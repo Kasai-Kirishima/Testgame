@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#171914">
+  <title>Тихий Сон — Autumn Survival 0.7</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="world"></canvas>
+  <div id="engine-error" class="engine-error hidden"><div><b>Не удалось запустить 3D-сцену</b><p>Проверьте подключение к интернету, доступность CDN и поддержку WebGL в браузере.</p></div></div>
+
+  <div id="main-menu" class="screen">
+    <div class="menu-backdrop"></div>
+    <div class="menu-content">
+      <div class="eyebrow">SURVIVAL EXPERIMENT</div>
+      <h1>ТИХИЙ <span>СОН</span></h1>
+      <div class="menu-rule"></div>
+      <button class="menu-button primary" id="new-game">Новая игра</button>
+      <button class="menu-button" id="choose-save">Выбрать сохранение</button>
+      <button class="menu-button" id="open-settings">Настройки</button>
+      <button class="menu-button muted" id="exit-game">Выход</button>
+      <div class="menu-foot">AUTUMN FOREST · ENDLESS NIGHTMARE</div>
+    </div>
+  </div>
+
+  <div id="creator" class="screen hidden">
+    <div class="panel creator-panel">
+      <div class="panel-top"><span class="eyebrow">ПРОБУЖДЕНИЕ</span><button class="icon-button" id="creator-back">✕</button></div>
+      <h2>Создание персонажа</h2>
+      <div class="creator-tabs"><span class="active" id="tab-traits">01 / Черты</span><span id="tab-look">02 / Внешность</span></div>
+      <section id="traits-step">
+        <div class="form-row">
+          <label>Профессия<select id="profession"></select></label>
+          <label>Очки черт <strong id="trait-points">0</strong></label>
+        </div>
+        <div class="trait-columns"><div><h3>Положительные</h3><div id="positive-traits" class="trait-list"></div></div><div><h3>Отрицательные</h3><div id="negative-traits" class="trait-list"></div></div></div>
+        <div class="trait-stats" id="trait-stats"></div>
+        <div class="form-actions"><button class="soft-button" id="random-traits">Случайный персонаж</button><button class="menu-button primary small" id="to-appearance">Далее</button></div>
+      </section>
+      <section id="appearance-step" class="hidden">
+        <div class="character-preview-wrap"><div class="character-preview-title">ПРЕДПРОСМОТР ПЕРСОНАЖА · 3D</div><canvas id="character-preview" width="320" height="340"></canvas><div class="character-preview-note">Модель обновляется при изменении внешности</div></div>
+        <div class="appearance-grid">
+          <label>Имя<input id="char-name" maxlength="22" value="Алексей"></label>
+          <label>Возраст <input id="char-age" type="number" min="18" max="70" value="27"></label>
+          <label>Рост, см<input id="char-height" type="number" min="150" max="205" value="178"></label>
+          <label>Вес, кг<input id="char-weight" type="number" min="45" max="125" value="76"></label>
+          <label>Телосложение<select id="char-build"><option>Обычное</option><option>Худощавое</option><option>Крепкое</option><option>Плотное</option></select></label>
+          <label>Тон кожи<select id="char-skin"><option value="#c78e68">Светлый</option><option value="#9c694e">Смуглый</option><option value="#e0b393">Очень светлый</option><option value="#704833">Тёмный</option></select></label>
+          <label>Цвет волос<select id="char-hair"><option>Тёмные</option><option>Русые</option><option>Светлые</option><option>Рыжие</option></select></label>
+          <label>Причёска<select id="char-hair-style"><option>Короткая стрижка</option><option>Средняя</option><option>Длинные волосы</option><option>Хвост</option><option>Бритая голова</option></select></label>
+          <label class="wide">Одежда<select id="char-clothes"><option>Походная куртка</option><option>Флисовая кофта</option><option>Дождевик</option><option>Рабочая одежда</option></select></label>
+          <label>Глаза<select id="char-eyes"><option>Карие</option><option>Серые</option><option>Голубые</option><option>Зелёные</option></select></label>
+          <label class="wide">Татуировки<select id="char-tattoo"><option>Нет</option><option>Левая рука</option><option>Правая рука</option><option>Обе руки</option></select></label>
+        </div>
+        <div class="form-actions"><button class="soft-button" id="back-traits">Назад</button><button class="menu-button primary small" id="begin-game">Войти в лес</button></div>
+      </section>
+    </div>
+  </div>
+
+  <div id="save-screen" class="screen hidden"><div class="panel compact-panel"><div class="panel-top"><span class="eyebrow">ПАМЯТЬ</span><button class="icon-button" data-close="save-screen">✕</button></div><h2>Сохранения</h2><div id="save-list"></div><button class="soft-button full" data-close="save-screen">Назад</button></div></div>
+  <div id="settings-screen" class="screen hidden"><div class="panel compact-panel"><div class="panel-top"><span class="eyebrow">ПАРАМЕТРЫ</span><button class="icon-button" data-close="settings-screen">✕</button></div><h2>Настройки</h2><label class="setting-row">Чувствительность мыши <input id="sensitivity" type="range" min="0.2" max="2.5" step="0.1" value="1"></label><label class="setting-row">Поле зрения <input id="fov" type="range" min="60" max="100" step="1" value="78"></label><label class="setting-row">Качество теней <select id="shadow-quality"><option value="high">Высокое</option><option value="medium">Среднее</option><option value="off">Выкл.</option></select></label><label class="setting-row">Громкость <input id="master-volume" type="range" min="0" max="100" step="1" value="65"></label><button class="soft-button full" id="sound-toggle">Звук: включён</button><button class="soft-button full" data-close="settings-screen">Готово</button></div></div>
+
+  <div id="hud" class="hidden">
+    <div id="minimap-wrap"><canvas id="minimap" width="180" height="180"></canvas><div class="map-caption">ЛЕС · <span id="compass">N</span></div><button id="hide-minimap" title="Скрыть карту">−</button></div>
+    <div id="status-effects"></div>
+    <div id="environment-panel">
+      <div class="environment-top"><b id="weather-label">ЯСНО</b><span id="clock-label">08:00</span></div>
+      <div class="environment-mid"><span id="temperature-label">14°C</span><span id="wetness-label">Сухо</span></div>
+      <div class="stamina-line"><span>ВЫНОСЛИВОСТЬ</span><div><i id="stamina-fill"></i></div></div>
+    </div>
+    <div id="nightmare-card" class="hidden"><div class="nightmare-title"><span>КОШМАР</span><b id="nightmare-name"></b><em id="nightmare-time">0с</em></div><div id="nightmare-guide"></div><div class="nightmare-track"><i id="nightmare-progress"></i></div></div>
+    <div id="health-panel">
+      <div class="heart-wrap"><div id="heart">♥</div><svg id="ecg" viewBox="0 0 150 34" preserveAspectRatio="none"><polyline points="0,18 23,18 31,18 37,8 44,28 51,3 59,18 82,18 90,18 96,8 103,28 110,3 118,18 150,18" /></svg></div>
+      <div class="health-numbers"><strong id="hp-value">100</strong><span>HP</span><em id="bpm">68 BPM</em></div>
+      <div class="needs"><span>ГОЛОД</span><div><i id="hunger-fill"></i></div><span>ЖАЖДА</span><div><i id="thirst-fill"></i></div></div>
+    </div>
+    <div id="quickbar"><div class="hand-slot" id="left-hand"><small>ЛЕВАЯ</small><span>—</span></div><div class="quick-slot active" data-slot="0"><b>1</b><span>—</span></div><div class="quick-slot" data-slot="1"><b>2</b><span>—</span></div><div class="quick-slot" data-slot="2"><b>3</b><span>—</span></div><div class="hand-slot" id="right-hand"><small>ПРАВАЯ</small><span>—</span></div></div>
+    <button id="inventory-toggle" class="hud-button"><span>▦</span> Инвентарь <kbd>I</kbd></button>
+    <div id="interaction-prompt"></div>
+    <div id="crosshair">⌖</div>
+    <div id="held-model"></div>
+    <div id="inspect-label"></div>
+    <div id="toast"></div>
+    <div id="nightmare-overlay"></div>
+    <div id="damage-overlay"></div>
+    <div id="cold-overlay"></div>
+    <div id="control-hint">WASD — движение　Shift — бег　Мышь — обзор　E — действие　Q — использовать　F — фонарь　R — осмотр　I — инвентарь　B — стройка　M — карта　V — камера
+  </div>
+
+  <div id="inventory-panel" class="overlay-panel hidden">
+    <div class="panel large-panel"><div class="panel-top"><span class="eyebrow">РЮКЗАК</span><button class="icon-button" data-close="inventory-panel">✕</button></div><div class="inventory-head"><h2>Инвентарь</h2><span id="capacity-label">20 слотов</span></div><div id="inventory-grid" class="inventory-grid"></div><div class="inventory-bottom"><div class="craft-box"><h3>Быстрый крафт</h3><div id="craft-recipes" class="craft-recipes"></div></div><div class="item-details" id="item-details"><span class="empty-detail">Выберите предмет</span></div></div></div>
+  </div>
+  <div id="map-panel" class="overlay-panel hidden"><div class="panel map-panel"><div class="panel-top"><span class="eyebrow">ОРИЕНТИРОВАНИЕ</span><button class="icon-button" data-close="map-panel">✕</button></div><h2>Карта местности</h2><canvas id="full-map" width="700" height="700"></canvas><div class="map-footer"><span>Нажмите на карту, чтобы поставить метку</span><button id="clear-markers" class="soft-button">Очистить метки</button></div></div></div>
+  <div id="build-panel" class="overlay-panel hidden"><div class="panel build-panel"><div class="panel-top"><span class="eyebrow">МАСТЕРСКАЯ</span><button class="icon-button" data-close="build-panel">✕</button></div><h2>Строительство</h2><div id="build-options" class="build-options"></div><div class="build-footer">Выберите объект, затем установите его левой кнопкой мыши</div></div></div>
+  <div id="camp-panel" class="overlay-panel hidden"><div class="panel camp-panel"><div class="panel-top"><span class="eyebrow" id="camp-eyebrow">ЛАГЕРЬ</span><button class="icon-button" data-close="camp-panel">✕</button></div><h2 id="camp-title">Лагерь</h2><p id="camp-description" class="camp-description"></p><div id="camp-actions" class="camp-actions"></div><div id="camp-storage" class="camp-storage hidden"><div class="camp-column"><h3>Рюкзак</h3><div id="camp-inventory"></div></div><div class="camp-column"><h3>Хранилище</h3><div id="camp-stored-items"></div></div></div></div></div>
+  <div id="pause-screen" class="screen hidden"><div class="panel compact-panel pause-panel"><div class="eyebrow">ПАУЗА</div><h2>Лес не спит</h2><button class="menu-button primary" id="resume-game">Продолжить</button><button class="menu-button" id="quick-save">Сохранить</button><button class="menu-button" id="pause-settings">Настройки</button><button class="menu-button muted" id="to-main-menu">В главное меню</button></div></div>
+
+  <script type="module" src="game.js" onerror="document.getElementById('engine-error')?.classList.remove('hidden')"></script>
+</body>
+</html>
