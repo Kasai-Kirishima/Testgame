@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <meta name="theme-color" content="#171914">
-  <title>Тихий Сон — Autumn Survival 0.7</title>
+  <title>Тихий Сон — Autumn Survival 0.9</title>
   <link rel="stylesheet" href="style.css">
   <script type="importmap">
     {
@@ -15,22 +15,34 @@
   </script>
 </head>
 <body>
-  <canvas id="world"></canvas>
+  <canvas id="world" tabindex="0" aria-label="Игровой мир"></canvas>
   <div id="engine-error" class="engine-error hidden"><div><b>Не удалось запустить 3D-сцену</b><p>Проверьте подключение к интернету, доступность CDN и поддержку WebGL в браузере.</p></div></div>
 
-  <div id="main-menu" class="screen">
-    <div class="menu-backdrop"></div>
-    <div class="menu-content">
-      <div class="eyebrow">SURVIVAL EXPERIMENT</div>
-      <h1>ТИХИЙ <span>СОН</span></h1>
-      <div class="menu-rule"></div>
-      <button class="menu-button primary" id="new-game">Новая игра</button>
-      <button class="menu-button" id="choose-save">Выбрать сохранение</button>
-      <button class="menu-button" id="open-settings">Настройки</button>
-      <button class="menu-button muted" id="exit-game">Выход</button>
-      <div class="menu-foot">AUTUMN FOREST · ENDLESS NIGHTMARE</div>
+  <main id="main-menu" class="screen menu-screen" aria-label="Главное меню">
+    <div class="menu-backdrop" aria-hidden="true"></div>
+    <div class="menu-shell">
+      <section class="menu-brand" aria-label="Тихий Сон">
+        <div class="brand-mark"><span></span><i></i></div>
+        <div class="eyebrow">АВТОНОМНОЕ ИССЛЕДОВАНИЕ · 01</div>
+        <h1>ТИХИЙ <span>СОН</span></h1>
+        <p class="menu-subtitle">Лес помнит то, чего ты не помнишь.</p>
+        <div class="menu-location"><span class="location-dot"></span><span>СЕВЕРНЫЙ ЛЕС</span><i>·</i><span>ОСЕНЬ</span></div>
+        <div class="menu-bottom-note">НЕПРЕРЫВНЫЙ СОН <b>—</b> БЕЗ ПРОБУЖДЕНИЯ</div>
+      </section>
+      <section class="menu-console" aria-label="Управление игрой">
+        <div class="console-head"><span>ГЛАВНОЕ МЕНЮ</span><span class="console-status"><i></i> СИСТЕМА ГОТОВА</span></div>
+        <div class="menu-actions">
+          <button class="menu-button continue-button" id="continue-game" type="button"><span class="button-glyph">↻</span><span class="button-copy"><b>Продолжить</b><small>Вернуться к последней записи</small></span><kbd>ENTER</kbd></button>
+          <button class="menu-button primary" id="new-game" type="button"><span class="button-glyph">＋</span><span class="button-copy"><b>Новая игра</b><small>Создать нового странника</small></span><kbd>01</kbd></button>
+          <button class="menu-button" id="choose-save" type="button"><span class="button-glyph">▤</span><span class="button-copy"><b>Сохранения</b><small>Загрузить или записать состояние</small></span><kbd>02</kbd></button>
+          <button class="menu-button" id="open-settings" type="button"><span class="button-glyph">⚙</span><span class="button-copy"><b>Настройки</b><small>Изображение, управление и звук</small></span><kbd>03</kbd></button>
+          <button class="menu-button muted" id="exit-game" type="button"><span class="button-glyph">⏻</span><span class="button-copy"><b>Выход</b><small>Закрыть вкладку, если разрешено</small></span><kbd>04</kbd></button>
+        </div>
+        <div class="console-foot"><span id="menu-save-meta">АВТОСОХРАНЕНИЕ ПОКА ОТСУТСТВУЕТ</span><span>↑ ↓ ВЫБОР&nbsp;&nbsp; ENTER ПОДТВЕРДИТЬ</span></div>
+      </section>
     </div>
-  </div>
+    <div class="menu-version">QUIET DREAM <span>·</span> BUILD 0.9</div>
+  </main>
 
   <div id="creator" class="screen hidden">
     <div class="panel creator-panel">
@@ -67,10 +79,20 @@
   </div>
 
   <div id="save-screen" class="screen hidden"><div class="panel compact-panel"><div class="panel-top"><span class="eyebrow">ПАМЯТЬ</span><button class="icon-button" data-close="save-screen">✕</button></div><h2>Сохранения</h2><div id="save-list"></div><button class="soft-button full" data-close="save-screen">Назад</button></div></div>
-  <div id="settings-screen" class="screen hidden"><div class="panel compact-panel"><div class="panel-top"><span class="eyebrow">ПАРАМЕТРЫ</span><button class="icon-button" data-close="settings-screen">✕</button></div><h2>Настройки</h2><label class="setting-row">Чувствительность мыши <input id="sensitivity" type="range" min="0.2" max="2.5" step="0.1" value="1"></label><label class="setting-row">Поле зрения <input id="fov" type="range" min="60" max="100" step="1" value="78"></label><label class="setting-row">Качество теней <select id="shadow-quality"><option value="high">Высокое</option><option value="medium">Среднее</option><option value="off">Выкл.</option></select></label><label class="setting-row">Громкость <input id="master-volume" type="range" min="0" max="100" step="1" value="65"></label><button class="soft-button full" id="sound-toggle">Звук: включён</button><button class="soft-button full" data-close="settings-screen">Готово</button></div></div>
+  <div id="settings-screen" class="screen hidden"><div class="panel compact-panel"><div class="panel-top"><span class="eyebrow">ПАРАМЕТРЫ</span><button class="icon-button" data-close="settings-screen">✕</button></div><h2>Настройки</h2><label class="setting-row">Чувствительность мыши <input id="sensitivity" type="range" min="0.2" max="2.5" step="0.1" value="1"></label><label class="setting-row">Поле зрения <input id="fov" type="range" min="60" max="100" step="1" value="78"></label><label class="setting-row">Качество теней <select id="shadow-quality"><option value="high">Высокое</option><option value="medium">Среднее</option><option value="off">Выкл.</option></select></label><label class="setting-row">Громкость <input id="master-volume" type="range" min="0" max="100" step="1" value="65"></label><button class="soft-button full" id="sound-toggle">Звук: включён</button>
+    <div class="control-reference"><h3>УПРАВЛЕНИЕ</h3><div class="control-reference-grid">
+      <div><span>Движение</span><kbd>WASD / ↑↓←→</kbd></div><div><span>Бег</span><kbd>SHIFT</kbd></div>
+      <div><span>Взаимодействие</span><kbd>E</kbd></div><div><span>Использовать</span><kbd>Q</kbd></div>
+      <div><span>Фонарь</span><kbd>F</kbd></div><div><span>Инвентарь</span><kbd>I</kbd></div>
+      <div><span>Карта</span><kbd>M</kbd></div><div><span>Строительство</span><kbd>B</kbd></div>
+      <div><span>Осмотр предмета</span><kbd>R</kbd></div><div><span>Смена камеры</span><kbd>V</kbd></div>
+      <div><span>Прыжок</span><kbd>SPACE</kbd></div><div><span>Пауза / назад</span><kbd>ESC</kbd></div>
+    </div></div>
+    <button class="soft-button full" data-close="settings-screen">Готово</button></div></div>
 
   <div id="hud" class="hidden">
-    <div id="minimap-wrap"><canvas id="minimap" width="180" height="180"></canvas><div class="map-caption">ЛЕС · <span id="compass">N</span></div><button id="hide-minimap" title="Скрыть карту">−</button></div>
+    <div id="minimap-wrap"><canvas id="minimap" width="180" height="180"></canvas><div class="map-caption">ЛЕС · <span id="compass">N</span></div><button id="hide-minimap" title="Скрыть карту" aria-label="Скрыть мини-карту">−</button></div>
+    <button id="show-minimap" class="hud-button map-restore hidden" type="button" aria-label="Показать мини-карту">◎ Карта</button>
     <div id="status-effects"></div>
     <div id="environment-panel">
       <div class="environment-top"><b id="weather-label">ЯСНО</b><span id="clock-label">08:00</span></div>
@@ -93,17 +115,24 @@
     <div id="nightmare-overlay"></div>
     <div id="damage-overlay"></div>
     <div id="cold-overlay"></div>
-    <div id="control-hint">WASD — движение　Shift — бег　Мышь — обзор　E — действие　Q — использовать　F — фонарь　R — осмотр　I — инвентарь　B — стройка　M — карта　V — камера
+    <div id="control-hint">WASD / стрелки — движение · Shift — бег · Мышь — обзор · E — действие · Q — использовать · F — фонарь · R — осмотр · I — инвентарь · B — стройка · M — карта · V — камера · Esc — пауза</div>
   </div>
 
   <div id="inventory-panel" class="overlay-panel hidden">
-    <div class="panel large-panel"><div class="panel-top"><span class="eyebrow">РЮКЗАК</span><button class="icon-button" data-close="inventory-panel">✕</button></div><div class="inventory-head"><h2>Инвентарь</h2><span id="capacity-label">20 слотов</span></div><div id="inventory-grid" class="inventory-grid"></div><div class="inventory-bottom"><div class="craft-box"><h3>Быстрый крафт</h3><div id="craft-recipes" class="craft-recipes"></div></div><div class="item-details" id="item-details"><span class="empty-detail">Выберите предмет</span></div></div></div>
+    <div class="panel large-panel"><div class="panel-top"><span class="eyebrow">РЮКЗАК</span><button class="icon-button" data-close="inventory-panel">✕</button></div><div class="inventory-head"><h2>Инвентарь</h2><span id="capacity-label">20 слотов</span></div>
+    <div class="inventory-toolbar">
+      <label class="inventory-search"><span>⌕</span><input id="inventory-search" type="search" placeholder="Найти предмет…" autocomplete="off" aria-label="Поиск предметов"></label>
+      <select id="inventory-category" aria-label="Категория предметов"><option value="all">Все категории</option><option value="food">Еда</option><option value="drink">Напитки</option><option value="medical">Медицина</option><option value="tool">Снаряжение</option><option value="resource">Ресурсы</option><option value="collectible">Прочее</option></select>
+      <select id="inventory-sort" aria-label="Сортировка предметов"><option value="default">По порядку</option><option value="name">По названию</option><option value="freshness">Сначала свежее</option></select>
+      <span id="inventory-filter-meta">Показаны все предметы</span>
+    </div>
+    <div id="inventory-grid" class="inventory-grid"></div><div class="inventory-bottom"><div class="craft-box"><h3>Быстрый крафт</h3><div id="craft-recipes" class="craft-recipes"></div></div><div class="item-details" id="item-details"><span class="empty-detail">Выберите предмет</span></div></div></div>
   </div>
-  <div id="map-panel" class="overlay-panel hidden"><div class="panel map-panel"><div class="panel-top"><span class="eyebrow">ОРИЕНТИРОВАНИЕ</span><button class="icon-button" data-close="map-panel">✕</button></div><h2>Карта местности</h2><canvas id="full-map" width="700" height="700"></canvas><div class="map-footer"><span>Нажмите на карту, чтобы поставить метку</span><button id="clear-markers" class="soft-button">Очистить метки</button></div></div></div>
+  <div id="map-panel" class="overlay-panel hidden"><div class="panel map-panel"><div class="panel-top"><span class="eyebrow">ОРИЕНТИРОВАНИЕ</span><button class="icon-button" data-close="map-panel">✕</button></div><h2>Карта местности</h2><canvas id="full-map" width="700" height="700"></canvas><div class="map-legend"><span><i class="legend-player"></i> Вы</span><span><i class="legend-marker"></i> Ваша метка</span><span><i class="legend-landmark"></i> Ориентир</span></div><div class="map-footer"><span>Нажмите на карту, чтобы поставить метку</span><button id="clear-markers" class="soft-button">Очистить метки</button></div></div></div>
   <div id="build-panel" class="overlay-panel hidden"><div class="panel build-panel"><div class="panel-top"><span class="eyebrow">МАСТЕРСКАЯ</span><button class="icon-button" data-close="build-panel">✕</button></div><h2>Строительство</h2><div id="build-options" class="build-options"></div><div class="build-footer">Выберите объект, затем установите его левой кнопкой мыши</div></div></div>
   <div id="camp-panel" class="overlay-panel hidden"><div class="panel camp-panel"><div class="panel-top"><span class="eyebrow" id="camp-eyebrow">ЛАГЕРЬ</span><button class="icon-button" data-close="camp-panel">✕</button></div><h2 id="camp-title">Лагерь</h2><p id="camp-description" class="camp-description"></p><div id="camp-actions" class="camp-actions"></div><div id="camp-storage" class="camp-storage hidden"><div class="camp-column"><h3>Рюкзак</h3><div id="camp-inventory"></div></div><div class="camp-column"><h3>Хранилище</h3><div id="camp-stored-items"></div></div></div></div></div>
-  <div id="pause-screen" class="screen hidden"><div class="panel compact-panel pause-panel"><div class="eyebrow">ПАУЗА</div><h2>Лес не спит</h2><button class="menu-button primary" id="resume-game">Продолжить</button><button class="menu-button" id="quick-save">Сохранить</button><button class="menu-button" id="pause-settings">Настройки</button><button class="menu-button muted" id="to-main-menu">В главное меню</button></div></div>
+  <div id="pause-screen" class="screen hidden"><div class="panel compact-panel pause-panel"><div class="eyebrow">СЕАНС ПРИОСТАНОВЛЕН</div><h2>Лес не спит</h2><p class="pause-caption">Время остановлено. Мир ждёт.</p><button class="menu-button primary" id="resume-game">Продолжить</button><button class="menu-button" id="quick-save">Сохранить</button><button class="menu-button" id="pause-settings">Настройки</button><button class="menu-button muted" id="to-main-menu">В главное меню</button></div></div>
 
-  <script type="module" src="game.js" onerror="document.getElementById('engine-error')?.classList.remove('hidden')"></script>
+  <script type="module" src="src/main.js" onerror="document.getElementById('engine-error')?.classList.remove('hidden')"></script>
 </body>
 </html>
