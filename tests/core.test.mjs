@@ -174,3 +174,34 @@ test('inventory search, category and sort preserve the source array', () => {
   assert.deepEqual(filterInventory(source, { sort: 'name' }, info).map(x => x.name), ['Бинт','Вода','Яблоко']);
   assert.equal(source.length, 3, 'sorting/filtering must not mutate source inventory');
 });
+
+test('dimensional item artwork renders dedicated SVGs without external assets', async () => {
+  const fs = await import('node:fs');
+  const vm = await import('node:vm');
+  const source = fs.readFileSync(new URL('../src/ui/item-icons.js', import.meta.url), 'utf8');
+  const window = {};
+  vm.runInNewContext(source, { window });
+  const bottle = window.QDItemIcons.render('Бутылка воды', { category: 'drink' });
+  const lamp = window.QDItemIcons.render('Керосиновая лампа', { category: 'tool' });
+  const med = window.QDItemIcons.render('Аптечка', { category: 'medical' });
+  assert.match(bottle, /<svg/);
+  assert.match(lamp, /<svg/);
+  assert.match(med, /<svg/);
+  assert.notEqual(bottle, lamp);
+  assert.equal(window.QDItemIcons.kindFor('Компас', {}), 'instrument');
+  assert.equal(window.QDItemIcons.kindFor('Хлеб', { category: 'food' }), 'food');
+});
+
+test('startup fallback is loaded before the optional Three.js module', async () => {
+  const fs = await import('node:fs');
+  const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.ok(html.indexOf('src="src/boot.js"') < html.indexOf('type="module" src="src/main.js"'));
+  assert.match(html, /QD_BOOT\?\.showFallback/);
+  const runtime = fs.readFileSync(new URL('../src/engine/GameRuntime.js', import.meta.url), 'utf8');
+  assert.equal((runtime.match(/\bsetup\(\);/g) || []).length, 1);
+  assert.ok(runtime.lastIndexOf('setup();') > runtime.indexOf('const inputController'));
+  const boot = fs.readFileSync(new URL('../src/boot.js', import.meta.url), 'utf8');
+  assert.match(boot, /function startFallback\(/);
+  assert.match(boot, /KeyW/);
+  assert.match(boot, /qd-fallback-save/);
+});

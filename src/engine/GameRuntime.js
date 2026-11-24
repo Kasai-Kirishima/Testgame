@@ -9,6 +9,7 @@ import { state } from '../core/GameState.js';
 
 import { ITEMS, PROFESSIONS, TRAITS, RECIPES, BUILDINGS, NIGHTMARES } from '../data/catalog.js';
 
+let engineInitSucceeded=false;
 let scene,camera,renderer,clock,ground,terrain,hemi,sun,moon,forest=[], lootMeshes=[], raycaster=new THREE.Raycaster(), pointer=new THREE.Vector2(0,0), handGroup, handItem=null, leftLight=null, activeLook=null;
 const canvas=$('#world');
 canvas.tabIndex = 0;
@@ -208,7 +209,7 @@ function enterMainMenu(){state.active=false;state.paused=true;state.uiOpen=false
 
 // HUD / inventory / effects
 function updateQuickbar(){
-  $$('.quick-slot').forEach((el,i)=>{el.classList.toggle('active',i===state.selectedSlot);el.querySelector('span').textContent=state.quick[i]||'—';});
+  $$('.quick-slot').forEach((el,i)=>{el.classList.toggle('active',i===state.selectedSlot);const name=state.quick[i];el.querySelector('span').innerHTML=name?`${window.QDItemIcons?.render(name,itemInfo(name),'small')||itemInfo(name).icon}<small class="quick-label">${name}</small>`:'—';});
   $('#left-hand span').textContent=state.leftHandOn?'Фонарь':'—';
   $('#right-hand span').textContent=state.quick[state.selectedSlot]||'—';
   if(handGroup)makeHandMesh();
@@ -225,7 +226,7 @@ function updateHud(force=false){
 }
 function renderInventory(){
   const grid=$('#inventory-grid');if(!grid)return;let html='';const total=Math.max(20,Math.ceil(state.inventory.length/5)*5);$('#capacity-label').textContent=`${state.inventory.length} предметов · ${total} ячеек`;
-  for(let i=0;i<total;i++){const it=state.inventory[i];if(it){const inf=itemInfo(it.name);html+=`<div class="inventory-slot ${state.selectedItem===it.name?'selected':''}" data-item="${encodeURIComponent(it.name)}"><span class="item-count">${it.count>1?it.count:''}</span><span class="item-icon">${inf.icon}</span><span class="item-name">${it.name}</span></div>`;}else html+=`<div class="inventory-slot empty"></div>`;}
+  for(let i=0;i<total;i++){const it=state.inventory[i];if(it){const inf=itemInfo(it.name);html+=`<div class="inventory-slot ${state.selectedItem===it.name?'selected':''}" data-item="${encodeURIComponent(it.name)}"><span class="item-count">${it.count>1?it.count:''}</span><span class="item-icon">${window.QDItemIcons?.render(it.name,inf)||inf.icon}</span><span class="item-name">${it.name}</span></div>`;}else html+=`<div class="inventory-slot empty"></div>`;}
   grid.innerHTML=html;$$('.inventory-slot[data-item]').forEach(el=>el.addEventListener('click',()=>selectItem(decodeURIComponent(el.dataset.item))));renderCraftRecipes();
 }
 function selectItem(name){state.selectedItem=name;const item=itemInfo(name);const it=state.inventory.find(x=>x.name===name);const detail=$('#item-details');detail.innerHTML=`<strong>${item.icon} ${name}</strong>${item.description}<div style="margin-top:5px;color:#c0a773">Количество: ${it?.count||0}</div><div class="item-actions">${item.usable?'<button id="use-selected">Использовать</button>':''}<button id="assign-selected">В быстрый слот</button><button id="drop-selected">Выбросить</button></div>`;
@@ -283,7 +284,7 @@ function buildModelBase(id,transparent=false){
   if(transparent)g.traverse(o=>{if(o.material){o.material.transparent=true;o.material.opacity=.42;o.material.depthWrite=false;}});
   return g;
 }
-function openBuild(){openOverlay('#build-panel');$('#build-options').innerHTML=BUILDINGS.map(b=>`<button class="build-option" data-build="${b.id}"><b>${b.icon} ${b.name}</b><small>${b.desc}</small><em>${formatCost(b.cost)}</em></button>`).join('');$$('.build-option').forEach(el=>el.onclick=()=>selectBuild(el.dataset.build));}
+function openBuild(){openOverlay('#build-panel');$('#build-options').innerHTML=BUILDINGS.map(b=>`<button class="build-option" data-build="${b.id}"><b><span class="build-option-icon">${window.QDItemIcons?.render(b.name,{category:'resource'},'small')||b.icon}</span> ${b.name}</b><small>${b.desc}</small><em>${formatCost(b.cost)}</em></button>`).join('');$$('.build-option').forEach(el=>el.onclick=()=>selectBuild(el.dataset.build));}
 function selectBuild(id){const b=BUILDINGS.find(x=>x.id===id);if(!hasItems(b.cost)){toast('Не хватает материалов');return;}closeOverlays();state.buildMode=id;if(state.buildPreview)scene.remove(state.buildPreview);state.buildPreview=buildModel(id,true);scene.add(state.buildPreview);toast('ЛКМ — установить · Esc — отмена');requestPointerLock();}
 function currentBuildPosition(){const px=state.player.x-Math.sin(state.yaw)*4.2,pz=state.player.z-Math.cos(state.yaw)*4.2;return {x:clamp(px,-56,56),z:clamp(pz,-56,56)};}
 function placeBuild(){if(!state.buildMode)return;const b=BUILDINGS.find(x=>x.id===state.buildMode);if(!hasItems(b.cost)){toast('Не хватает материалов');cancelBuild();return;}const pos=currentBuildPosition();consumeCost(b.cost);const obj=buildModel(b.id,false);obj.position.set(pos.x,terrainHeight(pos.x,pos.z),pos.z);obj.rotation.y=state.yaw;obj.userData={kind:'building',building:b.id,name:b.name};scene.add(obj);state.structures.push(obj);state.buildMode=null;if(state.buildPreview){scene.remove(state.buildPreview);state.buildPreview=null;}toast(`${b.name} построено`);renderInventory();}
@@ -764,7 +765,7 @@ function selectItem(name) {
   const freshness = item.perishable ? `<div class="item-meta">Свежесть: ${Math.round(stack?.freshness??100)}%</div><div class="item-freshness"><i style="width:${clamp(stack?.freshness??100,0,100)}%"></i></div>` : '';
   const equip = item.wearable ? '<button id="equip-selected">Экипировать / снять</button>' : '';
   const canUse = item.usable || item.category==='food' || item.category==='drink' || ['Активированный уголь','Антидот','Успокоительное'].includes(name);
-  detail.innerHTML=`<strong>${item.icon} ${name}</strong>${item.description}<div class="item-meta">Количество: ${stack?.count||0}</div>${freshness}<div class="item-actions">${canUse?'<button id="use-selected">Использовать</button>':''}${equip}<button id="assign-selected">В быстрый слот</button><button id="drop-selected">Выбросить</button></div>`;
+  detail.innerHTML=`<strong>${window.QDItemIcons?.render(name,item,'small')||item.icon} ${name}</strong>${item.description}<div class="item-meta">Количество: ${stack?.count||0}</div>${freshness}<div class="item-actions">${canUse?'<button id="use-selected">Использовать</button>':''}${equip}<button id="assign-selected">В быстрый слот</button><button id="drop-selected">Выбросить</button></div>`;
   $('#use-selected')?.addEventListener('click',()=>useItem(name));
   $('#equip-selected')?.addEventListener('click',()=>useItem(name));
   $('#assign-selected').onclick=()=>{const free=state.quick.findIndex(x=>!x);const slot=free>=0?free:state.selectedSlot;state.quick[slot]=name;updateQuickbar();toast(`Слот ${slot+1}: ${name}`);};
@@ -783,7 +784,7 @@ function renderInventory() {
   grid.innerHTML=visible.length?Array.from({length:Math.max(20,Math.ceil(visible.length/5)*5)},(_,i)=>{
     const it=visible[i];if(!it)return '<div class="inventory-slot empty"></div>';
     const inf=itemInfo(it.name);const quality=inf.perishable?`<div class="item-freshness"><i style="width:${clamp(it.freshness??100,0,100)}%"></i></div>`:'';
-    return `<div class="inventory-slot ${state.selectedItem===it.name?'selected':''}" data-item="${encodeURIComponent(it.name)}" title="${it.name}"><span class="item-count">${it.count>1?it.count:''}</span><span class="item-icon">${inf.icon}</span><span class="item-name">${it.name}</span>${quality}</div>`;
+    return `<div class="inventory-slot ${state.selectedItem===it.name?'selected':''}" data-item="${encodeURIComponent(it.name)}" title="${it.name}"><span class="item-count">${it.count>1?it.count:''}</span><span class="item-icon">${window.QDItemIcons?.render(it.name,inf)||inf.icon}</span><span class="item-name">${it.name}</span>${quality}</div>`;
   }).join(''):`<div class="inventory-empty"><span>⌕</span><b>Ничего не найдено</b><small>Измени запрос или выбери другую категорию</small></div>`;
   $$('.inventory-slot[data-item]').forEach(el=>el.addEventListener('click',()=>selectItem(decodeURIComponent(el.dataset.item))));
   renderCraftRecipes();
@@ -797,7 +798,7 @@ function renderCraftRecipes() {
       return (station==='workbench'&&id==='workbench'||station==='stove'&&(id==='stove'||id==='campfire'))&&distance2({x:o.position.x,z:o.position.z},state.player)<5;
     });
   });
-  $('#craft-recipes').innerHTML=available.map(({r,index})=>`<button class="craft-recipe" data-recipe="${index}" ${hasItems(r.cost)?'':'disabled'}><span>${r.icon}</span><span>${r.name}<br><small>${formatCost(r.cost)}</small></span></button>`).join('')||'<span class="camp-empty">Нет доступных рецептов</span>';
+  $('#craft-recipes').innerHTML=available.map(({r,index})=>`<button class="craft-recipe" data-recipe="${index}" ${hasItems(r.cost)?'':'disabled'}><span class="recipe-icon">${window.QDItemIcons?.render(r.out,itemInfo(r.out),'small')||r.icon}</span><span>${r.name}<br><small>${formatCost(r.cost)}</small></span></button>`).join('')||'<span class="camp-empty">Нет доступных рецептов</span>';
   $$('.craft-recipe').forEach(b=>b.onclick=()=>craft(Number(b.dataset.recipe)));
 }
 function craft(index) {
@@ -860,7 +861,7 @@ function renderStorage() {
   const isRack=state.activeStorage.userData.building==='woodRack';
   const allowed=it=>!isRack||['Сухие дрова','Древесина'].includes(it.name);
   const visibleInventory=state.inventory.filter(allowed);
-  const row=(it,action,label)=>`<div class="camp-item"><span>${itemInfo(it.name).icon} ${it.name} ×${it.count}</span><button data-${action}="${encodeURIComponent(it.name)}">${label}</button></div>`;
+  const row=(it,action,label)=>`<div class="camp-item"><span class="camp-item-label">${window.QDItemIcons?.render(it.name,itemInfo(it.name),'small')||itemInfo(it.name).icon} ${it.name} ×${it.count}</span><button data-${action}="${encodeURIComponent(it.name)}">${label}</button></div>`;
   inv.innerHTML=visibleInventory.length?visibleInventory.map(it=>row(it,'store',isRack?'В поленницу':'В сундук')).join(''):'<div class="camp-empty">'+(isRack?'Нет древесины или дров':'Рюкзак пуст')+'</div>';
   stored.innerHTML=storage.length?storage.map(it=>row(it,'take','Забрать')).join(''):'<div class="camp-empty">Пока пусто</div>';
   $$('#camp-inventory [data-store]').forEach(b=>b.onclick=()=>{
@@ -898,7 +899,7 @@ function campAction(action) {
     activeStation=id==='workbench'?'workbench':'stove';
     $('#camp-description').textContent='Выбери рецепт. Приготовленная пища лучше насыщает.';
     const recipes=RECIPES.map((r,index)=>({r,index})).filter(x=>!x.r.station||id==='workbench'&&x.r.station==='workbench'||id!=='workbench'&&x.r.station==='stove');
-    $('#camp-actions').innerHTML=recipes.map(({r,index})=>`<button class="camp-action" data-camp-craft="${index}" ${hasItems(r.cost)?'':'disabled'}><b>${r.icon} ${r.name}</b><small>${formatCost(r.cost)} → ${r.out}</small></button>`).join('');
+    $('#camp-actions').innerHTML=recipes.map(({r,index})=>`<button class="camp-action" data-camp-craft="${index}" ${hasItems(r.cost)?'':'disabled'}><b>${window.QDItemIcons?.render(r.out,itemInfo(r.out),'small')||r.icon} ${r.name}</b><small>${formatCost(r.cost)} → ${r.out}</small></button>`).join('');
     $$('#camp-actions [data-camp-craft]').forEach(b=>b.onclick=()=>{craft(Number(b.dataset.campCraft));renderCampPanel(obj);});return;
   }
 }
@@ -1131,7 +1132,9 @@ function setup() {
     initThree();createWeatherFX();
     renderer.shadowMap.enabled=state.settings.shadows!=='off';sun.shadow.mapSize.setScalar(state.settings.shadows==='high'?1024:512);
     camera.position.set(0,terrainHeight(0,0)+1.72,0);animate(performance.now());
+    engineInitSucceeded = true;
   } catch (error) {
+    engineInitSucceeded = false;
     console.error('3D startup failed:',error);
     $('#engine-error').classList.remove('hidden');
     $('#engine-error p').textContent='Браузер не смог создать WebGL-сцену. Проверьте аппаратное ускорение, обновите браузер и убедитесь, что сайт может загружать Three.js с CDN.';
@@ -1215,8 +1218,6 @@ function makeHandMesh() {
   }
   prop.position.set(.48,-.35,-.72);prop.rotation.set(.18,-.24,-.4);prop.scale.setScalar(.86);prop.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});handGroup.add(prop);handItem=prop;
 }
-
-setup();
 
 /* ========================================================================
    QUIET DREAM v0.7 — rigged characters, creature AI, pathfinding and CC0 audio
@@ -1866,3 +1867,26 @@ $('#resume-game')?.addEventListener('click',()=>{state.keys={};});
 updateContinueButton();
 inputController.install();
 menuController.install();
+
+
+// Bootstrap the 3D engine only after the entire runtime and all UI services are defined.
+// If Three.js/WebGL cannot start, the independent classic boot script keeps the menu usable
+// and offers a small playable offline mode instead of blocking the whole page.
+try {
+  if (!window.__QD_FALLBACK_ACTIVE) {
+    setup();
+    if (renderer && scene && engineInitSucceeded) {
+      window.__QD_ENGINE_READY = true;
+      window.dispatchEvent(new Event('qd-engine-ready'));
+    } else {
+      window.__QD_ENGINE_READY = false;
+      window.QD_BOOT?.showFallback('3D-сцена не смогла запуститься. Доступен автономный режим.');
+    }
+  } else {
+    window.__QD_ENGINE_READY = false;
+  }
+} catch (error) {
+  console.error('Quiet Dream startup failed:', error);
+  window.__QD_ENGINE_READY = false;
+  window.QD_BOOT?.showFallback('Ошибка запуска 3D-движка. Доступен автономный режим.');
+}
