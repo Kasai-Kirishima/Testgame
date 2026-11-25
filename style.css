@@ -194,3 +194,37 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .quick-slot .quick-label{display:block;font-size:7px;line-height:1.05;max-width:54px}
 
 .build-option-icon{display:inline-grid;width:34px;height:30px;vertical-align:middle;place-items:center;margin-right:5px}.build-option-icon svg{width:32px;height:32px}.camp-item-label{display:flex;align-items:center;gap:7px}.camp-item-label svg{width:30px;height:30px;flex:none}
+
+/* v1.2 — character creator balance and native WebGL fallback */
+.trait-list{max-height:286px;overflow:auto;padding-right:4px;align-content:start}
+#creator .trait-option{min-height:42px;text-align:left}
+#creator .trait-option small:last-child{flex:0 0 auto;min-width:28px;text-align:right;font:600 12px Oswald;color:#d9bd83}
+#creator .trait-option[data-name]{outline-offset:1px}
+.trait-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 12px;line-height:1.4}
+.trait-stats .profession-description{grid-column:1/-1;color:#c0b9a5;padding-bottom:3px;border-bottom:1px solid rgba(255,255,255,.07)}
+.trait-stats span:not(.profession-description){display:flex;justify-content:space-between;gap:5px;white-space:nowrap}
+.trait-stats b{font:600 12px Oswald}
+#trait-points{display:inline-block;min-width:74px;text-align:right}
+.appearance-random-row{grid-column:1/-1;display:flex;align-items:center;gap:12px;margin-top:12px}
+.appearance-random-row span{font-size:9px;color:#858779}
+#character-preview{touch-action:none;cursor:grab}
+#character-preview:active{cursor:grabbing}
+#qd-fallback-world{pointer-events:auto;background:linear-gradient(#64706a,#b19c78 58%,#384435)}
+.qdf-hint{bottom:8px;text-shadow:0 2px 6px #000}
+@media(max-width:740px){.trait-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.appearance-random-row{flex-wrap:wrap}.appearance-random-row span{flex-basis:100%}}
+
+
+/* v1.2 creator: always-visible 3D profile preview and clear point economy */
+.creator-traits-layout{display:grid;grid-template-columns:minmax(0,1fr) 225px;gap:18px;align-items:start}
+.creator-traits-main{min-width:0}
+.creator-preview-card{position:sticky;top:8px;min-width:0;border:1px solid rgba(198,166,107,.24);background:radial-gradient(ellipse at 50% 35%,rgba(126,107,75,.24),rgba(13,17,13,.95) 72%);padding:9px;text-align:center}
+#character-preview-traits{width:100%;height:260px;display:block;touch-action:pan-y;cursor:grab}
+#character-preview-traits:active{cursor:grabbing}
+.point-rules{display:flex;flex-direction:column;gap:3px;margin:0 0 12px;padding:9px 11px;background:rgba(174,139,83,.09);border-left:2px solid rgba(198,166,107,.62);font-size:10px;color:#a9aa99}
+.point-rules b{font:500 12px Oswald,sans-serif;letter-spacing:.08em;color:#d8c59c}
+.point-rules span{line-height:1.45}
+.trait-option small:first-child{line-height:1.35}
+.trait-option[data-name]{min-height:38px}
+.trait-option.selected{box-shadow:inset 2px 0 rgba(207,174,111,.65)}
+@media(max-width:900px){.creator-traits-layout{grid-template-columns:minmax(0,1fr) 195px;gap:12px}#character-preview-traits{height:230px}}
+@media(max-width:740px){.creator-traits-layout{grid-template-columns:1fr}.creator-preview-card{position:relative;top:auto;max-width:240px;width:100%;margin:0 auto;grid-row:1}#character-preview-traits{height:230px}.trait-columns{margin:12px 0}}

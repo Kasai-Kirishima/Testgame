@@ -1,3 +1,8 @@
-# UI captures — build 0.9
+# Превью 3D-геометрии v1.2
 
-These PNG files were rendered in Chromium from the project's actual HTML and CSS. The character trait list, inventory contents, HUD values, and map canvas were populated with demonstration state so the UI panels are visible without relying on the unavailable external Three.js CDN in the capture environment. They are interface previews, not screenshots of a running 3D world.
+- `world-3d-preview.png` — офлайн-визуализация настоящих треугольных мешей рельефа, деревьев, ветвей, объёмных крон, камней, листвы и рук. Геометрия создана теми же `MeshBuilder` и `Local3D.js`, которые использует локальный WebGL-рендерер; изображение отрисовано с z-buffer/depth test и освещением.
+- `third-person-3d-preview.png` — та же геометрия леса с полной моделью персонажа, показанной в перспективе от третьего лица.
+- `character-3d-preview.png` — офлайн-визуализация фактического меша персонажа из `Local3D.js`, с лицом, глазами, волосами, одеждой, ремнями, карманами и ботинками.
+- `item-icons-preview.png` — лист SVG-иконок интерфейса.
+
+Это не скриншоты работающей страницы браузера, а офлайн-визуализации тех же игровых треугольных мешей, которые загружает WebGL-рендерер. Они не являются концепт-артами или картинками вместо геометрии. Полноценный скриншот работающей браузерной страницы в среде сборки получить не удалось: локальный Chromium зависал при открытии проекта.

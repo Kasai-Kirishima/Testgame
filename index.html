@@ -1,188 +1,149 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#080d12">
-<title>СОН — интерактивный прототип</title>
-<style>
-:root{--ink:#e6edf0;--muted:#91a1a9;--cyan:#9ad9d2;--gold:#e8c98b;--panel:rgba(7,13,18,.78)}
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#070b10;color:var(--ink);font-family:Inter,Segoe UI,Arial,sans-serif}body{touch-action:none}#game{position:fixed;inset:0;display:block;width:100%;height:100%;outline:none}
-#vignette{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 36%,rgba(0,0,0,.2) 75%,rgba(0,0,0,.72) 140%);z-index:2}
-#grain{position:fixed;inset:-50%;pointer-events:none;opacity:.055;z-index:3;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");animation:grain .22s steps(2) infinite}@keyframes grain{0%{transform:translate(0,0)}25%{transform:translate(2%,-1%)}50%{transform:translate(-1%,2%)}75%{transform:translate(1%,1%)}100%{transform:translate(-2%,-1%)}}
-#hud{position:fixed;inset:0;z-index:5;pointer-events:none;opacity:0;transition:opacity .5s}body.playing #hud{opacity:1}
-.hud-top{position:absolute;left:clamp(16px,3vw,42px);right:clamp(16px,3vw,42px);top:clamp(16px,3vh,32px);display:flex;justify-content:space-between;align-items:flex-start;gap:18px}.brand{font-size:11px;letter-spacing:.34em;text-transform:uppercase;color:rgba(221,237,235,.62)}.objective{margin-top:9px;font-size:14px;letter-spacing:.04em;color:#e4eceb;text-shadow:0 2px 14px #000}.memory{display:flex;gap:7px;align-items:center;padding:10px 13px;border:1px solid rgba(176,220,211,.19);background:rgba(4,11,15,.48);backdrop-filter:blur(12px);border-radius:2px;font-size:11px;letter-spacing:.12em;color:#cbdad8}.dots{display:flex;gap:5px;margin-left:7px}.dot{width:7px;height:7px;border:1px solid rgba(181,220,213,.5);transform:rotate(45deg)}.dot.found{background:var(--cyan);box-shadow:0 0 10px rgba(154,217,210,.8);border-color:var(--cyan)}
-#crosshair{position:absolute;left:50%;top:50%;width:18px;height:18px;transform:translate(-50%,-50%);opacity:.68}#crosshair:before,#crosshair:after{content:"";position:absolute;background:rgba(227,244,239,.8);box-shadow:0 0 6px rgba(154,217,210,.7)}#crosshair:before{width:1px;height:12px;left:8px;top:3px}#crosshair:after{height:1px;width:12px;top:8px;left:3px}
-#hint{position:absolute;left:50%;bottom:clamp(95px,13vh,140px);transform:translateX(-50%);padding:10px 15px;background:rgba(5,11,15,.65);border:1px solid rgba(179,220,214,.2);color:#e7f1ed;font-size:12px;letter-spacing:.08em;white-space:nowrap;opacity:0;transition:opacity .2s;backdrop-filter:blur(10px)}#hint.visible{opacity:1}#hint b{color:var(--gold);font-weight:600;margin-right:8px}
-#subtitle{position:absolute;left:50%;bottom:clamp(24px,5vh,48px);transform:translateX(-50%);width:min(600px,calc(100% - 36px));padding:17px 22px;text-align:center;background:linear-gradient(90deg,transparent,rgba(4,10,14,.78) 12%,rgba(4,10,14,.78) 88%,transparent);color:#d5e2df;font-size:14px;line-height:1.6;letter-spacing:.025em;opacity:0;transition:opacity .3s;text-shadow:0 2px 12px #000}#subtitle.visible{opacity:1}
-#start,#pause,#ending,#error{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:22px;background:radial-gradient(ellipse at 50% 45%,rgba(25,44,49,.26),rgba(2,6,10,.92) 66%);backdrop-filter:blur(7px);transition:opacity .45s}#pause,#ending,#error{display:none}#start.hidden{opacity:0;pointer-events:none}.menu{width:min(620px,100%);padding:clamp(26px,5vw,52px);border:1px solid rgba(174,220,211,.2);background:linear-gradient(145deg,rgba(11,21,26,.82),rgba(5,10,14,.82));box-shadow:0 30px 100px rgba(0,0,0,.45);position:relative}.menu:before{content:"";position:absolute;top:-1px;left:42px;width:72px;height:2px;background:var(--cyan);box-shadow:0 0 18px rgba(154,217,210,.6)}.eyebrow{font-size:10px;letter-spacing:.42em;text-transform:uppercase;color:var(--cyan);margin-bottom:22px}.title{font-family:Georgia,serif;font-size:clamp(64px,13vw,112px);font-weight:400;letter-spacing:.12em;line-height:.9;margin:0 0 22px 0;color:#e6efec;text-shadow:0 0 38px rgba(154,217,210,.18)}.title span{color:#8daea9}.lead{max-width:430px;color:#9eafb1;font-size:14px;line-height:1.8;margin:0 0 28px}.rule{height:1px;background:linear-gradient(90deg,rgba(154,217,210,.45),transparent);margin:25px 0}.controls{display:grid;grid-template-columns:1fr 1fr;gap:11px 22px;margin-bottom:27px;color:#a8b7b8;font-size:11px;line-height:1.5}.control-line{display:flex;gap:10px;align-items:center}.key{min-width:32px;padding:5px 7px;border:1px solid rgba(198,225,219,.22);color:#e1ece8;text-align:center;font-size:10px;letter-spacing:.08em;background:rgba(255,255,255,.025)}.actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.primary,.secondary{appearance:none;border:0;cursor:pointer;padding:14px 24px;font:600 11px/1 Inter,Segoe UI,Arial,sans-serif;letter-spacing:.18em;text-transform:uppercase;transition:.2s}.primary{background:#a6d5ca;color:#081215;box-shadow:0 0 24px rgba(154,217,210,.12)}.primary:hover{background:#c1e8dc;transform:translateY(-1px);box-shadow:0 0 30px rgba(154,217,210,.24)}.secondary{background:transparent;color:#aabbb9;border:1px solid rgba(183,217,210,.22)}.secondary:hover{border-color:rgba(183,217,210,.55);color:#e0ece8}.small-note{font-size:10px;color:#607477;letter-spacing:.08em;margin-top:22px}
-#mobile{position:fixed;inset:0;z-index:8;pointer-events:none;display:none}#stick-base{position:absolute;left:22px;bottom:28px;width:116px;height:116px;border-radius:50%;border:1px solid rgba(190,224,218,.22);background:rgba(4,12,16,.28);pointer-events:auto;touch-action:none;backdrop-filter:blur(4px)}#stick{position:absolute;left:37px;top:37px;width:42px;height:42px;border-radius:50%;background:rgba(173,221,211,.22);border:1px solid rgba(192,230,220,.5);box-shadow:0 0 18px rgba(154,217,210,.13)}.mobile-actions{position:absolute;right:22px;bottom:35px;display:flex;flex-direction:column;gap:12px;pointer-events:auto}.mobile-btn{width:62px;height:62px;border:1px solid rgba(190,224,218,.32);border-radius:50%;background:rgba(4,12,16,.52);color:#e4efea;font-size:10px;letter-spacing:.08em;backdrop-filter:blur(8px);touch-action:manipulation}.mobile-btn:active{background:rgba(154,217,210,.3)}#mobile-tip{position:absolute;right:20px;bottom:185px;font-size:9px;color:rgba(220,235,230,.45);letter-spacing:.12em;text-align:right}
-@media(pointer:coarse),(max-width:700px){#mobile{display:block} .objective{font-size:12px}.brand{font-size:9px}.memory{padding:8px 9px;font-size:9px}.menu{padding:28px 23px}.controls{grid-template-columns:1fr 1fr;gap:9px}.lead{font-size:13px}.small-note{font-size:9px}}
-@media(max-width:420px){.controls{grid-template-columns:1fr}.title{font-size:76px}.menu{max-height:92vh;overflow:auto}.hud-top{top:13px;left:13px;right:13px}#stick-base{width:104px;height:104px;left:14px;bottom:17px}#stick{left:32px;top:32px}.mobile-actions{right:14px;bottom:20px}.mobile-btn{width:55px;height:55px}}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#171914">
+  <title>Тихий Сон — Quiet Dream 1.5</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"
+      }
+    }
+  </script>
 </head>
 <body>
-<canvas id="game" aria-label="Игровой мир СОН"></canvas><div id="vignette"></div><div id="grain"></div>
-<div id="hud"><div class="hud-top"><div><div class="brand">СОН / ЗАПИСЬ 01</div><div class="objective" id="objective">Найди три фрагмента памяти</div></div><div class="memory">ПАМЯТЬ <span id="count">0 / 3</span><span class="dots"><i class="dot"></i><i class="dot"></i><i class="dot"></i></span></div></div><div id="crosshair"></div><div id="hint"><b>E</b><span id="hint-text">ВЗАИМОДЕЙСТВОВАТЬ</span></div><div id="subtitle"></div></div>
-<div id="mobile"><div id="stick-base"><div id="stick"></div></div><div id="mobile-tip">ПРАВАЯ ЧАСТЬ ЭКРАНА — ОБЗОР</div><div class="mobile-actions"><button class="mobile-btn" id="interact-btn">ВЗЯТЬ</button><button class="mobile-btn" id="run-btn">БЕГ</button></div></div>
-<div id="start"><div class="menu"><div class="eyebrow">ИНТЕРАКТИВНЫЙ ПРОТОТИП · 0.1</div><h1 class="title">С<span>О</span>Н</h1><p class="lead">Ты проснулся там, где воспоминания становятся местами, а тишина пытается что-то сказать. Найди три обрывка прошлого. Не всё, что зовёт тебя, хочет быть найденным.</p><div class="rule"></div><div class="controls"><div class="control-line"><span class="key">W A S D</span> Движение</div><div class="control-line"><span class="key">МЫШЬ</span> Осмотреться</div><div class="control-line"><span class="key">E</span> Взаимодействие</div><div class="control-line"><span class="key">SHIFT</span> Бежать</div><div class="control-line"><span class="key">ESC</span> Пауза</div><div class="control-line"><span class="key">ТЕЛЕФОН</span> Джойстик и свайп</div></div><div class="actions"><button class="primary" id="start-btn">Начать пробуждение</button><button class="secondary" id="continue-btn" style="display:none">Продолжить</button></div><div class="small-note">ИССЛЕДОВАНИЕ · ЗАГАДКА · БЕЗ БОЯ И МУЗЫКИ</div></div></div>
-<div id="pause"><div class="menu"><div class="eyebrow">СОСТОЯНИЕ: ПАУЗА</div><h2 class="title" style="font-size:clamp(48px,9vw,74px);letter-spacing:.07em">ТИШИНА</h2><p class="lead">Мир подождёт. Воспоминания останутся на своих местах.</p><div class="actions"><button class="primary" id="resume-btn">Продолжить</button><button class="secondary" id="restart-btn">Начать заново</button></div></div></div>
-<div id="ending"><div class="menu"><div class="eyebrow">ЗАПИСЬ 01 · ЗАВЕРШЕНА</div><h2 class="title" style="font-size:clamp(54px,10vw,84px);letter-spacing:.08em">ПРОБУДИСЬ</h2><p class="lead">Три воспоминания вернулись на свои места. За дверью нет ответа — только утро. Возможно, это и есть начало.</p><div class="actions"><button class="primary" id="again-btn">Пройти ещё раз</button></div><div class="small-note">КОНЕЦ ПЕРВОЙ ГЛАВЫ</div></div></div>
-<div id="error"><div class="menu"><div class="eyebrow">НЕ УДАЛОСЬ ЗАПУСТИТЬ МИР</div><h2 class="title" style="font-size:42px;letter-spacing:.04em">НЕТ 3D</h2><p class="lead" id="error-text">Проверь подключение к интернету и обнови страницу. Для сцены используется Three.js.</p></div></div>
-<script type="module">
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+  <canvas id="world" tabindex="0" aria-label="Игровой мир"></canvas>
+  <div id="engine-error" class="engine-error hidden"><div><b>Не удалось запустить 3D-сцену</b><p>Проверьте подключение к интернету, доступность CDN и поддержку WebGL в браузере.</p></div></div>
 
-const $ = (s) => document.querySelector(s);
-const canvas = $('#game');
-const startLayer = $('#start'), pauseLayer = $('#pause'), endingLayer = $('#ending');
-const subtitle = $('#subtitle'), hint = $('#hint'), hintText = $('#hint-text');
-const mobile = $('#mobile');
-let renderer, scene, camera, clock;
-let started = false, paused = false, ended = false;
-let yaw = 0, pitch = 0, velocityY = 0, grounded = true;
-let lastTime = 0, subtitleTimer = 0, saveKey = 'son-prototype-save-v1';
-const keys = Object.create(null);
-const move = {x:0,z:0};
-let running = false, nearby = null;
-const memories = [], colliders = [], animated = [], fireflies = [];
-const player = new THREE.Vector3(0, 1.7, 13);
-const worldBounds = {minX:-13,maxX:13,minZ:-43,maxZ:17};
-const raycaster = new THREE.Raycaster();
-const tempVec = new THREE.Vector3();
+  <main id="main-menu" class="screen menu-screen" aria-label="Главное меню">
+    <div class="menu-backdrop" aria-hidden="true"></div>
+    <div class="menu-shell">
+      <section class="menu-brand" aria-label="Тихий Сон">
+        <div class="brand-mark"><span></span><i></i></div>
+        <div class="eyebrow">АВТОНОМНОЕ ИССЛЕДОВАНИЕ · 01</div>
+        <h1>ТИХИЙ <span>СОН</span></h1>
+        <p class="menu-subtitle">Лес помнит то, чего ты не помнишь.</p>
+        <div class="menu-location"><span class="location-dot"></span><span>СЕВЕРНЫЙ ЛЕС</span><i>·</i><span>ОСЕНЬ</span></div>
+        <div class="menu-bottom-note">НЕПРЕРЫВНЫЙ СОН <b>—</b> БЕЗ ПРОБУЖДЕНИЯ</div>
+      </section>
+      <section class="menu-console" aria-label="Управление игрой">
+        <div class="console-head"><span>ГЛАВНОЕ МЕНЮ</span><span class="console-status"><i></i> СИСТЕМА ГОТОВА</span></div>
+        <div class="menu-actions">
+          <button class="menu-button continue-button" id="continue-game" type="button"><span class="button-glyph">↻</span><span class="button-copy"><b>Продолжить</b><small>Вернуться к последней записи</small></span><kbd>ENTER</kbd></button>
+          <button class="menu-button primary" id="new-game" type="button"><span class="button-glyph">＋</span><span class="button-copy"><b>Новая игра</b><small>Создать нового странника</small></span><kbd>01</kbd></button>
+          <button class="menu-button" id="choose-save" type="button"><span class="button-glyph">▤</span><span class="button-copy"><b>Сохранения</b><small>Загрузить или записать состояние</small></span><kbd>02</kbd></button>
+          <button class="menu-button" id="open-settings" type="button"><span class="button-glyph">⚙</span><span class="button-copy"><b>Настройки</b><small>Изображение, управление и звук</small></span><kbd>03</kbd></button>
+          <button class="menu-button muted" id="exit-game" type="button"><span class="button-glyph">⏻</span><span class="button-copy"><b>Выход</b><small>Закрыть вкладку, если разрешено</small></span><kbd>04</kbd></button>
+        </div>
+        <div class="console-foot"><span id="menu-save-meta">АВТОСОХРАНЕНИЕ ПОКА ОТСУТСТВУЕТ</span><span>↑ ↓ ВЫБОР&nbsp;&nbsp; ENTER ПОДТВЕРДИТЬ</span></div>
+      </section>
+    </div>
+    <div class="menu-version">QUIET DREAM <span>·</span> BUILD 1.5</div>
+  </main>
 
-function seededRandom(seed){let x=seed>>>0;return()=>{x=(x*1664525+1013904223)>>>0;return x/4294967296}}
-const rand = seededRandom(91731);
-function mat(color,roughness=1,metalness=0,emissive=0x000000,emissiveIntensity=0){return new THREE.MeshStandardMaterial({color,roughness,metalness,emissive,emissiveIntensity})}
-const materials={bark:mat(0x282c2a),bark2:mat(0x343a35),leaf:mat(0x182c2b),leaf2:mat(0x203a35),rock:mat(0x343d3c),stone:mat(0x515a55),ground:mat(0x18201f),path:mat(0x252b28),metal:mat(0x303c3c,.72,.45),cloth:mat(0x293637),glow: new THREE.MeshStandardMaterial({color:0x9ad9d2,emissive:0x67d5c8,emissiveIntensity:2.5,roughness:.25}),ghost:new THREE.MeshStandardMaterial({color:0x9fbab3,transparent:true,opacity:.42,emissive:0x547e79,emissiveIntensity:.5,roughness:.8})};
+  <div id="creator" class="screen hidden">
+    <div class="panel creator-panel">
+      <div class="panel-top"><span class="eyebrow">ПРОБУЖДЕНИЕ</span><button class="icon-button" id="creator-back">✕</button></div>
+      <h2>Создание персонажа</h2>
+      <div class="creator-tabs"><span class="active" id="tab-traits">01 / Черты</span><span id="tab-look">02 / Внешность</span></div>
+      <section id="traits-step">
+        <div class="creator-traits-layout">
+          <div class="creator-traits-main">
+            <div class="point-rules"><b>10 очков на создание</b><span>Положительные черты расходуют очки (−). Отрицательные дают очки (+). Стоимость профессии тоже учитывается.</span></div>
+            <div class="form-row">
+              <label>Профессия<select id="profession"></select></label>
+              <label>Осталось очков <strong id="trait-points">10 оч.</strong></label>
+            </div>
+            <div class="trait-columns"><div><h3>ПОЛОЖИТЕЛЬНЫЕ · − ОЧКИ</h3><div id="positive-traits" class="trait-list"></div></div><div><h3>ОТРИЦАТЕЛЬНЫЕ · + ОЧКИ</h3><div id="negative-traits" class="trait-list"></div></div></div>
+            <div class="trait-stats" id="trait-stats"></div>
+            <div class="form-actions"><button class="soft-button" id="random-traits">Случайный персонаж</button><button class="menu-button primary small" id="to-appearance">Далее</button></div>
+          </div>
+          <aside class="creator-preview-card"><div class="character-preview-title">ПРЕДПРОСМОТР · 3D</div><canvas id="character-preview-traits" width="300" height="330" aria-label="Вращаемый 3D-предпросмотр персонажа"></canvas><div class="character-preview-note">Внешность можно изменить на следующем шаге. Перетащи модель, чтобы повернуть.</div></aside>
+        </div>
+      </section>
+      <section id="appearance-step" class="hidden">
+        <div class="character-preview-wrap"><div class="character-preview-title">ПРЕДПРОСМОТР ПЕРСОНАЖА · 3D</div><canvas id="character-preview" width="320" height="340"></canvas><div class="character-preview-note">Модель обновляется при изменении внешности</div></div>
+        <div class="appearance-grid">
+          <label>Имя<input id="char-name" maxlength="22" value="Алексей"></label>
+          <label>Возраст <input id="char-age" type="number" min="18" max="70" value="27"></label>
+          <label>Рост, см<input id="char-height" type="number" min="150" max="205" value="178"></label>
+          <label>Вес, кг<input id="char-weight" type="number" min="45" max="125" value="76"></label>
+          <label>Телосложение<select id="char-build"><option>Обычное</option><option>Худощавое</option><option>Крепкое</option><option>Плотное</option></select></label>
+          <label>Тон кожи<select id="char-skin"><option value="#c78e68">Светлый</option><option value="#9c694e">Смуглый</option><option value="#e0b393">Очень светлый</option><option value="#704833">Тёмный</option></select></label>
+          <label>Цвет волос<select id="char-hair"><option>Тёмные</option><option>Русые</option><option>Светлые</option><option>Рыжие</option></select></label>
+          <label>Причёска<select id="char-hair-style"><option>Короткая стрижка</option><option>Средняя</option><option>Длинные волосы</option><option>Хвост</option><option>Бритая голова</option></select></label>
+          <label class="wide">Одежда<select id="char-clothes"><option>Походная куртка</option><option>Флисовая кофта</option><option>Дождевик</option><option>Рабочая одежда</option></select></label>
+          <label>Глаза<select id="char-eyes"><option>Карие</option><option>Серые</option><option>Голубые</option><option>Зелёные</option></select></label>
+          <label class="wide">Татуировки<select id="char-tattoo"><option>Нет</option><option>Левая рука</option><option>Правая рука</option><option>Обе руки</option></select></label>
+        </div>
+        <div class="appearance-random-row"><button class="soft-button" id="random-appearance" type="button">Случайная внешность</button><span>Потяни модель мышью, чтобы осмотреть со всех сторон</span></div>
+        <div class="form-actions"><button class="soft-button" id="back-traits">Назад</button><button class="menu-button primary small" id="begin-game">Войти в лес</button></div>
+      </section>
+    </div>
+  </div>
 
-function addMesh(geometry, material, x,y,z, parent=scene){const m=new THREE.Mesh(geometry,material);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m}
-function addTree(x,z,scale=1){
-  const g=new THREE.Group();g.position.set(x,0,z);g.scale.setScalar(scale);scene.add(g);
-  const trunk=addMesh(new THREE.CylinderGeometry(.17,.29,4.7,7),rand()<.5?materials.bark:materials.bark2,0,2.35,0,g);trunk.rotation.z=(rand()-.5)*.12;
-  for(let i=0;i<3;i++){const h=3.1+i*.95;const cone=addMesh(new THREE.ConeGeometry(1.15-i*.19,2.9,7),i===1?materials.leaf2:materials.leaf,0,h,0,g);cone.position.x=(rand()-.5)*.28;}
-  colliders.push({x,z,r:.48*scale});return g;
-}
-function addRock(x,z,s=1){const mesh=addMesh(new THREE.DodecahedronGeometry(s,0),materials.rock,x,s*.42,z);mesh.scale.set(1.25,.72,.95);mesh.rotation.set(rand(),rand()*3,rand());colliders.push({x,z,r:s*.8});return mesh}
-function addLantern(x,z){const group=new THREE.Group();group.position.set(x,0,z);scene.add(group);addMesh(new THREE.CylinderGeometry(.055,.08,1.8,7),materials.metal,0,.9,0,group);addMesh(new THREE.BoxGeometry(.35,.08,.35),materials.metal,0,1.85,0,group);const orb=addMesh(new THREE.SphereGeometry(.105,12,10),materials.glow,0,2.06,0,group);const light=new THREE.PointLight(0x8fd9d0,1.7,8,2);light.position.set(0,2.1,0);group.add(light);animated.push({type:'lantern',object:orb,light,phase:rand()*6});}
-function makeMemory(x,z,index){
-  const group=new THREE.Group();group.position.set(x,1.25,z);scene.add(group);
-  const outer=addMesh(new THREE.OctahedronGeometry(.36,0),materials.glow,0,0,0,group);outer.scale.set(.78,1.2,.48);
-  const inner=addMesh(new THREE.OctahedronGeometry(.16,0),mat(0xe8d9b2,.25,.1,0xe8c98b,1.8),0,0,0,group);inner.rotation.y=.7;
-  const ring=addMesh(new THREE.TorusGeometry(.58,.012,6,36),new THREE.MeshBasicMaterial({color:0x9ad9d2,transparent:true,opacity:.55}),0,0,0,group);ring.rotation.x=Math.PI/2;
-  const light=new THREE.PointLight(0x8dd8ce,1.8,7,2);group.add(light);
-  group.userData={kind:'memory',index,baseY:1.25,collected:false};
-  memories.push(group);animated.push({type:'memory',object:group,phase:rand()*6});
-}
-function makeGhost(){
-  const g=new THREE.Group();g.position.set(-1.4,0,-31);scene.add(g);
-  const body=addMesh(new THREE.CapsuleGeometry(.28,.95,5,8),materials.ghost,0,1.1,0,g);body.scale.set(.8,1.1,.7);
-  const head=addMesh(new THREE.SphereGeometry(.24,12,10),materials.ghost,0,2.0,0,g);head.scale.set(.82,1.1,.8);
-  const veil=addMesh(new THREE.ConeGeometry(.48,1.5,10,1,true),new THREE.MeshBasicMaterial({color:0x829f99,transparent:true,opacity:.13,side:THREE.DoubleSide}),0,.25,0,g);veil.rotation.x=Math.PI;
-  const eyeMat=new THREE.MeshBasicMaterial({color:0xa4e1d5});
-  addMesh(new THREE.SphereGeometry(.025,8,8),eyeMat,-.085,2.03,.205,g);addMesh(new THREE.SphereGeometry(.025,8,8),eyeMat,.085,2.03,.205,g);
-  const light=new THREE.PointLight(0x7baea4,.6,5,2);light.position.y=1.8;g.add(light);
-  g.userData={kind:'ghost'};animated.push({type:'ghost',object:g,phase:0});return g;
-}
-function makeDoor(){
-  const g=new THREE.Group();g.position.set(0,0,-41);scene.add(g);
-  const stone=materials.stone;
-  addMesh(new THREE.BoxGeometry(.55,5.4,.7),stone,-1.55,2.7,0,g);addMesh(new THREE.BoxGeometry(.55,5.4,.7),stone,1.55,2.7,0,g);addMesh(new THREE.BoxGeometry(3.65,.6,.8),stone,0,5.15,0,g);
-  const inner=new THREE.Mesh(new THREE.PlaneGeometry(2.5,4.5),new THREE.MeshBasicMaterial({color:0x90bcb2,transparent:true,opacity:.12,side:THREE.DoubleSide}));inner.position.set(0,2.3,-.04);g.add(inner);
-  const glow=new THREE.PointLight(0x8bc8bd,2.1,10,2);glow.position.set(0,2.5,-1);g.add(glow);
-  const frame=addMesh(new THREE.TorusGeometry(2.5,.025,6,60),new THREE.MeshBasicMaterial({color:0x9ad9d2,transparent:true,opacity:.25}),0,2.6,-.1,g);frame.scale.set(.8,1.12,.08);
-  g.userData={kind:'door'};return g;
-}
-function buildWorld(){
-  scene=new THREE.Scene();scene.background=new THREE.Color(0x0a1215);scene.fog=new THREE.FogExp2(0x0a1215,.022);
-  camera=new THREE.PerspectiveCamera(74,innerWidth/innerHeight,.08,180);camera.rotation.order='YXZ';camera.position.copy(player);scene.add(camera);
-  const hemi=new THREE.HemisphereLight(0x91aaa7,0x111916,1.25);scene.add(hemi);
-  const moon=new THREE.DirectionalLight(0x9ebeba,1.25);moon.position.set(-12,24,11);moon.castShadow=true;moon.shadow.mapSize.set(1024,1024);moon.shadow.camera.left=-38;moon.shadow.camera.right=38;moon.shadow.camera.top=38;moon.shadow.camera.bottom=-38;scene.add(moon);
-  const ground=addMesh(new THREE.PlaneGeometry(150,150),materials.ground,0,-.12,-13);ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;
-  const path=addMesh(new THREE.PlaneGeometry(5.4,65),materials.path,0,-.105,-13);path.rotation.x=-Math.PI/2;path.receiveShadow=true;
-  // Broken paving stones create a readable trail without turning the level into a flat corridor.
-  for(let i=0;i<42;i++){const z=14-i*1.38;const w=.5+rand()*.75;const p=addMesh(new THREE.BoxGeometry(w,.08,.65+rand()*.5),i%3===0?materials.stone:materials.rock,(rand()-.5)*3.3,-.025,z);p.rotation.y=(rand()-.5)*.22;p.rotation.x=(rand()-.5)*.04;}
-  // Dense tree line with a clear playable corridor.
-  for(let i=0;i<148;i++){
-    let x=(rand()-.5)*34,z=16-rand()*64;
-    if(Math.abs(x)<4.7 && z<16 && z>-40){x+=(x<0?-1:1)*(5.0+rand()*4)}
-    addTree(x,z,.72+rand()*.72);
-  }
-  for(let i=0;i<72;i++){let x=(rand()-.5)*32,z=14-rand()*61;if(Math.abs(x)<3.6)x+=(x<0?-1:1)*4.2;addRock(x,z,.25+rand()*.8)}
-  for(let z=9;z>-38;z-=12){addLantern(-3.5,z);addLantern(3.5,z-5)}
-  // A collapsed shelter and a half-buried bus stop give the forest a sense of history.
-  const shelter=new THREE.Group();shelter.position.set(6.7,0,-10);scene.add(shelter);
-  addMesh(new THREE.BoxGeometry(4.2,.22,2.8),materials.metal,0,2.5,0,shelter).rotation.z=.12;
-  for(const x of [-1.8,1.8])addMesh(new THREE.BoxGeometry(.16,2.5,.16),materials.bark,x,1.2,0,shelter);
-  addMesh(new THREE.BoxGeometry(3.7,.12,.12),materials.metal,0,1.3,1.2,shelter);
-  const bench=addMesh(new THREE.BoxGeometry(2.2,.22,.55),materials.bark,6.2,.55,-12);bench.rotation.y=.15;
-  addMesh(new THREE.BoxGeometry(2.4,.12,.12),materials.metal,6.2,1.0,-12);
-  makeMemory(4.8,-3,0);makeMemory(-5.6,-17,1);makeMemory(4.2,-28,2);
-  makeGhost();makeDoor();
-  // Firefly points drift gently in the peripheral forest.
-  const fGeo=new THREE.BufferGeometry(),positions=new Float32Array(90*3);
-  for(let i=0;i<90;i++){positions[i*3]=(rand()-.5)*30;positions[i*3+1]=.4+rand()*3.8;positions[i*3+2]=12-rand()*60}
-  fGeo.setAttribute('position',new THREE.BufferAttribute(positions,3));
-  const fMat=new THREE.PointsMaterial({color:0x9bd9c9,size:.055,transparent:true,opacity:.65,depthWrite:false,blending:THREE.AdditiveBlending});const points=new THREE.Points(fGeo,fMat);scene.add(points);fireflies.push(points);
-}
-function restoreProgress(){try{const d=JSON.parse(localStorage.getItem(saveKey)||'null');if(d&&Array.isArray(d.found))return d.found.slice(0,3).map(Boolean); }catch(e){}return [false,false,false]}
-let found=[false,false,false];
-function saveProgress(){try{localStorage.setItem(saveKey,JSON.stringify({found,updated:Date.now()}))}catch(e){}}
-function updateHud(){const n=found.filter(Boolean).length;$('#count').textContent=`${n} / 3`;document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('found',found[i]));$('#objective').textContent=n===3?'Вернись к светящейся двери':'Найди три фрагмента памяти';}
-function showSubtitle(text,duration=3600){subtitle.textContent=text;subtitle.classList.add('visible');clearTimeout(subtitleTimer);subtitleTimer=setTimeout(()=>subtitle.classList.remove('visible'),duration)}
-function loadFound(){found=restoreProgress();memories.forEach((m,i)=>{if(found[i]){m.visible=false;m.userData.collected=true}});updateHud()}
-function resetGame(){found=[false,false,false];memories.forEach(m=>{m.visible=true;m.userData.collected=false});player.set(0,1.7,13);yaw=0;pitch=0;camera.position.copy(player);camera.rotation.set(0,0,0);saveProgress();updateHud();ended=false;}
-function startGame(continueGame=false){if(!continueGame)resetGame();else loadFound();started=true;paused=false;ended=false;startLayer.classList.add('hidden');pauseLayer.style.display='none';endingLayer.style.display='none';document.body.classList.add('playing');if(matchMedia('(pointer:fine)').matches&&canvas.requestPointerLock){try{canvas.requestPointerLock()}catch(e){/* Browser may deny pointer lock; keyboard movement still works. */}}showSubtitle('Холодный воздух. Под ногами мокрая земля. Где-то впереди мерцает свет.',4200);clock.start();}
-function pauseGame(){if(!started||ended)return;paused=true;pauseLayer.style.display='flex';document.exitPointerLock?.()}
-function resumeGame(){paused=false;pauseLayer.style.display='none';if(matchMedia('(pointer:fine)').matches)canvas.requestPointerLock?.()}
-function finishGame(){ended=true;started=false;paused=false;document.exitPointerLock?.();document.body.classList.remove('playing');endingLayer.style.display='flex';try{localStorage.removeItem(saveKey)}catch(e){}}
-function getNearestInteractable(){let best=null,dist=99;const candidates=[...memories.filter(m=>m.visible),scene.children.find(o=>o.userData?.kind==='ghost'),scene.children.find(o=>o.userData?.kind==='door')].filter(Boolean);for(const o of candidates){const p=o.getWorldPosition(tempVec);const d=Math.hypot(p.x-player.x,p.z-player.z);if(d<dist){best=o;dist=d}}return dist<3.3?best:null}
-function interact(){if(!started||paused||ended)return;const target=nearby||getNearestInteractable();if(!target){showSubtitle('Только шелест ветвей отвечает на твой шаг.',1800);return}
-  const kind=target.userData.kind;
-  if(kind==='memory'){
-    const i=target.userData.index;if(found[i])return;found[i]=true;target.visible=false;saveProgress();updateHud();const lines=['Чужой голос: «Ты обещал вернуться до темноты».','Детский смех растворяется в шуме дождя. Ты узнаёшь это место.','На ладони остаётся тепло. Теперь ты помнишь дорогу.'];showSubtitle(lines[i],4300);
-  }else if(kind==='ghost'){
-    const n=found.filter(Boolean).length;showSubtitle(n<3?'Наблюдатель: «Ты ищешь выход, но оставил здесь части себя».':'Наблюдатель: «Теперь дверь тебя узнает. Иди к свету».',4200);
-  }else if(kind==='door'){
-    if(found.every(Boolean))finishGame();else showSubtitle(`Дверь не открывается. Не хватает воспоминаний: ${3-found.filter(Boolean).length}.`,2700);
-  }
-}
-function setHint(){nearby=getNearestInteractable();if(!nearby){hint.classList.remove('visible');return}hint.classList.add('visible');const k=nearby.userData.kind;hintText.textContent=k==='memory'?'ЗАБРАТЬ ФРАГМЕНТ ПАМЯТИ':k==='ghost'?'ПОГОВОРИТЬ С НАБЛЮДАТЕЛЕМ':found.every(Boolean)?'ПРОЙТИ ЧЕРЕЗ ДВЕРЬ':'ОСМОТРЕТЬ ДВЕРЬ';}
-function checkCollision(nx,nz){for(const c of colliders){const dx=nx-c.x,dz=nz-c.z;if(dx*dx+dz*dz<c.r*c.r)return true}return false}
-function updatePlayer(dt){const fwd=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0)-move.z;const side=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0)+move.x;
-  const len=Math.hypot(fwd,side);if(len>.01){const speed=(running||keys.ShiftLeft||keys.ShiftRight?7.0:4.0)*dt;const fx=-Math.sin(yaw),fz=-Math.cos(yaw),rx=Math.cos(yaw),rz=-Math.sin(yaw);const nx=player.x+(fx*fwd/len+rx*side/len)*speed,nz=player.z+(fz*fwd/len+rz*side/len)*speed;
-    if(!checkCollision(nx,player.z))player.x=THREE.MathUtils.clamp(nx,worldBounds.minX,worldBounds.maxX);
-    if(!checkCollision(player.x,nz))player.z=THREE.MathUtils.clamp(nz,worldBounds.minZ,worldBounds.maxZ);
-  }
-  if((keys.Space||keys.ButtonJump)&&grounded){velocityY=5.4;grounded=false}
-  velocityY-=14*dt;player.y+=velocityY*dt;if(player.y<1.7){player.y=1.7;velocityY=0;grounded=true}
-  const bob=len>.01?Math.sin(performance.now()*.012)*(running?0.055:0.027):0;camera.position.set(player.x,player.y+bob,player.z);camera.rotation.set(pitch,yaw,0,'YXZ');
-}
-function updateWorld(t,dt){for(const a of animated){if(a.type==='memory'){a.object.position.y=a.object.userData.baseY+Math.sin(t*1.35+a.phase)*.16;a.object.rotation.y=t*.45+a.phase;a.object.rotation.z=Math.sin(t*.65+a.phase)*.08}
-  else if(a.type==='lantern'){const pulse=.78+Math.sin(t*1.4+a.phase)*.16;a.light.intensity=1.55*pulse;a.object.material.emissiveIntensity=2.1*pulse}
-  else if(a.type==='ghost'){a.object.position.y=Math.sin(t*.7)*.13;a.object.rotation.y=Math.sin(t*.24)*.12}}
-  for(const p of fireflies){const a=p.geometry.attributes.position;for(let i=0;i<a.count;i++){a.array[i*3+1]+=(Math.sin(t*.8+i)*.0009);a.array[i*3]+=(Math.sin(t*.35+i*.3)*.0008)}a.needsUpdate=true}
-}
-function render(){requestAnimationFrame(render);if(!renderer)return;const dt=Math.min(clock.getDelta(),.035),now=clock.elapsedTime;if(started&&!paused&&!ended){updatePlayer(dt);updateWorld(now,dt);setHint()}renderer.render(scene,camera)}
-function resize(){if(!renderer||!camera)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.7))}
-function look(dx,dy){yaw-=dx*.0022;pitch=THREE.MathUtils.clamp(pitch-dy*.0022,-1.25,1.25)}
-function init(){try{renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;clock=new THREE.Clock();buildWorld();loadFound();if(found.some(Boolean))$('#continue-btn').style.display='inline-block';window.addEventListener('resize',resize);render();}catch(err){console.error(err);$('#error-text').textContent='Браузер не смог создать WebGL-сцену. Обнови браузер или включи аппаратное ускорение.';$('#error').style.display='flex'}}
+  <div id="save-screen" class="screen hidden"><div class="panel compact-panel"><div class="panel-top"><span class="eyebrow">ПАМЯТЬ</span><button class="icon-button" data-close="save-screen">✕</button></div><h2>Сохранения</h2><div id="save-list"></div><button class="soft-button full" data-close="save-screen">Назад</button></div></div>
+  <div id="settings-screen" class="screen hidden"><div class="panel compact-panel"><div class="panel-top"><span class="eyebrow">ПАРАМЕТРЫ</span><button class="icon-button" data-close="settings-screen">✕</button></div><h2>Настройки</h2><label class="setting-row">Чувствительность мыши <input id="sensitivity" type="range" min="0.2" max="2.5" step="0.1" value="1"></label><label class="setting-row">Поле зрения <input id="fov" type="range" min="60" max="100" step="1" value="78"></label><label class="setting-row">Качество теней <select id="shadow-quality"><option value="high">Высокое</option><option value="medium">Среднее</option><option value="off">Выкл.</option></select></label><label class="setting-row">Громкость <input id="master-volume" type="range" min="0" max="100" step="1" value="65"></label><button class="soft-button full" id="sound-toggle">Звук: включён</button>
+    <div class="control-reference"><h3>УПРАВЛЕНИЕ</h3><div class="control-reference-grid">
+      <div><span>Движение</span><kbd>WASD / ↑↓←→</kbd></div><div><span>Бег</span><kbd>SHIFT</kbd></div>
+      <div><span>Взаимодействие</span><kbd>E</kbd></div><div><span>Использовать</span><kbd>Q</kbd></div>
+      <div><span>Фонарь</span><kbd>F</kbd></div><div><span>Инвентарь</span><kbd>I</kbd></div>
+      <div><span>Карта</span><kbd>M</kbd></div><div><span>Строительство</span><kbd>B</kbd></div>
+      <div><span>Осмотр предмета</span><kbd>R</kbd></div><div><span>Смена камеры</span><kbd>V</kbd></div>
+      <div><span>Прыжок</span><kbd>SPACE</kbd></div><div><span>Пауза / назад</span><kbd>ESC</kbd></div>
+    </div></div>
+    <button class="soft-button full" data-close="settings-screen">Готово</button></div></div>
 
-// Keyboard and desktop pointer controls.
-window.addEventListener('keydown',e=>{keys[e.code]=true;if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();if(e.code==='KeyE'||e.code==='Enter')interact();if(e.code==='Escape'){if(started&&!paused)pauseGame();else if(paused)resumeGame()}});
-window.addEventListener('keyup',e=>{keys[e.code]=false});
-canvas.addEventListener('click',()=>{if(started&&!paused&&matchMedia('(pointer:fine)').matches&&document.pointerLockElement!==canvas)canvas.requestPointerLock?.()});
-document.addEventListener('mousemove',e=>{if(document.pointerLockElement===canvas&&started&&!paused)look(e.movementX,e.movementY)});
-document.addEventListener('pointerlockchange',()=>{if(started&&!paused&&document.pointerLockElement!==canvas&&matchMedia('(pointer:fine)').matches){/* pointer lock can be released by browser; movement remains available */}});
-$('#start-btn').addEventListener('click',()=>startGame(false));$('#continue-btn').addEventListener('click',()=>startGame(true));$('#resume-btn').addEventListener('click',resumeGame);$('#restart-btn').addEventListener('click',()=>{resetGame();resumeGame()});$('#again-btn').addEventListener('click',()=>{endingLayer.style.display='none';startLayer.classList.remove('hidden');document.body.classList.remove('playing');$('#continue-btn').style.display='none';});$('#interact-btn').addEventListener('click',interact);$('#run-btn').addEventListener('touchstart',e=>{e.preventDefault();running=true},{passive:false});$('#run-btn').addEventListener('touchend',()=>running=false);$('#run-btn').addEventListener('touchcancel',()=>running=false);
-// Mobile virtual joystick.
-const base=$('#stick-base'),stick=$('#stick');let stickId=null,baseRect=null;
-base.addEventListener('pointerdown',e=>{stickId=e.pointerId;baseRect=base.getBoundingClientRect();base.setPointerCapture(e.pointerId);move.x=move.z=0;moveStick(e)});
-function moveStick(e){if(stickId!==e.pointerId)return;const cx=baseRect.left+baseRect.width/2,cy=baseRect.top+baseRect.height/2;let dx=e.clientX-cx,dy=e.clientY-cy;const max=baseRect.width*.34,d=Math.hypot(dx,dy);if(d>max){dx=dx/d*max;dy=dy/d*max}stick.style.transform=`translate(${dx}px,${dy}px)`;move.x=dx/max;move.z=dy/max}
-base.addEventListener('pointermove',moveStick);function resetStick(){stickId=null;move.x=move.z=0;stick.style.transform='translate(0,0)'}base.addEventListener('pointerup',resetStick);base.addEventListener('pointercancel',resetStick);
-// Right-side touch drag controls camera view. The left side is reserved for movement.
-let lookId=null,lastTouchX=0,lastTouchY=0;canvas.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch'||e.clientX<innerWidth*.38)return;lookId=e.pointerId;lastTouchX=e.clientX;lastTouchY=e.clientY;canvas.setPointerCapture(e.pointerId)});canvas.addEventListener('pointermove',e=>{if(e.pointerId!==lookId)return;look(e.clientX-lastTouchX,e.clientY-lastTouchY);lastTouchX=e.clientX;lastTouchY=e.clientY});function endLook(e){if(e.pointerId===lookId)lookId=null}canvas.addEventListener('pointerup',endLook);canvas.addEventListener('pointercancel',endLook);
+  <div id="hud" class="hidden">
+    <div id="minimap-wrap"><canvas id="minimap" width="180" height="180"></canvas><div class="map-caption">ЛЕС · <span id="compass">N</span></div><button id="hide-minimap" title="Скрыть карту" aria-label="Скрыть мини-карту">−</button></div>
+    <button id="show-minimap" class="hud-button map-restore hidden" type="button" aria-label="Показать мини-карту">◎ Карта</button>
+    <div id="status-effects"></div>
+    <div id="environment-panel">
+      <div class="environment-top"><b id="weather-label">ЯСНО</b><span id="clock-label">08:00</span></div>
+      <div class="environment-mid"><span id="temperature-label">14°C</span><span id="wetness-label">Сухо</span></div>
+      <div class="stamina-line"><span>ВЫНОСЛИВОСТЬ</span><div><i id="stamina-fill"></i></div></div>
+    </div>
+    <div id="nightmare-card" class="hidden"><div class="nightmare-title"><span>КОШМАР</span><b id="nightmare-name"></b><em id="nightmare-time">0с</em></div><div id="nightmare-guide"></div><div class="nightmare-track"><i id="nightmare-progress"></i></div></div>
+    <div id="health-panel">
+      <div class="heart-wrap"><div id="heart">♥</div><svg id="ecg" viewBox="0 0 150 34" preserveAspectRatio="none"><polyline points="0,18 23,18 31,18 37,8 44,28 51,3 59,18 82,18 90,18 96,8 103,28 110,3 118,18 150,18" /></svg></div>
+      <div class="health-numbers"><strong id="hp-value">100</strong><span>HP</span><em id="bpm">68 BPM</em></div>
+      <div class="needs"><span>ГОЛОД</span><div><i id="hunger-fill"></i></div><span>ЖАЖДА</span><div><i id="thirst-fill"></i></div></div>
+    </div>
+    <div id="quickbar"><div class="hand-slot" id="left-hand"><small>ЛЕВАЯ</small><span>—</span></div><div class="quick-slot active" data-slot="0"><b>1</b><span>—</span></div><div class="quick-slot" data-slot="1"><b>2</b><span>—</span></div><div class="quick-slot" data-slot="2"><b>3</b><span>—</span></div><div class="hand-slot" id="right-hand"><small>ПРАВАЯ</small><span>—</span></div></div>
+    <button id="inventory-toggle" class="hud-button"><span>▦</span> Инвентарь <kbd>I</kbd></button>
+    <div id="interaction-prompt"></div>
+    <div id="crosshair">⌖</div>
+    <div id="held-model"></div>
+    <div id="inspect-label"></div>
+    <div id="toast"></div>
+    <div id="nightmare-overlay"></div>
+    <div id="damage-overlay"></div>
+    <div id="cold-overlay"></div>
+    <div id="control-hint">WASD / стрелки — движение · Shift — бег · Мышь — обзор · E — действие · Q — использовать · F — фонарь · R — осмотр · I — инвентарь · B — стройка · M — карта · V — камера · Esc — пауза</div>
+  </div>
 
-init();
-</script>
+  <div id="inventory-panel" class="overlay-panel hidden">
+    <div class="panel large-panel"><div class="panel-top"><span class="eyebrow">РЮКЗАК</span><button class="icon-button" data-close="inventory-panel">✕</button></div><div class="inventory-head"><h2>Инвентарь</h2><span id="capacity-label">20 слотов</span></div>
+    <div class="inventory-toolbar">
+      <label class="inventory-search"><span>⌕</span><input id="inventory-search" type="search" placeholder="Найти предмет…" autocomplete="off" aria-label="Поиск предметов"></label>
+      <select id="inventory-category" aria-label="Категория предметов"><option value="all">Все категории</option><option value="food">Еда</option><option value="drink">Напитки</option><option value="medical">Медицина</option><option value="tool">Снаряжение</option><option value="resource">Ресурсы</option><option value="collectible">Прочее</option></select>
+      <select id="inventory-sort" aria-label="Сортировка предметов"><option value="default">По порядку</option><option value="name">По названию</option><option value="freshness">Сначала свежее</option></select>
+      <span id="inventory-filter-meta">Показаны все предметы</span>
+    </div>
+    <div id="inventory-grid" class="inventory-grid"></div><div class="inventory-bottom"><div class="craft-box"><h3>Быстрый крафт</h3><div id="craft-recipes" class="craft-recipes"></div></div><div class="item-details" id="item-details"><span class="empty-detail">Выберите предмет</span></div></div></div>
+  </div>
+  <div id="map-panel" class="overlay-panel hidden"><div class="panel map-panel"><div class="panel-top"><span class="eyebrow">ОРИЕНТИРОВАНИЕ</span><button class="icon-button" data-close="map-panel">✕</button></div><h2>Карта местности</h2><canvas id="full-map" width="700" height="700"></canvas><div class="map-legend"><span><i class="legend-player"></i> Вы</span><span><i class="legend-marker"></i> Ваша метка</span><span><i class="legend-landmark"></i> Ориентир</span></div><div class="map-footer"><span>Нажмите на карту, чтобы поставить метку</span><button id="clear-markers" class="soft-button">Очистить метки</button></div></div></div>
+  <div id="build-panel" class="overlay-panel hidden"><div class="panel build-panel"><div class="panel-top"><span class="eyebrow">МАСТЕРСКАЯ</span><button class="icon-button" data-close="build-panel">✕</button></div><h2>Строительство</h2><div id="build-options" class="build-options"></div><div class="build-footer">Выберите объект, затем установите его левой кнопкой мыши</div></div></div>
+  <div id="camp-panel" class="overlay-panel hidden"><div class="panel camp-panel"><div class="panel-top"><span class="eyebrow" id="camp-eyebrow">ЛАГЕРЬ</span><button class="icon-button" data-close="camp-panel">✕</button></div><h2 id="camp-title">Лагерь</h2><p id="camp-description" class="camp-description"></p><div id="camp-actions" class="camp-actions"></div><div id="camp-storage" class="camp-storage hidden"><div class="camp-column"><h3>Рюкзак</h3><div id="camp-inventory"></div></div><div class="camp-column"><h3>Хранилище</h3><div id="camp-stored-items"></div></div></div></div></div>
+  <div id="pause-screen" class="screen hidden"><div class="panel compact-panel pause-panel"><div class="eyebrow">СЕАНС ПРИОСТАНОВЛЕН</div><h2>Лес не спит</h2><p class="pause-caption">Время остановлено. Мир ждёт.</p><button class="menu-button primary" id="resume-game">Продолжить</button><button class="menu-button" id="quick-save">Сохранить</button><button class="menu-button" id="pause-settings">Настройки</button><button class="menu-button muted" id="to-main-menu">В главное меню</button></div></div>
+
+  <script src="src/data/character-data.js"></script>
+  <script src="src/ui/item-icons.js"></script>
+  <script src="src/boot.js"></script>
+  <script type="module" src="src/engine/Local3D.js"></script>
+  <script type="module" src="src/main.js" onerror="window.QD_BOOT?.showFallback('Не удалось загрузить Three.js с CDN. Включён автономный игровой режим.')"></script>
 </body>
 </html>

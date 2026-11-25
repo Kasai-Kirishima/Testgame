@@ -4,6 +4,7 @@ import { createInputController } from '../src/core/InputController.js';
 import { createMenuController } from '../src/ui/MenuController.js';
 import { SaveRepository } from '../src/data/SaveRepository.js';
 import { filterInventory } from '../src/data/InventoryQuery.js';
+import { MeshBuilder } from '../src/engine/MeshBuilder.js';
 import { ITEMS, PROFESSIONS, TRAITS, RECIPES, BUILDINGS, NIGHTMARES } from '../src/data/catalog.js';
 
 function makeEvent(code, target = null) {
@@ -204,4 +205,115 @@ test('startup fallback is loaded before the optional Three.js module', async () 
   assert.match(boot, /function startFallback\(/);
   assert.match(boot, /KeyW/);
   assert.match(boot, /qd-fallback-save/);
+});
+
+test('character creator spends positive-trait points and refunds negative-trait points', () => {
+  assert.equal(PROFESSIONS.length, 23);
+  assert.equal(TRAITS.length, 28);
+  assert.equal(globalThis.QDCharacterData.STAT_LABELS.length, 12);
+  assert.ok(TRAITS.filter(t => t.side === 'positive').every(t => t.cost > 0));
+  assert.ok(TRAITS.filter(t => t.side === 'negative').every(t => t.cost < 0));
+  const profession = PROFESSIONS.find(p => p.name === 'Безработный');
+  const good = TRAITS.find(t => t.name === 'Выносливый');
+  const bad = TRAITS.find(t => t.name === 'Одышка');
+  const rules = globalThis.QDCharacterData;
+  assert.equal(rules.calculatePoints(profession, []), 10);
+  assert.equal(rules.calculatePoints(profession, [good.name]), 7, 'positive trait must deduct its cost');
+  assert.equal(rules.calculatePoints(profession, [bad.name]), 13, 'negative trait must grant its points');
+  assert.equal(rules.calculatePoints(profession, [good.name, bad.name]), 10, 'balanced good and bad traits offset each other');
+  const stats = rules.calculateStats(profession, [good.name, bad.name]);
+  assert.equal(stats.Выносливость, 0, 'trait bonuses must also be combined through the shared rule');
+});
+
+test('local fallback is a real perspective WebGL renderer, not the removed flat canvas projection', async () => {
+  const fs = await import('node:fs');
+  const local3d = fs.readFileSync(new URL('../src/engine/Local3D.js', import.meta.url), 'utf8');
+  const boot = fs.readFileSync(new URL('../src/boot.js', import.meta.url), 'utf8');
+  assert.match(local3d, /getContext\('webgl'/);
+  assert.match(local3d, /gl\.enable\(gl\.DEPTH_TEST\)/);
+  assert.match(local3d, /perspective\(70\*PI\/180/);
+  assert.match(local3d, /buildTerrain\(b\)/);
+  assert.match(local3d, /buildForest\(b,game\.trees/);
+  assert.match(local3d, /function addChar\(/);
+  assert.match(local3d, /quadReverse/);
+  assert.doesNotMatch(local3d, /loseContext/);
+  assert.doesNotMatch(boot, /function drawTree\(/);
+  assert.doesNotMatch(boot, /function project\(/);
+  assert.match(boot, /QDLocal3D\.createWorld\(canvas\)/);
+});
+
+
+test('3D mesh winding produces outward normals for terrain, spheres and box props', () => {
+  const ground = new MeshBuilder();
+  ground.quadReverse([0,0,0],[1,0,0],[1,0,1],[0,0,1],'#777777');
+  const gd = ground.arrays();
+  assert.ok(gd.n[1] > 0.99, 'terrain top faces must point upward');
+
+  const sphere = new MeshBuilder();
+  sphere.sphere(0,0,0,1,1,1,'#ffffff',12,8);
+  const sd = sphere.arrays();
+  let checked = 0;
+  for (let i=0;i<sd.p.length;i+=3) {
+    const dot=sd.p[i]*sd.n[i]+sd.p[i+1]*sd.n[i+1]+sd.p[i+2]*sd.n[i+2];
+    assert.ok(dot > -0.001, 'ellipsoid face normal must not point inward');
+    if (dot > 0.05) checked++;
+  }
+  assert.ok(checked > 100, 'ellipsoid needs a meaningful set of outward-facing surfaces');
+
+  const box = new MeshBuilder();
+  box.box(0,0,0,2,2,2,'#ffffff');
+  const bd=box.arrays();
+  for(let i=0;i<bd.p.length;i+=3){
+    const dot=bd.p[i]*bd.n[i]+bd.p[i+1]*bd.n[i+1]+bd.p[i+2]*bd.n[i+2];
+    assert.ok(dot > 0.99, 'box face normals must face away from the center');
+  }
+});
+
+test('3D previews initialize in the main engine and redraw after creator becomes visible', async () => {
+  const fs = await import('node:fs');
+  const runtime = fs.readFileSync(new URL('../src/engine/GameRuntime.js', import.meta.url), 'utf8');
+  const boot = fs.readFileSync(new URL('../src/boot.js', import.meta.url), 'utf8');
+  assert.match(runtime, /populateCreator\(\);advInitPreview\(\);/);
+  assert.match(runtime, /early&&window\.QDLocal3D\?\.renderCharacter\)window\.QDLocal3D\.renderCharacter\(early,profile,advEarlyPreviewAngle\)/);
+  const showCreator = boot.indexOf("showScreen('#creator');requestAnimationFrame(updateCharacterPreview)");
+  assert.ok(showCreator > 0, 'fallback preview is redrawn only after the creator canvas is visible');
+});
+
+test('actual generated world and player mesh contain finite 3D vertices', async () => {
+  globalThis.window = { dispatchEvent() {} };
+  await import('../src/engine/Local3D.js');
+  const trees = Array.from({ length: 6 }, (_, i) => ({
+    x: (i - 3) * 4, z: 8 + i * 4, height: .9 + i * .08, shade: i % 5, w: .9
+  }));
+  const world = globalThis.window.QDLocal3D.createDebugGeometry({ trees });
+  const profile = { height: 178, weight: 76, build: 'Обычное', skin: '#c78e68', hair: 'Русые', hairStyle: 'Средняя', eyes: 'Карие', clothes: 'Походная куртка' };
+  const player = globalThis.window.QDLocal3D.createDebugCharacter(profile, .1);
+  for (const mesh of [world, player]) {
+    assert.ok(mesh.count > 1000, 'generated mesh has a real triangle buffer');
+    for (const key of ['p','n','c']) assert.ok(mesh[key].every(Number.isFinite), `${key} vertex data must not contain NaN or Infinity`);
+  }
+  const ys = [];
+  for (let i = 1; i < player.p.length; i += 3) ys.push(player.p[i]);
+  const top = Math.max(...ys);
+  assert.ok(top > 1.7 && top < 2.0, '178 cm character model should be represented near realistic scale');
+});
+
+
+test('forest canopy is generated as an irregular triangulated 3D volume', async () => {
+  const fs = await import('node:fs');
+  const local3d = fs.readFileSync(new URL('../src/engine/Local3D.js', import.meta.url), 'utf8');
+  assert.match(local3d, /function leafCanopy\(/);
+  assert.match(local3d, /leafCanopy\(b,x,crownY,z/);
+  const mesh = globalThis.window.QDLocal3D.createDebugGeometry({ trees: [{ x: 0, z: 6, height: 1, w: 1, shade: 3 }] });
+  assert.ok(mesh.count > 50000, 'terrain, trunks, branches and foliage must form a real mesh');
+  for (const key of ['p','n','c']) assert.ok(mesh[key].every(Number.isFinite), `${key} canopy buffers must stay finite`);
+});
+
+test('fallback saves preserve world loot and first-person equipment state', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const source = await readFile(new URL('../src/boot.js', import.meta.url), 'utf8');
+  assert.match(source, /version:2,profile,game:/);
+  assert.match(source, /loot:game\.loot\.map/);
+  assert.match(source, /thirdPerson:!!game\.thirdPerson,flash:!!game\.flash/);
+  assert.match(source, /game\.keys=\{\};game\.panel=null/);
 });

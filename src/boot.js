@@ -6,23 +6,7 @@
   const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const storageGet = key => { try { return window.localStorage?.getItem(key) ?? null; } catch { return null; } };
   const storageSet = (key, value) => { try { window.localStorage?.setItem(key, value); return true; } catch { return false; } };
-  const professions = [
-    {name:'Лесник',cost:0,desc:'Лучше ориентируется и собирает ресурсы.'},
-    {name:'Медик',cost:2,desc:'Больше пользы от лечебных предметов.'},
-    {name:'Механик',cost:1,desc:'Увереннее работает с инструментами.'},
-    {name:'Путник',cost:-1,desc:'Выносливость выше, стартовых очков меньше.'},
-    {name:'Ботаник',cost:0,desc:'Лучше распознаёт растения и пищу.'}
-  ];
-  const traits = [
-    {name:'Крепкое здоровье',cost:3,side:'positive',stat:'Восстановление +'},
-    {name:'Выносливый',cost:2,side:'positive',stat:'Выносливость +'},
-    {name:'Наблюдательный',cost:2,side:'positive',stat:'Восприятие +'},
-    {name:'Тёплая кровь',cost:2,side:'positive',stat:'Холодостойкость +'},
-    {name:'Бессонница',cost:-2,side:'negative',stat:'Кошмары чаще'},
-    {name:'Слабый желудок',cost:-2,side:'negative',stat:'Еда чаще портит самочувствие'},
-    {name:'Тревожный',cost:-2,side:'negative',stat:'Страх растёт быстрее'},
-    {name:'Хрупкий',cost:-3,side:'negative',stat:'Меньше здоровья'}
-  ];
+  const {PROFESSIONS:professions, TRAITS:traits, BASE_POINTS} = window.QDCharacterData;
   let fallbackAvailable = false;
   let fallbackActive = false;
   let creatorPopulated = false;
@@ -34,7 +18,7 @@
   let lastFrame = 0;
   let toastTimer = 0;
   let dpr = 1;
-  let canvas, ctx;
+  let canvas, fallbackRenderer = null;
 
   function toast(message) {
     const node = $('#qd-fallback-toast');
@@ -49,7 +33,7 @@
   function populateCreator() {
     if (creatorPopulated) { updateTraits(); return; }
     creatorPopulated = true;
-    $('#profession').innerHTML = professions.map((p,i)=>`<option value="${i}">${p.name} · ${p.cost >= 0 ? '−' : '+'}${Math.abs(p.cost)} оч.</option>`).join('');
+    $('#profession').innerHTML = professions.map((p,i)=>`<option value="${i}">${esc(p.name)} · ${p.cost>0?'−'+p.cost:p.cost<0?'+'+Math.abs(p.cost):'0'} оч.</option>`).join('');
     $('#positive-traits').innerHTML = traits.filter(t=>t.side==='positive').map(traitHTML).join('');
     $('#negative-traits').innerHTML = traits.filter(t=>t.side==='negative').map(traitHTML).join('');
     $$('.trait-option').forEach(el => {
@@ -61,31 +45,47 @@
       });
     });
     $('#profession').addEventListener('change', updateTraits);
-    updateTraits();
+    $('#random-appearance')?.addEventListener('click', randomAppearance);
+    ['#char-name','#char-age','#char-height','#char-weight','#char-build','#char-skin','#char-hair','#char-hair-style','#char-clothes','#char-eyes','#char-tattoo'].forEach(id=>{const e=$(id);e?.addEventListener('input',updateCharacterPreview);e?.addEventListener('change',updateCharacterPreview);});
+    for(const preview of [$('#character-preview-traits'),$('#character-preview')].filter(Boolean)){let lastX=0;preview.addEventListener('pointerdown',e=>{lastX=e.clientX;preview.setPointerCapture(e.pointerId);});preview.addEventListener('pointermove',e=>{if(e.buttons){previewAngle+=(e.clientX-lastX)*.012;lastX=e.clientX;updateCharacterPreview();}});}
+    updateTraits(); updateCharacterPreview();
   }
-  function traitHTML(t) { return `<button type="button" class="trait-option" data-name="${esc(t.name)}"><span>${esc(t.name)}<br><small>${esc(t.stat)}</small></span><small>${t.cost>0?'+':''}${t.cost}</small></button>`; }
+  function traitHTML(t) { return `<button type="button" class="trait-option" data-name="${esc(t.name)}"><span>${esc(t.name)}<br><small>${esc(t.stat)}</small></span><small>${t.cost>0?'−':'+'}${Math.abs(t.cost)}</small></button>`; }
   function updateTraits() {
     const profession = professions[Number($('#profession').value)||0];
-    points = 8 - profession.cost + [...traitsSelected].reduce((sum,n)=>sum+(traits.find(t=>t.name===n)?.cost||0),0);
+    points = window.QDCharacterData.calculatePoints(profession,[...traitsSelected]);
     $('#trait-points').textContent = `${points} оч.`;
     $('#trait-points').style.color = points < 0 ? '#cf6a5d' : '#c6a66b';
     $('#to-appearance').disabled = points < 0;
-    $('#trait-stats').innerHTML = `<span>${esc(profession.desc)}</span>` + [...traitsSelected].map(n=>`<span>${esc(n)}</span>`).join('');
+    const stats=window.QDCharacterData.calculateStats(profession,[...traitsSelected]); const statHtml=window.QDCharacterData.STAT_LABELS.map(k=>`<span>${esc(k)} <b>${stats[k]>=0?'+':''}${stats[k]||0}</b></span>`).join(''); $('#trait-stats').innerHTML = `<span class="profession-description">${esc(profession.desc)}</span>${statHtml}`; updateCharacterPreview();
   }
   function randomCharacter() {
+    const pick = (arr) => arr[Math.floor(Math.random()*arr.length)];
+    $('#char-name').value=pick(['Алексей','Иван','Дмитрий','Сергей','Артём','Максим','Никита','Михаил','Андрей','Евгений','Павел','Кирилл','Денис','Антон','Руслан']);
     $('#profession').value = String(Math.floor(Math.random()*professions.length));
     traitsSelected = new Set();
-    $$('.trait-option').forEach(el=>el.classList.remove('selected'));
-    const pool = [...traits].sort(()=>Math.random()-.5);
-    for (const trait of pool) {
-      traitsSelected.add(trait.name);
-      if (8-professions[Number($('#profession').value)].cost+[...traitsSelected].reduce((s,n)=>s+traits.find(t=>t.name===n).cost,0)>=0 && traitsSelected.size>=3) break;
-    }
+    const candidates=[...traits].sort(()=>Math.random()-.5);
+    const profession=professions[Number($('#profession').value)||0];
+    const positive=candidates.filter(t=>t.side==='positive'), negative=candidates.filter(t=>t.side==='negative');
+    const order=[...positive.slice(0,2),...negative.slice(0,3),...candidates];
+    for(const t of order){if(traitsSelected.size>=5)break;if(traitsSelected.has(t.name))continue;const spent=[...traitsSelected].reduce((sum,n)=>sum+(traits.find(x=>x.name===n)?.cost||0),0)+t.cost;if(BASE_POINTS-profession.cost-spent>=0)traitsSelected.add(t.name);}
     $$('.trait-option').forEach(el=>el.classList.toggle('selected',traitsSelected.has(el.dataset.name)));
     ['#char-build','#char-skin','#char-hair','#char-hair-style','#char-clothes','#char-eyes','#char-tattoo'].forEach(id=>{const e=$(id);if(e&&e.options.length)e.selectedIndex=Math.floor(Math.random()*e.options.length);});
     $('#char-age').value=20+Math.floor(Math.random()*35);$('#char-height').value=160+Math.floor(Math.random()*39);$('#char-weight').value=52+Math.floor(Math.random()*57);
-    updateTraits();
+    updateTraits(); updateCharacterPreview();
+    toast('Случайный персонаж создан');
   }
+  function randomAppearance(){
+    ['#char-build','#char-skin','#char-hair','#char-hair-style','#char-clothes','#char-eyes','#char-tattoo'].forEach(id=>{const e=$(id);if(e&&e.options.length)e.selectedIndex=Math.floor(Math.random()*e.options.length);});
+    $('#char-age').value=20+Math.floor(Math.random()*35);$('#char-height').value=160+Math.floor(Math.random()*39);$('#char-weight').value=52+Math.floor(Math.random()*57);
+    updateCharacterPreview();
+  }
+  function currentProfile(){
+    const profession=professions[Number($('#profession').value)||0],stats=window.QDCharacterData.calculateStats(profession,[...traitsSelected]);
+    return {name:$('#char-name').value.trim()||'Странник',profession:profession.name,traits:[...traitsSelected],stats,age:Math.max(18,Math.min(70,Number($('#char-age').value)||27)),height:Math.max(150,Math.min(205,Number($('#char-height').value)||178)),weight:Math.max(45,Math.min(125,Number($('#char-weight').value)||76)),build:$('#char-build').value,skin:$('#char-skin').value,hair:$('#char-hair').value,hairStyle:$('#char-hair-style').value,clothes:$('#char-clothes').value,eyes:$('#char-eyes').value,tattoo:$('#char-tattoo').value};
+  }
+  let previewAngle=0;
+  function updateCharacterPreview(){if(!window.QDLocal3D?.renderCharacter)return;const p=currentProfile();for(const id of ['#character-preview-traits','#character-preview']){const c=$(id);if(c&&c.getClientRects().length)window.QDLocal3D.renderCharacter(c,p,previewAngle);}}
 
   function ensureFallbackDOM() {
     if ($('#qd-fallback-game')) return;
@@ -97,25 +97,22 @@
       <div class="qdf-top"><div><b>ТИХИЙ СОН</b><small id="qdf-weather">ОСЕННИЙ ЛЕС · РЕЗЕРВНЫЙ РЕЖИМ</small></div><div class="qdf-coords" id="qdf-coords">X 0 · Z 0</div></div>
       <div class="qdf-status"><div><span>ЗДОРОВЬЕ</span><b id="qdf-hp">100</b><i><em id="qdf-hpbar"></em></i></div><div><span>ГОЛОД</span><b id="qdf-hunger">100</b><i><em id="qdf-hungerbar"></em></i></div><div><span>ЖАЖДА</span><b id="qdf-thirst">100</b><i><em id="qdf-thirstbar"></em></i></div></div>
       <div class="qdf-bottom"><div class="qdf-hand">ЛЕВАЯ<br><b id="qdf-left">ФОНАРЬ</b></div><div class="qdf-slots" id="qdf-slots"></div><div class="qdf-hand">ПРАВАЯ<br><b id="qdf-right">ПУСТО</b></div></div>
-      <div class="qdf-prompt" id="qdf-prompt"></div><div class="qdf-hint">WASD — движение · ← → — поворот · E — подобрать · Q — использовать · F — фонарь · I — инвентарь · M — карта · Esc — пауза</div>
+      <div class="qdf-prompt" id="qdf-prompt"></div><div class="qdf-hint">WASD — движение · мышь — обзор · E — подобрать · Q — использовать · F — фонарь · V — камера · I — инвентарь · M — карта · Esc — пауза</div>
       <div id="qdf-panel" class="qdf-panel hidden"></div>
       <div id="qd-fallback-toast" class="qd-fallback-toast"></div>
       <div id="qdf-crosshair">+</div>
     `;
     document.body.appendChild(wrap);
     canvas = $('#qd-fallback-world');
-    ctx = canvas.getContext('2d');
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
-    $('#qd-fallback-world').addEventListener('click', () => { if (fallbackActive && game?.panel === null) toast('Используй WASD для движения'); });
+    $('#qd-fallback-world').addEventListener('click', () => { if (fallbackActive && game?.panel === null) { try { canvas.requestPointerLock?.(); } catch {} } });
+    document.addEventListener('mousemove', e=>{if(fallbackActive&&game&&document.pointerLockElement===canvas){game.yaw+=e.movementX*.0022;game.pitch=Math.max(-.85,Math.min(.85,(game.pitch||0)-e.movementY*.0022));}});
   }
   function resizeCanvas() {
-    if (!canvas || !ctx) return;
-    dpr = Math.min(window.devicePixelRatio||1, 1.6);
-    const w = innerWidth, h = innerHeight;
-    canvas.width = Math.round(w*dpr); canvas.height = Math.round(h*dpr);
-    canvas.style.width = `${w}px`; canvas.style.height = `${h}px`;
-    ctx.setTransform(dpr,0,0,dpr,0,0);
+    if (!canvas) return;
+    canvas.style.width = `${innerWidth}px`; canvas.style.height = `${innerHeight}px`;
+    if (fallbackRenderer) fallbackRenderer.resize?.();
   }
   function itemIcon(name, info = {}) {
     const kit = window.QDItemIcons;
@@ -139,29 +136,25 @@
     let seed=982451653;
     const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
     for(let i=0;i<210;i++) {
-      const a=random()*Math.PI*2, r=7+random()*65;
+      const a=random()*Math.PI*2, r=13+random()*52;
       trees.push({x:Math.cos(a)*r,z:Math.sin(a)*r,height:0.8+random()*.8,shade:Math.floor(random()*4),w:.7+random()*.55});
     }
     const lootNames=['Бутылка воды','Хлеб','Бинт','Компас','Динамо-фонарь','Яблоко','Консервы','Доска','Сухие дрова','Термос','Аптечка','Блокнот','Картофель','Морковь'];
     const loot=[];
-    for(let i=0;i<34;i++){const a=random()*Math.PI*2,r=7+random()*48;loot.push({x:Math.cos(a)*r,z:Math.sin(a)*r,name:lootNames[Math.floor(random()*lootNames.length)],taken:false,phase:random()*6.28});}
-    return {x:0,z:0,yaw:0,hp:100,hunger:100,thirst:100,stamina:100,flash:false,run:false,keys:{},items:[{name:'Бутылка воды',count:2},{name:'Хлеб',count:2},{name:'Бинт',count:1},{name:'Динамо-фонарь',count:1},{name:'Компас',count:1},{name:'Доска',count:3},{name:'Сухие дрова',count:2}],quick:['Динамо-фонарь','Бинт','Хлеб'],selected:0,trees,loot,markers:[],panel:null,clock:0,profile,toast:'Ты проснулся в лесу',lastSave:0};
+    const bonusLoot=Math.max(0,Math.min(12,Math.round(((profile?.stats?.Поиск||0)+(profile?.stats?.Удача||0))*.6)));for(let i=0;i<34+bonusLoot;i++){const a=random()*Math.PI*2,r=7+random()*48;loot.push({x:Math.cos(a)*r,z:Math.sin(a)*r,name:lootNames[Math.floor(random()*lootNames.length)],taken:false,phase:random()*6.28});}
+    return {x:0,z:0,yaw:0,pitch:0,thirdPerson:false,hp:100,hunger:100,thirst:100,stamina:100,flash:false,run:false,keys:{},items:[{name:'Бутылка воды',count:2},{name:'Хлеб',count:2},{name:'Бинт',count:1},{name:'Динамо-фонарь',count:1},{name:'Компас',count:1},{name:'Доска',count:3},{name:'Сухие дрова',count:2}],quick:['Динамо-фонарь','Бинт','Хлеб'],selected:0,trees,loot,markers:[],panel:null,clock:0,profile,toast:'Ты проснулся в лесу',lastSave:0};
   }
   function startFallback() {
     if (!fallbackAvailable) showFallback();
     fallbackActive = true;
     window.__QD_FALLBACK_ACTIVE = true;
-    profile = {
-      name:$('#char-name').value.trim()||'Странник', profession:professions[Number($('#profession').value)||0].name,
-      traits:[...traitsSelected], age:Math.max(18,Math.min(70,Number($('#char-age').value)||27)), height:Math.max(150,Math.min(205,Number($('#char-height').value)||178)),
-      weight:Math.max(45,Math.min(125,Number($('#char-weight').value)||76)), build:$('#char-build').value, skin:$('#char-skin').value, hair:$('#char-hair').value,
-      clothes:$('#char-clothes').value, eyes:$('#char-eyes').value, tattoo:$('#char-tattoo').value
-    };
+    profile = currentProfile();
     game=makeWorld();
+    if(fallbackRenderer){fallbackRenderer.dispose?.();fallbackRenderer=null;}
     hideScreens();
     $('#hud')?.classList.add('hidden');
     $('#qd-fallback-game').classList.remove('hidden');
-    $('#qdf-weather').textContent=`${profile.name.toUpperCase()} · СОН НЕ ЗАКАНЧИВАЕТСЯ`;
+    $('#qdf-weather').textContent=`${profile.name.toUpperCase()} · ${profile.profession.toUpperCase()}`;
     renderSlots(); renderHud();
     game.toast='Ты проснулся в лесу';
     startLoop();
@@ -187,19 +180,19 @@
     const item=game.items.find(x=>x.name===name);if(!item)return;
     const n=name.toLowerCase();
     if(/вода|сок|термос/.test(n)){game.thirst=Math.min(100,game.thirst+32);toast('Жажда утолена');}
-    else if(/хлеб|яблок|картоф|морков|консерв/.test(n)){game.hunger=Math.min(100,game.hunger+28);toast('Ты немного поел');}
-    else if(/бинт|аптеч/.test(n)){game.hp=Math.min(100,game.hp+24);toast('Самочувствие улучшилось');}
+    else if(/хлеб|яблок|картоф|морков|консерв/.test(n)){const cook=game.profile?.stats?.Кулинария||0;game.hunger=Math.min(100,game.hunger+28*(1+Math.max(-.18,Math.min(.22,cook*.025))));toast('Ты немного поел');}
+    else if(/бинт|аптеч/.test(n)){const medical=game.profile?.stats?.Медицина||0;game.hp=Math.min(100,game.hp+24*(1+Math.max(-.2,Math.min(.28,medical*.035))));toast('Самочувствие улучшилось');}
     else if(/фонар/.test(n)){game.flash=!game.flash;toast(game.flash?'Фонарь включён':'Фонарь выключен');renderSlots();return;}
     else {toast('Пока нельзя использовать этот предмет');return;}
     item.count--;if(item.count<=0)game.items=game.items.filter(x=>x!==item);renderHud();renderInventory();
   }
   function saveFallback() {
     if(!game)return;
-    const data={version:1,profile,game:{x:game.x,z:game.z,yaw:game.yaw,hp:game.hp,hunger:game.hunger,thirst:game.thirst,stamina:game.stamina,items:game.items,quick:game.quick,selected:game.selected,clock:game.clock,markers:game.markers}};
+    const data={version:2,profile,game:{x:game.x,z:game.z,yaw:game.yaw,pitch:game.pitch||0,thirdPerson:!!game.thirdPerson,flash:!!game.flash,hp:game.hp,hunger:game.hunger,thirst:game.thirst,stamina:game.stamina,items:game.items,quick:game.quick,selected:game.selected,clock:game.clock,markers:game.markers,loot:game.loot.map(item=>({x:item.x,z:item.z,name:item.name,taken:!!item.taken,phase:item.phase||0}))}};
     if(storageSet('qd-fallback-save',JSON.stringify(data))){game.lastSave=game.clock;toast('Игра сохранена в этом браузере');}else toast('Хранилище браузера недоступно');
   }
   function loadFallback() {
-    try{const data=JSON.parse(storageGet('qd-fallback-save')||'null');if(!data?.game)return false;profile=data.profile||{name:'Странник'};game=makeWorld();Object.assign(game,data.game);return true;}catch{return false;}
+    try{const data=JSON.parse(storageGet('qd-fallback-save')||'null');if(!data?.game)return false;profile=data.profile||{name:'Странник'};game=makeWorld();const saved=data.game;Object.assign(game,saved);if(Array.isArray(saved.loot)){const byKey=new Map(saved.loot.map(item=>[`${item.name}|${Math.round(item.x*100)}|${Math.round(item.z*100)}`,item]));for(const item of game.loot){const match=byKey.get(`${item.name}|${Math.round(item.x*100)}|${Math.round(item.z*100)}`);if(match)item.taken=!!match.taken;}if(saved.loot.length===game.loot.length)game.loot=saved.loot.map(item=>({...item}));}game.keys={};game.panel=null;if(fallbackRenderer){fallbackRenderer.dispose?.();fallbackRenderer=null;}return true;}catch{return false;}
   }
   function renderInventory() {
     if(!game)return;
@@ -229,7 +222,7 @@
     $('[data-fresume]').onclick=closePanel;$('[data-fsave]').onclick=saveFallback;$('[data-fmenu]').onclick=()=>{saveFallback();game=null;fallbackActive=false;window.__QD_FALLBACK_ACTIVE=false;$('#qd-fallback-game').classList.add('hidden');showScreen('#main-menu');};
   }
   function closePanel(){if(!game)return;game.panel=null;$('#qdf-panel').classList.add('hidden');}
-  function nearestLoot() {let best=null,dist=999;for(const o of game.loot){if(o.taken)continue;const d=Math.hypot(o.x-game.x,o.z-game.z);if(d<dist){dist=d;best=o;}}return dist<5?best:null;}
+  function nearestLoot() {let best=null,dist=999;for(const o of game.loot){if(o.taken)continue;const d=Math.hypot(o.x-game.x,o.z-game.z);if(d<dist){dist=d;best=o;}}const range=5+Math.max(-1,Math.min(2,(game.profile?.stats?.Поиск||0)*.15));return dist<range?best:null;}
   function interact() {const item=nearestLoot();if(!item){toast('Рядом ничего нет');return;}item.taken=true;addItem(item.name);toast(`Подобрано: ${item.name}`);}
   function handleKeyDown(e) {
     if(!fallbackActive||!game)return;
@@ -243,6 +236,7 @@
     else if(code==='KeyI')renderInventory();
     else if(code==='KeyM')renderMap();
     else if(code==='KeyF'){game.flash=!game.flash;renderSlots();toast(game.flash?'Фонарь включён':'Фонарь выключен');}
+    else if(code==='KeyV'){game.thirdPerson=!game.thirdPerson;toast(game.thirdPerson?'Камера: от третьего лица':'Камера: от первого лица');}
     else if(code==='KeyQ'){const name=game.quick[game.selected];if(name)useItem(name);}
     else if(code==='Digit1'||code==='Digit2'||code==='Digit3'){game.selected=Number(code.slice(-1))-1;renderSlots();}
   }
@@ -254,70 +248,33 @@
     const forward=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0);
     const side=(keys.KeyD?1:0)-(keys.KeyA?1:0);
     if(keys.ArrowLeft)game.yaw-=dt*1.65;if(keys.ArrowRight)game.yaw+=dt*1.65;
-    const speed=sprint?7:4.2;
-    game.x+=(Math.sin(game.yaw)*forward+Math.cos(game.yaw)*side)*speed*dt;
-    game.z+=(Math.cos(game.yaw)*forward-Math.sin(game.yaw)*side)*speed*dt;
+    const staminaStat=game.profile?.stats?.Выносливость||0;const speed=(sprint?6.4:4.1)*(1+Math.max(-.12,Math.min(.16,staminaStat*.025)))*(game.stamina<=0?.62:1);
+    const norm=Math.hypot(forward,side)||1;
+    game.x+=(Math.sin(game.yaw)*forward/norm+Math.cos(game.yaw)*side/norm)*speed*dt;
+    game.z+=(Math.cos(game.yaw)*forward/norm-Math.sin(game.yaw)*side/norm)*speed*dt;
     const radius=Math.hypot(game.x,game.z);if(radius>54){game.hp=Math.max(0,game.hp-dt*3);game.x*=.998;game.z*=.998;}
-    game.hunger=Math.max(0,game.hunger-dt*.035);game.thirst=Math.max(0,game.thirst-dt*.05);
+    const digestion=game.profile?.stats?.Пищеварение||0;const consumption=Math.max(.62,Math.min(1.55,1-digestion*.035));game.hunger=Math.max(0,game.hunger-dt*.035*consumption);game.thirst=Math.max(0,game.thirst-dt*.05*Math.max(.78,Math.min(1.25,1-digestion*.012)));if(game.hp<100&&game.hunger>45&&game.thirst>45)game.hp=Math.min(100,game.hp+dt*(.015+(game.profile?.stats?.Восстановление||0)*.005));
     if(game.hunger<18||game.thirst<18)game.hp=Math.max(0,game.hp-dt*.6);
-    game.stamina=Math.max(0,Math.min(100,game.stamina+(sprint&&forward?-18:10)*dt));
+    const staminaDrain=1-Math.max(-.18,Math.min(.3,staminaStat*.035));game.stamina=Math.max(0,Math.min(100,game.stamina+(sprint&&forward?-18*staminaDrain:10)*dt));
     if(game.hp<=0){renderPause();toast('Ты потерял сознание');}
     if(game.clock-game.lastSave>180){saveFallback();}
     renderHud();
   }
-  function project(x,z,w,h) {
-    const dx=x-game.x,dz=z-game.z,sy=Math.sin(game.yaw),cy=Math.cos(game.yaw);
-    const forward=dx*sy+dz*cy,side=dx*cy-dz*sy;
-    if(forward<1.2)return null;
-    const scale=360/(forward+10),sx=w/2+side*scale,ground=h*.76+scale*.45;
-    return {x:sx,y:ground,scale,depth:forward};
-  }
-  function drawTree(c,p,tree,time) {
-    const h=tree.height*125*p.scale/1.3,w=tree.w*34*p.scale/1.2;
-    if(p.x<-w*2||p.x>innerWidth+w*2)return;
-    c.fillStyle='rgba(0,0,0,.22)';c.beginPath();c.ellipse(p.x,p.y,w*.82,Math.max(2,w*.18),0,0,Math.PI*2);c.fill();
-    c.fillStyle='#49372a';c.beginPath();c.moveTo(p.x-w*.15,p.y);c.lineTo(p.x-w*.10,p.y-h*.60);c.lineTo(p.x+w*.11,p.y-h*.6);c.lineTo(p.x+w*.18,p.y);c.fill();
-    const colors=[['#8a6334','#ad7a3c','#6e5230'],['#704c2c','#a34e2c','#593d2a'],['#536044','#7a743e','#394b37'],['#965137','#bb793d','#67442f']][tree.shade];
-    for(let layer=0;layer<3;layer++){
-      const y=p.y-h*(.34+layer*.24),rw=w*(1.1-layer*.19),rh=h*.36;
-      c.fillStyle=colors[layer];c.beginPath();c.moveTo(p.x,y-rh);c.quadraticCurveTo(p.x-rw*1.25,y-rh*.2,p.x-rw,y+rh*.32);c.quadraticCurveTo(p.x,y+rh*.7,p.x+rw,y+rh*.32);c.quadraticCurveTo(p.x+rw*.8,y-rh*.4,p.x,y-rh);c.fill();
-      c.fillStyle='rgba(235,181,102,.14)';c.beginPath();c.ellipse(p.x-rw*.28,y-rh*.14,rw*.28,rh*.18,-.5,0,Math.PI*2);c.fill();
-    }
-  }
-  function drawLoot(c,p,o) {
-    const s=Math.max(.45,Math.min(1.55,p.scale*.55));
-    c.fillStyle='rgba(0,0,0,.3)';c.beginPath();c.ellipse(p.x,p.y,9*s,3*s,0,0,Math.PI*2);c.fill();
-    c.save();c.translate(p.x,p.y-11*s);c.scale(s,s);
-    c.fillStyle='#8c7550';c.strokeStyle='#dfc99d';c.lineWidth=1.3;
-    if(/вода|бутыл|термос/.test(o.name)){c.fillStyle='#718e87';c.beginPath();c.roundRect(-5,-15,10,21,3);c.fill();c.fillStyle='#c4b78d';c.fillRect(-3,-19,6,5);}
-    else if(/бинт|аптеч/.test(o.name)){c.fillStyle='#d4cfbb';c.fillRect(-10,-8,20,15);c.fillStyle='#ad4b43';c.fillRect(-3,-5,6,9);c.fillRect(-7,-2,14,3);}
-    else if(/яблок|картоф|морков/.test(o.name)){c.fillStyle='#a96c37';c.beginPath();c.ellipse(0,0,9,8,0,0,Math.PI*2);c.fill();c.fillStyle='#617a4d';c.fillRect(1,-11,2,5);}
-    else if(/фонар/.test(o.name)){c.fillStyle='#536159';c.fillRect(-6,-12,12,23);c.fillStyle='#e8c885';c.fillRect(-5,-11,10,5);}
-    else if(/доска|дров/.test(o.name)){c.fillStyle='#8a613c';c.fillRect(-12,-5,24,10);c.strokeRect(-12,-5,24,10);}
-    else {c.fillStyle='#817355';c.beginPath();c.roundRect(-9,-7,18,14,3);c.fill();c.stroke();}
-    c.restore();
-  }
+  // The local fallback is rendered only by the real WebGL mesh renderer in Local3D.js.
   function drawFrame(time) {
-    if(!fallbackActive||!game||!ctx)return;
+    if(!fallbackActive||!game)return;
     const dt=Math.min((time-lastFrame)/1000,.05)||0;lastFrame=time;update(dt);
-    const w=innerWidth,h=innerHeight,c=ctx;
-    const daylight=.55+Math.sin(game.clock/220)*.12;
-    const sky=c.createLinearGradient(0,0,0,h*.72);sky.addColorStop(0,'#4b5550');sky.addColorStop(.55,'#8d806a');sky.addColorStop(1,'#b19a72');c.fillStyle=sky;c.fillRect(0,0,w,h);
-    c.fillStyle='#41483b';c.fillRect(0,h*.42,w,h*.58);
-    c.beginPath();c.moveTo(0,h*.46);c.lineTo(w*.45,h*.38);c.lineTo(w*.56,h*.38);c.lineTo(w,h*.45);c.lineTo(w,h);c.lineTo(0,h);c.closePath();const ground=c.createLinearGradient(0,h*.42,0,h);ground.addColorStop(0,'#666047');ground.addColorStop(.3,'#4b5039');ground.addColorStop(1,'#20271f');c.fillStyle=ground;c.fill();
-    // distant fog and rows of trunks to establish depth
-    c.fillStyle=`rgba(183,183,157,${.09+(1-daylight)*.07})`;c.fillRect(0,h*.36,w,h*.25);
-    const horizon=[];
-    for(const tree of game.trees){const p=project(tree.x,tree.z,w,h);if(p&&p.depth<100)horizon.push({tree,p});}
-    horizon.sort((a,b)=>b.p.depth-a.p.depth);
-    for(const {tree,p} of horizon)drawTree(c,p,tree,time);
-    const loot=[];for(const o of game.loot){if(o.taken)continue;const p=project(o.x,o.z,w,h);if(p&&p.depth<38)loot.push({o,p});}
-    loot.sort((a,b)=>b.p.depth-a.p.depth);for(const {o,p} of loot)drawLoot(c,p,o);
-    // low camera vignette, hands and lantern glow
-    if(game.flash){const g=c.createRadialGradient(w*.5,h*.47,12,w*.5,h*.47,w*.55);g.addColorStop(0,'rgba(255,225,160,.15)');g.addColorStop(1,'rgba(255,225,160,0)');c.fillStyle=g;c.fillRect(0,0,w,h);}
-    c.fillStyle='#303b32';c.beginPath();c.moveTo(0,h);c.lineTo(0,h*.9);c.quadraticCurveTo(w*.1,h*.84,w*.22,h);c.fill();c.beginPath();c.moveTo(w,h);c.lineTo(w,h*.9);c.quadraticCurveTo(w*.9,h*.84,w*.78,h);c.fill();
-    const near=nearestLoot();$('#qdf-prompt').textContent=near?`[ E ]  Подобрать: ${near.name}`:'';
-    c.fillStyle='rgba(5,8,6,.1)';c.fillRect(0,0,w,h);
+    if(!window.QDLocal3D){animation=requestAnimationFrame(drawFrame);return;}
+    try {
+      if(!fallbackRenderer) fallbackRenderer=window.QDLocal3D.createWorld(canvas);
+      const cam={x:game.x,y:window.QDLocal3D.terrainHeight(game.x,game.z)+1.72,z:game.z,yaw:game.yaw,pitch:game.pitch||0,flash:game.flash,clock:game.clock,thirdPerson:!!game.thirdPerson};
+      fallbackRenderer.render(cam,game);
+      const near=nearestLoot();$('#qdf-prompt').textContent=near?`[ E ]  Подобрать: ${near.name}`:'';
+    } catch(error) {
+      console.error('[Quiet Dream] Local 3D renderer failed:',error);
+      $('#qdf-weather').textContent='ОШИБКА 3D · WebGL НЕ ДОСТУПЕН';
+      const gl=canvas.getContext('webgl'); if(!gl){const p=canvas.parentElement.querySelector('.qdf-hint');if(p)p.textContent='Включи аппаратное ускорение / WebGL в браузере.';}
+    }
     animation=requestAnimationFrame(drawFrame);
   }
   function startLoop(){cancelAnimationFrame(animation);lastFrame=performance.now();animation=requestAnimationFrame(drawFrame);}
@@ -326,10 +283,11 @@
     const button=event.target.closest('button');
     if(!button)return;
     const id=button.id;
-    if(id==='new-game') { event.preventDefault();event.stopImmediatePropagation();if(!fallbackAvailable)showFallback();populateCreator();traitsSelected.clear();$$('.trait-option').forEach(el=>el.classList.remove('selected'));updateTraits();showScreen('#creator');return; }
+    if(id==='new-game') { event.preventDefault();event.stopImmediatePropagation();if(!fallbackAvailable)showFallback();populateCreator();traitsSelected.clear();$$('.trait-option').forEach(el=>el.classList.remove('selected'));updateTraits();showScreen('#creator');requestAnimationFrame(updateCharacterPreview);return; }
     if(id==='creator-back') {event.preventDefault();event.stopImmediatePropagation();showScreen('#main-menu');return;}
     if(id==='random-traits' && fallbackActive===false) {event.preventDefault();event.stopImmediatePropagation();randomCharacter();return;}
-    if(id==='to-appearance') {event.preventDefault();event.stopImmediatePropagation();if(points<0){toast('Нужно сбалансировать черты');return;}$('#traits-step').classList.add('hidden');$('#appearance-step').classList.remove('hidden');$('#tab-traits').classList.remove('active');$('#tab-look').classList.add('active');return;}
+    if(id==='random-appearance') {event.preventDefault();event.stopImmediatePropagation();randomAppearance();return;}
+    if(id==='to-appearance') {event.preventDefault();event.stopImmediatePropagation();if(points<0){toast('Нужно сбалансировать черты');return;}$('#traits-step').classList.add('hidden');$('#appearance-step').classList.remove('hidden');$('#tab-traits').classList.remove('active');$('#tab-look').classList.add('active');updateCharacterPreview();return;}
     if(id==='back-traits') {event.preventDefault();event.stopImmediatePropagation();$('#appearance-step').classList.add('hidden');$('#traits-step').classList.remove('hidden');$('#tab-look').classList.remove('active');$('#tab-traits').classList.add('active');return;}
     if(id==='begin-game') {event.preventDefault();event.stopImmediatePropagation();startFallback();return;}
     if(id==='continue-game') {event.preventDefault();event.stopImmediatePropagation();showFallback();if(loadFallback()){fallbackAvailable=true;fallbackActive=true;window.__QD_FALLBACK_ACTIVE=true;hideScreens();$('#qd-fallback-game').classList.remove('hidden');renderSlots();renderHud();startLoop();toast('Сохранение загружено');}else toast('Сохранение не найдено');return;}
@@ -363,6 +321,8 @@
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&game)game.keys={};});
 
   function onBootError(reason) { showFallback(reason || 'Не удалось загрузить игровой движок.'); }
-  window.QD_BOOT = { showFallback:onBootError, startFallback, get available(){return fallbackAvailable;}, get active(){return fallbackActive;} };
+  window.addEventListener('qd-local3d-ready',updateCharacterPreview);
+  window.addEventListener('blur',()=>{if(game)game.keys={};});
+  window.QD_BOOT = { showFallback:onBootError, startFallback, get available(){return fallbackAvailable;}, get active(){return fallbackActive;}, currentProfile, randomCharacter };
   // The classic bootstrap stays alive if the module import fails before any game handlers are registered.
 })();

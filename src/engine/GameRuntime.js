@@ -21,36 +21,43 @@ function toast(msg){ const t=$('#toast');t.textContent=msg;t.classList.add('show
 function itemInfo(name){return ITEMS[name]||{name,icon:'◆',category:'resource',description:'Предмет из мира сна.'};}
 function addItem(name,count=1){const info=itemInfo(name);let existing=state.inventory.find(x=>x.name===name&&info.stack);if(existing)existing.count+=count;else state.inventory.push({name,count});renderInventory();updateQuickbar();}
 function removeItem(name,count=1){let it=state.inventory.find(x=>x.name===name);if(!it||it.count<count)return false;it.count-=count;if(it.count<=0){state.inventory=state.inventory.filter(x=>x!==it);state.quick=state.quick.map(q=>q===name?null:q);}renderInventory();updateQuickbar();return true;}
-function hasItems(cost){return Object.entries(cost).every(([n,c])=>state.inventory.some(it=>it.name===n&&it.count>=c));}
-function consumeCost(cost){for(const [n,c] of Object.entries(cost))removeItem(n,c);}
-function formatCost(cost){return Object.entries(cost).map(([n,c])=>`${n} ×${c}`).join(' · ');}
+function effectiveMaterialCost(cost){const skill=state.player?.stats?.Ремесло||0,discount=Math.trunc(skill/3);return Object.fromEntries(Object.entries(cost).map(([name,count])=>[name,Math.max(1,count-discount)]));}
+function hasItems(cost){return Object.entries(effectiveMaterialCost(cost)).every(([n,c])=>state.inventory.some(it=>it.name===n&&it.count>=c));}
+function consumeCost(cost){for(const [n,c] of Object.entries(effectiveMaterialCost(cost)))removeItem(n,c);}
+function formatCost(cost){return Object.entries(effectiveMaterialCost(cost)).map(([n,c])=>`${n} ×${c}`).join(' · ');}
 
 // Character creation
 function populateCreator(){
-  $('#profession').innerHTML=PROFESSIONS.map((p,i)=>`<option value="${i}">${p.name} · ${p.cost>=0?'-':''}${p.cost} оч.</option>`).join('');
+  $('#profession').innerHTML=PROFESSIONS.map((p,i)=>`<option value="${i}">${p.name} · ${p.cost>0?'−'+p.cost:p.cost<0?'+'+Math.abs(p.cost):'0'} оч.</option>`).join('');
   $('#positive-traits').innerHTML=TRAITS.filter(t=>t.side==='positive').map(t=>traitHTML(t)).join('');
   $('#negative-traits').innerHTML=TRAITS.filter(t=>t.side==='negative').map(t=>traitHTML(t)).join('');
   $$('.trait-option').forEach(el=>el.addEventListener('click',()=>{el.classList.toggle('selected');updateTraitPoints();}));
   $('#profession').onchange=updateTraitPoints;
   updateTraitPoints();
 }
-function traitHTML(t){return `<div class="trait-option" data-name="${t.name}"><span>${t.name}<br><small>${t.stat}</small></span><small>${t.cost>0?'+':''}${t.cost}</small></div>`;}
+function traitHTML(t){return `<button type="button" class="trait-option" data-name="${t.name}"><span>${t.name}<br><small>${t.stat}</small></span><small>${t.cost>0?'−':'+'}${Math.abs(t.cost)}</small></button>`;}
 function selectedTraits(){return $$('.trait-option.selected').map(e=>e.dataset.name);}
-function updateTraitPoints(){let profession=PROFESSIONS[Number($('#profession').value||0)];let points=8-profession.cost;for(const name of selectedTraits())points+=TRAITS.find(t=>t.name===name).cost;$('#trait-points').textContent=`${points} оч.`;$('#trait-points').style.color=points<0?'#cf6a5d':'#c6a66b';$('#to-appearance').disabled=points<0;$('#trait-stats').innerHTML=Object.entries(profession.stats).map(([k,v])=>`<span>${k}: <b>${v>=0?'+':''}${v}</b></span>`).join('')+selectedTraits().map(n=>`<span>${n}</span>`).join('');}
+function characterStats(){const profession=PROFESSIONS[Number($('#profession').value||0)]||PROFESSIONS[0];return window.QDCharacterData.calculateStats(profession,selectedTraits());}
+function updateTraitPoints(){const profession=PROFESSIONS[Number($('#profession').value||0)]||PROFESSIONS[0],names=selectedTraits(),points=window.QDCharacterData.calculatePoints(profession,names);$('#trait-points').textContent=`${points} оч.`;$('#trait-points').style.color=points<0?'#cf6a5d':'#c6a66b';$('#to-appearance').disabled=points<0;const stats=characterStats(),chips=window.QDCharacterData.STAT_LABELS.map(k=>`<span>${k} <b>${stats[k]>=0?'+':''}${stats[k]||0}</b></span>`).join('');$('#trait-stats').innerHTML=`<span class="profession-description">${profession.desc}</span>${chips}`;advRefreshPreview?.();}
 function randomCharacter(){
-  $('#profession').value=String(Math.floor(Math.random()*PROFESSIONS.length));
+  const pick=arr=>arr[Math.floor(Math.random()*arr.length)];$('#char-name').value=pick(['Алексей','Иван','Дмитрий','Сергей','Артём','Максим','Никита','Михаил','Андрей','Евгений','Павел','Кирилл','Денис','Антон','Руслан']);$('#profession').value=String(Math.floor(Math.random()*PROFESSIONS.length));
   $$('.trait-option').forEach(e=>e.classList.remove('selected'));
-  const positives=TRAITS.filter(t=>t.side==='positive'), negatives=TRAITS.filter(t=>t.side==='negative');
-  const candidates=[...positives.sort(()=>Math.random()-.5).slice(0,2),...negatives.sort(()=>Math.random()-.5).slice(0,2)];
-  candidates.forEach(t=>{$(`.trait-option[data-name="${t.name}"]`)?.classList.add('selected');});
-  const pick=(id)=>{const e=$(id);if(e&&e.options.length)e.selectedIndex=Math.floor(Math.random()*e.options.length);};
-  pick('#char-build');pick('#char-skin');pick('#char-hair');pick('#char-hair-style');pick('#char-clothes');pick('#char-eyes');pick('#char-tattoo');
+  const profession=PROFESSIONS[Number($('#profession').value)],list=[...TRAITS].sort(()=>Math.random()-.5),selected=[];
+  const positives=list.filter(t=>t.side==='positive'),negatives=list.filter(t=>t.side==='negative');
+  const ordered=[...positives.slice(0,2),...negatives.slice(0,3),...list];
+  for(const t of ordered){if(selected.length>=5)break;if(selected.includes(t.name))continue;if(window.QDCharacterData.calculatePoints(profession,[...selected,t.name])>=0)selected.push(t.name);}
+  selected.forEach(n=>$(`.trait-option[data-name="${n}"]`)?.classList.add('selected'));
+  randomAppearance();updateTraitPoints();
+}
+function randomAppearance(){
+  const pick=id=>{const e=$(id);if(e&&e.options.length)e.selectedIndex=Math.floor(Math.random()*e.options.length);};
+  ['#char-build','#char-skin','#char-hair','#char-hair-style','#char-clothes','#char-eyes','#char-tattoo'].forEach(pick);
   $('#char-age').value=Math.round(rand(20,55));$('#char-height').value=Math.round(rand(160,198));$('#char-weight').value=Math.round(rand(52,108));
-  while(Number($('#trait-points').textContent)<0){const removable=$$('.trait-option.selected').filter(el=>TRAITS.find(t=>t.name===el.dataset.name).cost<0).pop();if(removable){removable.classList.remove('selected');updateTraitPoints();}else{$('#profession').value='0';updateTraitPoints();break;}}updateTraitPoints();
+  advRefreshPreview?.();
 }
 $('#new-game').onclick=()=>{showScreen('#creator');};
 $('#creator-back').onclick=()=>showScreen('#main-menu');
-$('#random-traits').onclick=randomCharacter;
+$('#random-traits').onclick=randomCharacter;$('#random-appearance')?.addEventListener('click',randomAppearance);
 $('#to-appearance').onclick=()=>{if(Number($('#trait-points').textContent)<0)return;$('#traits-step').classList.add('hidden');$('#appearance-step').classList.remove('hidden');$('#tab-traits').classList.remove('active');$('#tab-look').classList.add('active');};
 $('#back-traits').onclick=()=>{$('#appearance-step').classList.add('hidden');$('#traits-step').classList.remove('hidden');$('#tab-look').classList.remove('active');$('#tab-traits').classList.add('active');};
 $('#begin-game').onclick=()=>{
@@ -191,10 +198,11 @@ function makeHandMeshBase(){
 // Game lifecycle
 function startNewGameBase(profile,professionStats={}){
   if(!scene)initThree();else resetWorld();
-  state.inventory=[];state.quick=[null,null,null];state.selectedSlot=0;state.leftHandOn=true;state.structures=[];state.markers=[];state.explored=new Set();state.player={x:0,z:0,y:terrainHeight(0,0)+1.72,hp:100,hunger:100,thirst:100,stamina:100,name:profile.name,age:profile.age,profile,stats:professionStats,lastDamage:0};
-  const positives=profile.traits||[];if(positives.includes('Крепкое здоровье'))state.player.stats.Восстановление=(state.player.stats.Восстановление||0)+2;
-  if(positives.includes('Выносливый'))state.player.stats.Выносливость=(state.player.stats.Выносливость||0)+2;
-  if(positives.includes('Наблюдательность'))state.player.stats.Поиск=(state.player.stats.Поиск||0)+2;
+  state.inventory=[];state.quick=[null,null,null];state.selectedSlot=0;state.leftHandOn=true;state.structures=[];state.markers=[];state.explored=new Set();
+  const finalStats={...professionStats};for(const name of profile.traits||[]){const t=TRAITS.find(x=>x.name===name);for(const [key,value] of Object.entries(t?.bonuses||{}))finalStats[key]=(finalStats[key]||0)+value;}
+  state.player={x:0,z:0,y:terrainHeight(0,0)+1.72,hp:100,hunger:100,thirst:100,stamina:100,name:profile.name,age:profile.age,profile,stats:finalStats,lastDamage:0};
+  // Rebuild loot after the selected profession and traits are applied, so Search/Luck are respected.
+  state.objects.forEach(o=>scene.remove(o));state.objects=[];lootMeshes=[];buildLoot();
   addItem('Бутылка воды',2);addItem('Хлеб',2);addItem('Бинт',2);addItem('Древесина',5);addItem('Верёвка',2);addItem('Ткань',2);addItem('Динамо-фонарь',1);addItem('Спички',1);state.quick[0]='Динамо-фонарь';state.leftHandOn=true;state.quick[1]='Бинт';state.quick[2]='Хлеб';
   finishNightmare();state.clock=0;state.dayTime=.60;state.active=true;state.paused=false;state.nightmare=0;state.fear=0;state.nextNightmare=rand(85,145);state.lastTick=performance.now();
   $('#hud').classList.remove('hidden');hideScreen('#creator');hideScreen('#main-menu');makeHandMesh();updateQuickbar();renderInventory();updateHud(true);toast('Ты проснулся в лесу');
@@ -301,7 +309,7 @@ function interact(){
   if(root?.userData.kind==='building'){if(root.userData.building==='workbench'||root.userData.building==='stove'){openOverlay('#inventory-panel');renderInventory();toast('Рабочее место доступно');}else if(root.userData.building==='bed'||root.userData.building==='tent'){state.player.hp=clamp(state.player.hp+6,0,100);state.player.stamina=100;toast('Ты немного отдохнул');}else toast(root.userData.name||'Постройка');return;}
   toast('Здесь ничего нет');
 }
-function updateInteractionPrompt(){if(state.clock-(state.lastPrompt||0)<.12)return;state.lastPrompt=state.clock;raycaster.setFromCamera(pointer,camera);const hits=raycaster.intersectObjects([...state.objects,...state.structures],true).filter(h=>h.distance<4.2);let root=hits[0]?.object;while(root&&root.parent&&!root.userData.kind)root=root.parent;const p=$('#interaction-prompt');if(root?.userData.kind==='loot')p.textContent=`[E] Взять: ${root.userData.name}`;else if(root?.userData.kind==='building')p.textContent=`[E] ${root.userData.name||'Использовать'}`;else p.textContent='';}
+function updateInteractionPrompt(){if(state.clock-(state.lastPrompt||0)<.12)return;state.lastPrompt=state.clock;raycaster.setFromCamera(pointer,camera);const hits=raycaster.intersectObjects([...state.objects,...state.structures],true).filter(h=>h.distance<4.2+clamp((state.player?.stats?.Поиск||0)*.16,0,1.8));let root=hits[0]?.object;while(root&&root.parent&&!root.userData.kind)root=root.parent;const p=$('#interaction-prompt');if(root?.userData.kind==='loot')p.textContent=`[E] Взять: ${root.userData.name}`;else if(root?.userData.kind==='building')p.textContent=`[E] ${root.userData.name||'Использовать'}`;else p.textContent='';}
 
 // Input and overlays
 function openOverlay(id){['#inventory-panel','#map-panel','#build-panel','#camp-panel'].forEach(other=>{if(other!==id)$(other)?.classList.add('hidden');});state.uiOpen=true;$(id).classList.remove('hidden');if(document.pointerLockElement)document.exitPointerLock();}
@@ -358,7 +366,7 @@ function updateWorld(delta){
   state.dayTime=(state.dayTime+delta/1080)%1;const angle=state.dayTime*Math.PI*2-Math.PI/2;const sunHeight=Math.sin(angle);sun.position.set(Math.cos(angle)*58,Math.max(-8,sunHeight*68),Math.sin(angle)*50);sun.intensity=clamp(.18+Math.max(0,sunHeight)*2.3,.12,2.2);hemi.intensity=clamp(.28+Math.max(0,sunHeight)*.95,.23,1.25);moon.intensity=clamp(.35-Math.max(0,sunHeight)*.32,.08,.33);
   const night=clamp(1-(sunHeight+.12)*2.2,0,1);const sky=new THREE.Color(0x778073).lerp(new THREE.Color(0x111a23),night);scene.background.copy(sky);scene.fog.color.copy(sky);scene.fog.density=.008+night*.006+(state.currentNightmare?.id==='muteFog'?.026:state.currentNightmare?.id==='blackSquall'?.014:0);renderer.toneMappingExposure=1.12-night*.22-(state.currentNightmare?.id==='falseDawn'?.28:0);
   // Nightmares: entities and reality-warping events.
-  if((night>.48||state.clock>120)&&!state.currentNightmare){state.nextNightmare-=delta*(p.profile?.traits?.includes('Бессонница')?1.35:1);if(state.nextNightmare<=0){const choices=NIGHTMARES.filter(n=>!p.profile?.traits?.includes('Крепкий сон')||n.kind!=='entity'||Math.random()>.12);const pick=choices[Math.floor(Math.random()*choices.length)];startNightmare(pick.id);state.nextNightmare=rand(85,150);}}
+  if((night>.48||state.clock>120)&&!state.currentNightmare){state.nextNightmare-=delta*clamp(1-(p.stats?.Психика||0)*.035,.58,1.55);if(state.nextNightmare<=0){const choices=NIGHTMARES.filter(n=>!p.profile?.traits?.includes('Крепкий сон')||n.kind!=='entity'||Math.random()>.12);const pick=choices[Math.floor(Math.random()*choices.length)];startNightmare(pick.id);state.nextNightmare=rand(85,150);}}
   if(state.currentNightmare){state.nightmare=Math.max(0,state.nightmare-delta);updateNightmare(delta);if(state.nightmare<=0)finishNightmare();}else{state.fear=clamp(state.fear-delta*2.7,0,100);$('#nightmare-overlay').style.opacity='0';}
   if(leftLight)leftLight.intensity=state.leftHandOn?1.45:0;
   // leaf canopy breeze
@@ -648,7 +656,7 @@ function updateWeather(delta, sunHeight, night) {
   const nearFire = state.structures.some(o => o.userData.building==='campfire' && o.userData.lit && o.userData.fuel>0 && distance2({x:o.position.x,z:o.position.z},p)<7);
   const nearShelter = near('shelter',4.5) || near('tent',3.4);
   p.warmthBoost=Math.max(0,(p.warmthBoost||0)-delta);
-  const warmth = (p.equipment.coat?6:0)+(p.equipment.hat?2:0)+(p.equipment.socks?2:0)+(p.equipment.raincoat?3:0)+(nearShelter?2:0)+(nearFire?9:0)+(p.warmthBoost||0)*.055;
+  const warmth = (p.equipment.coat?6:0)+(p.equipment.hat?2:0)+(p.equipment.socks?2:0)+(p.equipment.raincoat?3:0)+(nearShelter?2:0)+(nearFire?9:0)+clamp((p.stats?.Холодостойкость||0)*.55,-4,5)+(p.warmthBoost||0)*.055;
   const base = 13 + sunHeight*5 + WEATHER_TEMPERATURE[weatherState.current] - night*2;
   state.temperature = Math.round((base + warmth - p.wetness*.085)*10)/10;
   if (state.temperature < 2) {
@@ -821,11 +829,11 @@ function applyConsumable(name,info) {
       state.effects.poison=clamp(state.effects.poison+35,0,100);
       state.fear=clamp(state.fear+4,0,100);toast('Самочувствие ухудшилось');
     } else {
-      p.hunger=clamp(p.hunger+(info.hunger??12),0,100);p.thirst=clamp(p.thirst+(info.thirst||0),0,100);
+      const cooking=1+clamp((p.stats?.Кулинария||0)*.025,-.18,.22);p.hunger=clamp(p.hunger+(info.hunger??12)*cooking,0,100);p.thirst=clamp(p.thirst+(info.thirst||0)*cooking,0,100);
       if(info.warmth)p.warmthBoost=Math.max(p.warmthBoost||0,info.warmth*18);
     }
   } else if(info.usable==='heal') {
-    p.hp=clamp(p.hp+(info.heal||12),0,100);
+    p.hp=clamp(p.hp+(info.heal||12)*(1+clamp((p.stats?.Медицина||0)*.035,-.2,.28)),0,100);
     state.effects.bandage=Math.max(state.effects.bandage,info.heal>=18?95:45);
   } else if(name==='Активированный уголь'||name==='Антидот') {
     state.effects.poison=clamp(state.effects.poison-(name==='Антидот'?75:35),0,100);toast('Состояние немного улучшилось');
@@ -1066,7 +1074,7 @@ function updateWorld(delta) {
   const reversed=state.currentNightmare?.id==='reverseNorth'&&state.nightmare>state.currentNightmare.duration-7;if(reversed){forward*=-1;side*=-1;}
   const moving=forward!==0||side!==0;const wantsSprint=!!(state.keys.ShiftLeft||state.keys.ShiftRight);const sprint=wantsSprint&&moving&&p.stamina>3;
   const staminaFactor=p.stamina<=0?.58:1;
-  const speed=(sprint?6.1:4.05)*staminaFactor*(p.stats?.Выносливость>=2?1.08:1)*(p.profile?.traits?.includes('Лёгкая походка')?1.06:1)*(state.currentNightmare?.id==='sleepDrop'?.58:1);
+  const staminaStat=p.stats?.Выносливость||0;const speed=(sprint?6.1:4.05)*staminaFactor*(1+clamp(staminaStat*.025,-.12,.16))*(p.profile?.traits?.includes('Лёгкая походка')?1.06:1)*(state.currentNightmare?.id==='sleepDrop'?.58:1);
   if(moving){const len=Math.hypot(forward,side)||1;const f=forward/len,s=side/len;p.x+=(-Math.sin(state.yaw)*f+Math.cos(state.yaw)*s)*speed*delta;p.z+=(-Math.cos(state.yaw)*f-Math.sin(state.yaw)*s)*speed*delta;}
   p.x=clamp(p.x,-67,67);p.z=clamp(p.z,-67,67);
   // Soft tree collision keeps the player from walking through thick trunks.
@@ -1079,9 +1087,9 @@ function updateWorld(delta) {
   if(moving&&state.onGround){const sway=Math.sin(state.clock*(sprint?11:8))*(sprint?.055:.025);camera.position.y+=sway;}
   if(state.buildPreview){const pos=currentBuildPosition();state.buildPreview.position.set(pos.x,terrainHeight(pos.x,pos.z),pos.z);state.buildPreview.rotation.y=state.yaw;}
   // Needs, stamina and spoilage.
-  const hungerRate=p.profile?.traits?.includes('Хороший аппетит')?.0042:.0029;const thirstRate=.0038;
+  const digestion=p.stats?.Пищеварение||0;const hungerRate=.0029*clamp(1-digestion*.035,.62,1.55);const thirstRate=.0038*clamp(1-digestion*.012,.78,1.25);
   p.hunger=clamp(p.hunger-hungerRate*delta*60,0,100);p.thirst=clamp(p.thirst-thirstRate*delta*60,0,100);
-  p.stamina=clamp(p.stamina+(sprint?-13:moving?-1.2:9)*delta,0,100);
+  const staminaEfficiency=1-clamp(staminaStat*.035,-.18,.3);p.stamina=clamp(p.stamina+(sprint?-13*staminaEfficiency:moving?-1.2*staminaEfficiency:9)*delta,0,100);
   if(!state.effects.bandage)state.effects.bandage=0;else state.effects.bandage=Math.max(0,state.effects.bandage-delta);
   if(state.effects.poison>0){state.effects.poison=Math.max(0,state.effects.poison-delta*.65);state.effects.poisonTick=(state.effects.poisonTick||0)-delta;if(state.effects.poisonTick<=0){damage(.6,'Плохое самочувствие');state.effects.poisonTick=3.5;}}
   if(p.hunger<=0||p.thirst<=0)damage((p.thirst<=0?1.05:.45)*delta,'Истощение');
@@ -1102,7 +1110,7 @@ function updateWorld(delta) {
   renderer.toneMappingExposure=1.12-night*.22-(state.currentNightmare?.id==='falseDawn'?.28:0);
   updateWeather(delta,sunHeight,night);
   // Nightmare cycle and effects.
-  if((night>.48||state.clock>120)&&!state.currentNightmare){state.nextNightmare-=delta*(p.profile?.traits?.includes('Бессонница')?1.35:1);if(state.nextNightmare<=0){const choices=NIGHTMARES.filter(n=>!p.profile?.traits?.includes('Крепкий сон')||n.kind!=='entity'||Math.random()>.12);startNightmare(choices[Math.floor(Math.random()*choices.length)].id);state.nextNightmare=rand(85,150);}}
+  if((night>.48||state.clock>120)&&!state.currentNightmare){state.nextNightmare-=delta*clamp(1-(p.stats?.Психика||0)*.035,.58,1.55);if(state.nextNightmare<=0){const choices=NIGHTMARES.filter(n=>!p.profile?.traits?.includes('Крепкий сон')||n.kind!=='entity'||Math.random()>.12);startNightmare(choices[Math.floor(Math.random()*choices.length)].id);state.nextNightmare=rand(85,150);}}
   if(state.currentNightmare){state.nightmare=Math.max(0,state.nightmare-delta);updateNightmare(delta);if(state.nightmare<=0)finishNightmare();}else{state.fear=clamp(state.fear-delta*2.7,0,100);$('#nightmare-overlay').style.opacity='0';}
   if(leftLight)leftLight.intensity=state.leftHandOn?1.45:0;
   for(const tree of forest){const t=tree.userData.sway;const wind=weatherState.current==='storm'?.028:weatherState.current==='rain'?.018:.012;tree.rotation.z=Math.sin(state.clock*.55+t)*wind;tree.rotation.x=Math.cos(state.clock*.42+t)*wind*.75;}
@@ -1117,7 +1125,7 @@ function updateWorld(delta) {
 function setup() {
   loadSettings();ensurePlayerSystems();
   $('#sensitivity').value=state.settings.sensitivity;$('#fov').value=state.settings.fov;$('#shadow-quality').value=state.settings.shadows;
-  $('#minimap-wrap').classList.remove('minimap-hidden');setMinimapVisible(true);populateCreator();
+  $('#minimap-wrap').classList.remove('minimap-hidden');setMinimapVisible(true);populateCreator();advInitPreview();
   $('#inventory-search')?.addEventListener('input',renderInventory);
   $('#inventory-category')?.addEventListener('change',renderInventory);
   $('#inventory-sort')?.addEventListener('change',renderInventory);
@@ -1145,7 +1153,7 @@ function setup() {
 function buildLoot() {
   buildLootBase();
   const extra=['Картофель','Морковь','Лук','Помидор','Огурец','Пельмени','Свиной фарш','Сахар','Соль','Бутылка воды','Ткань','Брезент','Сухие дрова','Шерстяная шапка','Тёплая куртка','Дождевик','Сухие носки','Фонарик на батарейках','Фильтр для воды','Термос','Запасные батарейки'];
-  for(let i=0;i<24;i++){const a=Math.random()*Math.PI*2,r=rand(7,53),x=Math.cos(a)*r,z=Math.sin(a)*r;const name=extra[Math.floor(Math.random()*extra.length)];makeLootMesh(name,x,z,rand(52,100));}
+  const stats=state.player?.stats||{},bonus=Math.max(0,Math.min(12,Math.round((stats.Поиск||0)/2+(stats.Удача||0)/2)));for(let i=0;i<24+bonus;i++){const a=Math.random()*Math.PI*2,r=rand(7,53),x=Math.cos(a)*r,z=Math.sin(a)*r;const pool=extra.slice();if((stats.Удача||0)>1)pool.push('Аптечка','Фильтр для воды','Тёплая куртка','Термос');const name=pool[Math.floor(Math.random()*pool.length)];makeLootMesh(name,x,z,rand(52,100));}
   for(const o of state.objects){if(itemInfo(o.userData.name).perishable)o.userData.freshness=rand(48,100);}
 }
 function startNewGame(profile,professionStats={}) {
@@ -1459,16 +1467,17 @@ function advCreateMonster(model){
   rig.kind=model;return rig;
 }
 
-function advCreatorProfile(){return {name:$('#char-name').value.trim()||'Странник',age:Number($('#char-age').value)||27,height:Number($('#char-height').value)||178,weight:Number($('#char-weight').value)||76,build:$('#char-build').value,skin:$('#char-skin').value,hair:$('#char-hair').value,hairStyle:$('#char-hair-style')?.value||'Короткая стрижка',clothes:$('#char-clothes')?.value||'Походная куртка',eyes:$('#char-eyes').value,tattoo:$('#char-tattoo').value};}
+function advCreatorProfile(){const profession=PROFESSIONS[Number($('#profession').value||0)]||PROFESSIONS[0];return {profession:profession.name,traits:selectedTraits(),stats:characterStats(),name:$('#char-name').value.trim()||'Странник',age:Number($('#char-age').value)||27,height:Number($('#char-height').value)||178,weight:Number($('#char-weight').value)||76,build:$('#char-build').value,skin:$('#char-skin').value,hair:$('#char-hair').value,hairStyle:$('#char-hair-style')?.value||'Короткая стрижка',clothes:$('#char-clothes')?.value||'Походная куртка',eyes:$('#char-eyes').value,tattoo:$('#char-tattoo').value};}
 function advDisposeRig(rig){if(!rig)return;rig.group.traverse(o=>{if(o.isMesh){o.geometry?.dispose();if(o.material&&!Array.isArray(o.material))o.material.dispose();}});}
 function advRefreshPreview(){
+  const profile=advCreatorProfile();const early=$('#character-preview-traits');if(early&&window.QDLocal3D?.renderCharacter)window.QDLocal3D.renderCharacter(early,profile,advEarlyPreviewAngle);
   if(!advPreviewScene||!$('#appearance-step'))return;
   if(advPreviewRenderer&&advPreviewCamera){const canvas=$('#character-preview');const width=canvas?.clientWidth||320,height=canvas?.clientHeight||340;advPreviewRenderer.setSize(width,height,false);advPreviewCamera.aspect=width/height;advPreviewCamera.updateProjectionMatrix();}
   if(advPreviewRig){advPreviewScene.remove(advPreviewRig.group);advDisposeRig(advPreviewRig);}
   advPreviewRig=advCreateHumanoid(advCreatorProfile(),'player',1);advPreviewScene.add(advPreviewRig.group);advPreviewRig.group.position.set(0,-.02,0);advPreviewRig.group.rotation.y=-.25;
 }
 function advInitPreview(){
-  const c=$('#character-preview');if(!c||advPreviewRenderer)return;
+  const early=$('#character-preview-traits');if(early){let lastX=0;early.addEventListener('pointerdown',e=>{lastX=e.clientX;early.setPointerCapture(e.pointerId);});early.addEventListener('pointermove',e=>{if(e.buttons){advEarlyPreviewAngle+=(e.clientX-lastX)*.012;lastX=e.clientX;advRefreshPreview();}});}const c=$('#character-preview');if(!c||advPreviewRenderer){advRefreshPreview();return;}
   try{advPreviewRenderer=new THREE.WebGLRenderer({canvas:c,alpha:true,antialias:true,powerPreference:'low-power'});advPreviewRenderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));advPreviewRenderer.setSize(c.clientWidth||300,c.clientHeight||290,false);advPreviewRenderer.outputColorSpace=THREE.SRGBColorSpace;advPreviewRenderer.toneMapping=THREE.ACESFilmicToneMapping;advPreviewScene=new THREE.Scene();advPreviewCamera=new THREE.PerspectiveCamera(34,1,.1,30);advPreviewCamera.position.set(0,1.08,4.7);advPreviewCamera.lookAt(0,1.0,0);advPreviewCamera.layers.set(1);const hemiLight=new THREE.HemisphereLight(0xe4e0d1,0x34352d,1.65);hemiLight.layers.enable(1);advPreviewScene.add(hemiLight);const key=new THREE.DirectionalLight(0xffe1bd,2.2);key.position.set(-3,5,4);key.layers.enable(1);advPreviewScene.add(key);const fill=new THREE.DirectionalLight(0x91a9a2,.8);fill.position.set(3,2,-2);fill.layers.enable(1);advPreviewScene.add(fill);advRefreshPreview();
     const draw=(time)=>{if(!advPreviewRenderer)return;requestAnimationFrame(draw);if(advPreviewRig){advPreviewRig.group.rotation.y=Math.sin(time*.00035)*.17-.25;advPreviewRig.animate(time*.001,false,false,false);}advPreviewRenderer.render(advPreviewScene,advPreviewCamera);};requestAnimationFrame(draw);
     const resize=()=>{if(!advPreviewRenderer)return;const w=c.clientWidth||300,h=c.clientHeight||290;advPreviewRenderer.setSize(w,h,false);advPreviewCamera.aspect=w/h;advPreviewCamera.updateProjectionMatrix();};window.addEventListener('resize',resize);
@@ -1520,8 +1529,8 @@ function advPlayCreatureSound(entity,kind='alert'){
   const dist=distance2({x:entity.mesh.position.x,z:entity.mesh.position.z},state.player);if(dist>34)return;let key='growl';if(entity.def.model==='deer')key='wolf';else if(entity.def.model==='orb'||entity.def.model==='glass'||entity.def.model==='echo')key='ghost';else if(entity.def.model==='brute')key='roar';else if(entity.def.model==='crawler')key='zombie';if(kind==='attack'&&entity.def.model==='brute')key='roar';advAudio.oneShot(key,clamp(.55*(1-dist/42),.08,.5),entity.def.model==='brute'?.78:rand(.88,1.06));
 }
 
-function advPlayerNoiseRadius(){const moving=pMoving(),running=moving&&(state.keys.ShiftLeft||state.keys.ShiftRight)&&state.player.stamina>0;return running?30:moving?17:7;}
-function advNightVisionRange(){const w=weatherState?.current||'clear';const night=state.dayTime>.73||state.dayTime<.22;return w==='fog'?15:night?21:34;}
+function advPlayerNoiseRadius(){const moving=pMoving(),running=moving&&(state.keys.ShiftLeft||state.keys.ShiftRight)&&state.player.stamina>0;const base=running?30:moving?17:7;return base*clamp(1-(state.player?.stats?.Скрытность||0)*.04,.55,1.6);}
+function advNightVisionRange(){const w=weatherState?.current||'clear';const night=state.dayTime>.73||state.dayTime<.22;const base=w==='fog'?15:night?21:34;return base+clamp((state.player?.stats?.Внимание||0)*.65,-5,8);}
 function advChooseWanderPoint(anchor){for(let i=0;i<12;i++){const a=rand(0,Math.PI*2),r=rand(3,9),x=clamp(anchor.x+Math.cos(a)*r,-52,52),z=clamp(anchor.z+Math.sin(a)*r,-52,52);if(!advBlocked(x,z))return {x,z};}return {x:anchor.x,z:anchor.z};}
 
 function advUpdateNightmare(delta){
@@ -1561,7 +1570,7 @@ function advUpdateNightmare(delta){
     if(e.def.mode==='fear'&&dist<16)state.fear=clamp(state.fear+delta*4.5,0,100);
     if(e.callTimer<=0&&dist<30){advPlayCreatureSound(e,'idle');e.callTimer=rand(10,18);}
   }
-  if(state.nightmareEntities.length){if(nearest<22)state.fear=clamp(state.fear+delta*(22-nearest)*.3,0,100);else state.fear=clamp(state.fear-delta*2.1,0,100);}
+  if(state.nightmareEntities.length){const mind=clamp(1-(state.player?.stats?.Психика||0)*.035,.55,1.55);if(nearest<22)state.fear=clamp(state.fear+delta*(22-nearest)*.3*mind,0,100);else state.fear=clamp(state.fear-delta*(2.1+(state.player?.stats?.Психика||0)*.12),0,100);}
   if(id==='muteFog'){overlay.style.opacity=String(.19+Math.sin(state.clock*2.1)*.04);}
   else if(id==='reverseNorth'){overlay.style.opacity=String(.12+Math.sin(state.clock*5)*.06);if($('#compass'))$('#compass').textContent=state.nightmare>def.duration-7?'?':(state.yaw%(Math.PI*2)>0?'N':'S');}
   else if(id==='blackSquall'){overlay.style.opacity=String(.24+Math.sin(state.clock*13)*.08);p.stamina=clamp(p.stamina-delta*(safe?1.2:7),0,100);}
