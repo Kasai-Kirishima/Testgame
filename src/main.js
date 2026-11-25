@@ -25,6 +25,19 @@ function toast(message) {
   window.setTimeout(() => item.remove(), 2800);
 }
 
+const NAME_BANK = {
+  male: ['Рэн','Рику','Харуто','Акира','Сора','Дайчи','Ицуки','Кайто','Наоки','Тома','Юто','Хару'],
+  female: ['Аой','Юна','Мэй','Рин','Хана','Акари','Саки','Мио','Нацуми','Кохару','Рэй','Ая'],
+  other: ['Хару','Аки','Нао','Сора','Рин','Хикару','Рэн','Мити','Юки','Каору']
+};
+const FAMILY_BANK = ['Морикава','Акияма','Фудзимото','Куросава','Мидзуно','Татибана','Хаяси','Кобаяси','Арата','Симидзу','Кандзаки','Хосино'];
+function randomPlayerName() {
+  const gender=document.getElementById('player-gender')?.value || 'male';
+  const given=NAME_BANK[gender] || NAME_BANK.other;
+  const pick=list=>list[Math.floor(Math.random()*list.length)];
+  return `${pick(given)} ${pick(FAMILY_BANK)}`;
+}
+
 function persist() {
   if (state && state.settings.autosave) saveState(state);
 }
@@ -67,7 +80,7 @@ function startGame(player) {
 
 function switchView(view) {
   state.ui.view = view;
-  if (view !== 'people') state.ui.targetId = '';
+  if (view !== 'profile') state.ui.targetId = '';
   render();
 }
 
@@ -221,7 +234,7 @@ function executeFreeAction(rawText) {
   if (speaksToCharacter) {
     state.ui.sceneCharacterId = character.id;
     state.ui.targetId = character.id;
-    state.ui.view = 'people';
+    state.ui.view = 'profile';
     appendDialogue(character.id,'player',raw);
     const response = talkToCharacter(state,character,raw);
     appendDialogue(character.id,'npc',response.reply);
@@ -236,7 +249,7 @@ function executeFreeAction(rawText) {
   if (character && !destinationId) {
     state.ui.sceneCharacterId = character.id;
     state.ui.targetId = character.id;
-    state.ui.view = 'people';
+    state.ui.view = 'profile';
     const approach = `Ты подходишь к ${character.name}. Она замечает тебя и готова поговорить.`;
     appendDialogue(character.id,'player',raw);
     appendDialogue(character.id,'npc',approach);
@@ -292,7 +305,7 @@ function sendWorldDialogue(characterId,rawText) {
   if (!character || !state.unlocked.includes(character.id) || !text) return;
   state.ui.sceneCharacterId = character.id;
   state.ui.targetId = character.id;
-  state.ui.view = 'people';
+  state.ui.view = 'profile';
   appendDialogue(character.id,'player',text);
   const response = talkToCharacter(state,character,text);
   appendDialogue(character.id,'npc',response.reply);
@@ -429,9 +442,10 @@ document.addEventListener('click',event=>{
   const {action,id,type,hours,item} = button.dataset;
   switch (action) {
     case 'new-game': populateOrigins(); showScreen('creation'); break;
+    case 'random-name': { const field=document.getElementById('player-name'); if(field) field.value=randomPlayerName(); break; }
     case 'continue': { const loaded = loadState(); if (loaded) { state=loaded; showScreen('game'); } else toast('Сохранение не найдено.'); break; }
     case 'home': showScreen('title'); break;
-    case 'open-settings': openSettings(); break;
+    case 'open-settings': switchView('settings'); break;
     case 'close-modal': elements.modal.innerHTML=''; break;
     case 'skip-time': skipTime(state,Number(hours)||1); render(); break;
     case 'sleep': sleepUntilMorning(state); render(); toast('Наступило утро.'); break;
@@ -440,13 +454,13 @@ document.addEventListener('click',event=>{
     case 'patrol': startPatrol(); break;
     case 'combat-move': combatMove(type); break;
     case 'close-encounter': state.encounter=null; elements.modal.innerHTML=''; render(); break;
-    case 'open-person': state.ui.view='people'; state.ui.targetId=id; state.ui.sceneCharacterId=id; render(); break;
+    case 'open-person': state.ui.view='profile'; state.ui.targetId=id; state.ui.sceneCharacterId=id; render(); break;
     case 'select-scene-character': state.ui.sceneCharacterId=id; render(); break;
-    case 'back-people': state.ui.targetId=''; render(); break;
+    case 'back-people': state.ui.view='people'; state.ui.targetId=''; render(); break;
     case 'person-action': speakAsAction(id,type); break;
     case 'secret-hint':
       if (state.world.secretClue && !state.unlocked.includes('haku')) {
-        state.unlocked.push('haku'); state.ui.view='people'; state.ui.targetId='haku';
+        state.unlocked.push('haku'); state.ui.view='profile'; state.ui.targetId='haku';
         addFeed(state,'У старой беседки ты встретил Хаку — тихого путешественника. Секретная ветка открыта.');
         appendDialogue('haku','npc','Привет. Я Хаку. Надеюсь, моё появление не стало неожиданностью.');
         render(); toast('Открыт секретный персонаж: Хаку.');
@@ -479,7 +493,7 @@ document.addEventListener('submit',event=>{
   if (event.target.id === 'creation-form') {
     event.preventDefault();
     const form = new FormData(event.target);
-    startGame({name:form.get('name'),origin:form.get('origin'),style:form.get('style'),look:form.get('look'),mark:form.get('mark')});
+    startGame({name:String(form.get('name')||'').trim() || randomPlayerName(),origin:form.get('origin'),style:form.get('style'),look:form.get('look'),mark:form.get('mark'),gender:form.get('gender'),age:form.get('age'),clan:form.get('clan'),chakra:form.get('chakra'),specialty:form.get('specialty'),hair:form.get('hair'),eyes:form.get('eyes'),goal:form.get('goal'),village:form.get('village'),signatureTool:form.get('signatureTool')});
   }
   if (event.target.id === 'world-action-form') {
     event.preventDefault();
@@ -510,7 +524,7 @@ document.addEventListener('change',event=>{
   if (event.target.dataset.setting && state) {
     const key = event.target.dataset.setting;
     state.settings[key] = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
-    renderSettings(state);
+    if (state.ui.view === 'settings') render(); else renderSettings(state);
     persist();
   }
   if (event.target.id === 'import-file') importSaveFile(event.target.files?.[0]);

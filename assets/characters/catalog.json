@@ -1,0 +1,241 @@
+{
+  "version": 1,
+  "characters": [
+    {
+      "id": "anko",
+      "portrait": "anko/portrait.webp",
+      "gallery": [
+        "anko/daily.webp",
+        "anko/shinobi.webp",
+        "anko/festival.webp"
+      ],
+      "galleryType": "triptych"
+    },
+    {
+      "id": "ayame",
+      "portrait": "ayame/portrait.webp",
+      "gallery": [
+        "ayame/daily.webp",
+        "ayame/shinobi.webp",
+        "ayame/festival.webp"
+      ],
+      "galleryType": "triptych"
+    },
+    {
+      "id": "buntan",
+      "portrait": "buntan/portrait.webp",
+      "gallery": [
+        "buntan/portrait.webp"
+      ],
+      "galleryType": "portrait"
+    },
+    {
+      "id": "ino",
+      "portrait": "ino/portrait.webp",
+      "gallery": [
+        "ino/portrait.webp"
+      ],
+      "galleryType": "portrait"
+    },
+    {
+      "id": "yodo",
+      "portrait": "yodo/portrait.webp",
+      "gallery": [
+        "yodo/portrait.webp"
+      ],
+      "galleryType": "portrait"
+    },
+    {
+      "id": "kaguya",
+      "portrait": "kaguya/portrait.webp",
+      "gallery": [
+        "kaguya/portrait.webp"
+      ],
+      "galleryType": "portrait"
+    },
+    {
+      "id": "karin",
+      "portrait": "karin/portrait.webp",
+      "gallery": [
+        "karin/portrait.webp"
+      ],
+      "galleryType": "portrait"
+    },
+    {
+      "id": "konan",
+      "portrait": "konan/portrait.webp",
+      "gallery": [
+        "konan/daily.webp",
+        "konan/shinobi.webp",
+        "konan/festival.webp"
+      ],
+      "galleryType": "triptych"
+    },
+    {
+      "id": "kurenai",
+      "portrait": "kurenai/portrait.webp",
+      "gallery": [
+        "kurenai/portrait.webp"
+      ],
+      "galleryType": "portrait"
+    },
+    {
+      "id": "kurotsuchi",
+      "portrait": "kurotsuchi/portrait.webp",
+      "gallery": [
+        "kurotsuchi/portrait.webp"
+      ],
+      "galleryType": "portrait"
+    },
+    {
+      "id": "kushina",
+      "portrait": "kushina/portrait.webp",
+      "gallery": [
+        "kushina/portrait.webp"
+      ],
+      "galleryType": "portrait"
+    },
+    {
+      "id": "mabui",
+      "portrait": "mabui/portrait.webp",
+      "gallery": [
+        "mabui/portrait.webp"
+      ],
+      "galleryType": "portrait"
+    },
+    {
+      "id": "mei",
+      "portrait": "mei/portrait.webp",
+      "gallery": [
+        "mei/portrait.webp"
+      ],
+      "galleryType": "portrait"
+    },
+    {
+      "id": "mikoto",
+      "portrait": "mikoto/portrait.webp",
+      "gallery": [
+        "mikoto/portrait.webp"
+      ],
+      "galleryType": "portrait"
+    },
+    {
+      "id": "mirai",
+      "portrait": "mirai/portrait.webp",
+      "gallery": [
+        "mirai/portrait.webp"
+      ],
+      "galleryType": "portrait"
+    },
+    {
+      "id": "mito",
+      "portrait": "mito/portrait.webp",
+      "gallery": [
+        "mito/portrait.webp"
+      ],
+      "galleryType": "portrait"
+    },
+    {
+      "id": "rin",
+      "portrait": "rin/portrait.webp",
+      "gallery": [
+        "rin/portrait.webp"
+      ],
+      "galleryType": "portrait"
+    },
+    {
+      "id": "sakura",
+      "portrait": "sakura/portrait.webp",
+      "gallery": [
+        "sakura/daily.webp",
+        "sakura/shinobi.webp",
+        "sakura/festival.webp"
+      ],
+      "galleryType": "triptych"
+    },
+    {
+      "id": "samui",
+      "portrait": "samui/portrait.webp",
+      "gallery": [
+        "samui/portrait.webp"
+      ],
+      "galleryType": "portrait"
+    },
+    {
+      "id": "sarada",
+      "portrait": "sarada/portrait.webp",
+      "gallery": [
+        "sarada/portrait.webp"
+      ],
+      "galleryType": "portrait"
+    },
+    {
+      "id": "tayuya",
+      "portrait": "tayuya/portrait.webp",
+      "gallery": [
+        "tayuya/portrait.webp"
+      ],
+      "galleryType": "portrait"
+    },
+    {
+      "id": "temari",
+      "portrait": "temari/portrait.webp",
+      "gallery": [
+        "temari/portrait.webp"
+      ],
+      "galleryType": "portrait"
+    },
+    {
+      "id": "tenten",
+      "portrait": "tenten/portrait.webp",
+      "gallery": [
+        "tenten/portrait.webp"
+      ],
+      "galleryType": "portrait"
+    },
+    {
+      "id": "hanabi",
+      "portrait": "hanabi/portrait.webp",
+      "gallery": [
+        "hanabi/daily.webp",
+        "hanabi/shinobi.webp",
+        "hanabi/festival.webp"
+      ],
+      "galleryType": "triptych"
+    },
+    {
+      "id": "hinata",
+      "portrait": "hinata/portrait.webp",
+      "gallery": [
+        "hinata/daily.webp",
+        "hinata/shinobi.webp",
+        "hinata/festival.webp"
+      ],
+      "galleryType": "triptych"
+    },
+    {
+      "id": "tsunade",
+      "portrait": "tsunade/portrait.webp",
+      "gallery": [
+        "tsunade/portrait.webp"
+      ],
+      "galleryType": "portrait"
+    },
+    {
+      "id": "haku",
+      "portrait": "haku/portrait.webp",
+      "gallery": [
+        "haku/portrait.webp"
+      ],
+      "galleryType": "portrait"
+    },
+    {
+      "id": "shizune",
+      "portrait": "shizune/portrait.webp",
+      "gallery": [
+        "shizune/portrait.webp"
+      ],
+      "galleryType": "portrait"
+    }
+  ]
+}

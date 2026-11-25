@@ -16,8 +16,9 @@ assert.equal(ORIGINS.length,10,'Должно быть 10 вариантов пр
 assert.equal(LOCATIONS.length,17,'Карта должна содержать 17 мест');
 assert.equal(state.unlocked.length,27,'Все персонажи, кроме секретного Хаку, доступны в начале');
 assert.equal(getCharacter('haku').secret,true,'Хаку должен быть секретным персонажем');
+const detailedCharacters = new Set(['anko','ayame','konan','sakura','hanabi','hinata']);
 for (const character of CHARACTERS) {
-  assert.equal(character.art.length,3,`${character.name}: должно быть три варианта арта`);
+  assert.equal(character.art.length,detailedCharacters.has(character.id)?3:1,`${character.name}: число изображений должно соответствовать готовым материалам`);
   for (const art of character.art) assert.ok(fs.existsSync(path.join(root,art.src)),`${character.name}: файл арта ${art.src} должен существовать`);
 }
 
@@ -61,19 +62,28 @@ skipTime(state,2);
 assert.ok(state.world.minute >= 0 && state.world.minute < 1440,'Время должно оставаться в пределах суток');
 
 state.ui.view='world';
-assert.match(renderView(state),/Карта Конохи/,'Экран мира должен выводить карту');
-assert.match(renderView(state),/data-action="patrol"/,'На карте доступен патруль');
+assert.match(renderView(state),/Хроники Конохи/,'Главная страница должна рендериться');
+assert.match(renderView(state),/world-action-form/,'Главная страница должна содержать поле действий');
+assert.match(renderView(state),/world-dialogue-form/,'Главная страница должна содержать свободный диалог');
+assert.match(renderView(state),/data-action="patrol"/,'На главной странице доступен патруль');
 for (const location of LOCATIONS) assert.ok(fs.existsSync(path.join(root,location.bg)),`${location.name}: локальный фон должен существовать`);
 state.ui.view='people';
 state.ui.targetId='';
-assert.match(renderView(state),/Жители и союзники/,'Экран персонажей должен рендериться');
+assert.match(renderView(state),/Жители и союзники/,'Отдельная страница списка персонажей должна рендериться');
+state.ui.view='profile';
 state.ui.targetId='ayame';
-assert.match(renderView(state),/chat-form/,'Карточка персонажа должна включать свободный чат');
-assert.match(renderView(state),/character-art-grid/,'Карточка персонажа должна показывать галерею артов');
+assert.match(renderView(state),/chat-form/,'Отдельная страница профиля должна включать свободный чат');
+assert.match(renderView(state),/character-art-grid/,'Профиль персонажа должен показывать доступные арты');
 state.ui.view='scroll';
 assert.match(renderView(state),/Свиток дел/,'Экран заданий должен рендериться');
 state.ui.view='bag';
 assert.match(renderView(state),/Инвентарь/,'Экран инвентаря должен рендериться');
+state.ui.view='day';
+assert.match(renderView(state),/Распорядок дня/,'Экран планов должен рендериться');
+state.ui.view='settings';
+assert.match(renderView(state),/Настройки/,'Экран настроек должен рендериться');
+state.ui.view='map';
+assert.match(renderView(state),/ref-location-grid/,'Карта должна рендериться отдельной страницей');
 
 // Haku's clue is designed to appear only during winter exploration.
 for(let i=0;i<21;i++) sleepUntilMorning(state);

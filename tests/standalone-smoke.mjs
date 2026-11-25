@@ -65,27 +65,48 @@ const newGameButton = {dataset:{action:'new-game'},textContent:'Новая ис�
 click({target:{closest:()=>newGameButton,classList:{contains:()=>false}}});
 assert.equal(getElement('creation-screen').classList.contains('hidden'),false,'new-game button must reveal character creation');
 assert.ok(getElement('player-origin').innerHTML.includes('Житель Конохи'),'origin options must populate');
+const randomNameButton = {dataset:{action:'random-name'},textContent:'Случайное имя',closest(){return this;}};
+click({target:{closest:()=>randomNameButton,classList:{contains:()=>false}}});
+assert.ok(getElement('player-name').value.length>2,'random name button must fill the character name');
 
 const submit = listeners.submit?.[0];
-const form = {id:'creation-form',data:{name:'Проверка',origin:'shinobi',style:'balanced',look:'casual',mark:'none'}};
+const form = {id:'creation-form',data:{name:'Проверка',origin:'shinobi',style:'balanced',look:'casual',mark:'none',gender:'female',age:'22',clan:'Хьюга',chakra:'wind',specialty:'sensors',hair:'long',eyes:'Фиолетовые',goal:'explore',village:'konoha',signatureTool:'scroll'}};
 submit({target:form,preventDefault(){}});
 assert.equal(getElement('game-screen').classList.contains('hidden'),false,'creation form must start the game');
-assert.ok(getElement('view-root').innerHTML.includes('Карта Конохи'),'game screen must render the map');
+assert.equal(context.window.NEG_TEST.state().player.village,'konoha','creator should store village selection');
+assert.equal(context.window.NEG_TEST.state().player.signatureTool,'scroll','creator should store tool selection');
+assert.equal(context.window.NEG_TEST.state().player.age,22,'creator should store age selection');
+assert.ok(getElement('view-root').innerHTML.includes('Хроники Конохи'),'game screen must render the world page');
 assert.ok(getElement('view-root').innerHTML.includes('world-action-form'),'world screen must show free-text actions');
 assert.ok(getElement('view-root').innerHTML.includes('world-dialogue-form'),'world screen must show free-text dialogue');
+assert.ok(getElement('view-root').innerHTML.includes('data-action="patrol"'),'world screen must expose patrol action');
 const worldActionForm = {id:'world-action-form',data:{action:'Я иду в больницу.'}};
 submit({target:worldActionForm,preventDefault(){}});
 assert.equal(context.window.NEG_TEST.state().world.location,'hospital','free-text movement must navigate to a named location');
 assert.ok(context.window.NEG_TEST.state().ui.lastActionResult.includes('направляешься'),'free-text action must return a narrated result');
 const worldDialogueForm = {id:'world-dialogue-form',data:{characterId:'sakura',message:'Привет, Сакура! Как прошёл твой день?'}};
 submit({target:worldDialogueForm,preventDefault(){}});
-assert.equal(context.window.NEG_TEST.state().ui.view,'people','free-text dialogue must open the selected character conversation');
+assert.equal(context.window.NEG_TEST.state().ui.view,'profile','free-text dialogue must open the selected character profile page');
 assert.ok(context.window.NEG_TEST.state().dialogues.sakura.some(message=>message.from==='player' && message.text.includes('Как прошёл')),'free-text dialogue must be saved in the character history');
 const naturalActionForm = {id:'world-action-form',data:{action:'Иду к Хинате и спрашиваю, как прошёл её день.'}};
 submit({target:naturalActionForm,preventDefault(){}});
 assert.equal(context.window.NEG_TEST.state().ui.targetId,'hinata','free-text RP must resolve an inflected character name');
 assert.ok(context.window.NEG_TEST.state().dialogues.hinata.some(message=>message.from==='player' && message.text.includes('спрашиваю')),'action text can include dialogue and resolve it to a character');
 assert.ok(JSON.parse(local.get('naruto-enot-garem-save-v2')).player.name === 'Проверка','new game must save progress');
+const navHandler = listeners.click?.[1];
+assert.equal(typeof navHandler,'function','page navigation handler must initialize');
+const mapNav = {dataset:{view:'map'},closest(){return this;}};
+navHandler({target:{closest:selector=>selector==='[data-view]'?mapNav:null}});
+assert.equal(context.window.NEG_TEST.state().ui.view,'map','map must be a separate page');
+const peopleNav = {dataset:{view:'people'},closest(){return this;}};
+navHandler({target:{closest:selector=>selector==='[data-view]'?peopleNav:null}});
+assert.equal(context.window.NEG_TEST.state().ui.view,'people','character list must be a separate page');
+const openProfileButton = {dataset:{action:'open-person',id:'sakura'},textContent:'Сакура',closest(){return this;}};
+click({target:{closest:selector=>selector==='[data-action]'?openProfileButton:null,classList:{contains:()=>false}}});
+assert.equal(context.window.NEG_TEST.state().ui.view,'profile','character dossier must be a separate page');
+const backToPeopleButton = {dataset:{action:'back-people'},textContent:'К списку',closest(){return this;}};
+click({target:{closest:selector=>selector==='[data-action]'?backToPeopleButton:null,classList:{contains:()=>false}}});
+assert.equal(context.window.NEG_TEST.state().ui.view,'people','profile back button must return to character list');
 
 const patrolButton = {dataset:{action:'patrol'},textContent:'Патруль',closest(){return this;}};
 click({target:{closest:()=>patrolButton,classList:{contains:()=>false}}});
@@ -111,10 +132,12 @@ for (const characterId of detailedCharacters) {
 }
 const allCharacters = ['anko','ayame','buntan','ino','yodo','kaguya','karin','konan','kurenai','kurotsuchi','kushina','mabui','mei','mikoto','mirai','mito','rin','sakura','samui','sarada','tayuya','temari','tenten','hanabi','hinata','tsunade','haku','shizune'];
 for (const characterId of allCharacters) {
+  const portrait = new URL(`../assets/characters/${characterId}/portrait.webp`, import.meta.url);
+  assert.ok(fs.existsSync(portrait),`${characterId} real portrait asset must exist`);
+}
+for (const characterId of detailedCharacters) {
   for (const variant of galleryFiles) {
-    const webp = new URL(`../assets/characters/${characterId}/${variant}.webp`, import.meta.url);
-    const svg = new URL(`../assets/characters/${characterId}/${variant}.svg`, import.meta.url);
-    assert.ok(fs.existsSync(webp) || fs.existsSync(svg),`${characterId} ${variant} gallery asset must exist`);
+    assert.ok(fs.existsSync(new URL(`../assets/characters/${characterId}/${variant}.webp`, import.meta.url)),`${characterId} ${variant} detailed art must exist`);
   }
 }
 for (const scene of ['konoha-main','training-ground','ichiraku','tatami-home','river-sunset','festival-street','clinic','library','flower-shop','hokage-office','village-gate','memorial-garden','market-street','academy-courtyard','bathhouse-garden','rainy-alley','mountain-trail','campsite']) assert.ok(fs.existsSync(new URL(`../assets/backgrounds/${scene}.webp`, import.meta.url)),`${scene} background must exist`);
@@ -126,4 +149,4 @@ for (const sprite of uiSprites) {
 }
 assert.ok(fs.existsSync(new URL('../ui-atlas-preview.jpg', import.meta.url)),'UI sprite atlas preview must exist');
 
-console.log('OK: start flow, save, 28 character galleries, 18 scene backgrounds, 6 enemies, and 17 extracted UI sprites.');
+console.log('OK: start flow, free actions/dialogue, save, 28 portraits, 6 detailed triptychs, 18 backgrounds, 6 enemies, and 17 UI sprites.');
