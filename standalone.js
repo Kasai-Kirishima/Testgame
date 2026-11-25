@@ -154,7 +154,7 @@ function createInitialState(player = {}) {
     unlocked,
     assignments: [],
     settings: {autosave:true,animations:true,textSize:'normal',contrast:'normal',musicLink:true,confirmReset:true},
-    ui: {screen:'world',view:'world',targetId:'',showHelp:true}
+    ui: {screen:'world',view:'world',targetId:'',sceneCharacterId:'hinata',lastActionText:'',lastActionResult:'Ты прибыл в Коноху. Напиши, куда хочешь пойти, что сделать или с кем поговорить.',showHelp:true}
   };
 }
 
@@ -622,33 +622,92 @@ function renderWorld(state) {
   const hour = Math.floor(state.world.minute/60);
   const isNight = hour >= 19 || hour < 5;
   const sceneImage = weather.id === 'rain' && place.rainBg ? place.rainBg : isNight && place.nightBg ? place.nightBg : place.bg;
+  const available = CHARACTERS.filter(character => state.unlocked.includes(character.id));
+  const peopleHere = available.filter(character => character.startLocation === place.id);
+  const featured = available.find(character => character.id === state.ui.sceneCharacterId)
+    || peopleHere[0]
+    || available.find(character => ['hinata','sakura','konan','anko','ayame','hanabi'].includes(character.id))
+    || available[0];
+  if (featured && state.ui.sceneCharacterId !== featured.id) state.ui.sceneCharacterId = featured.id;
+  const bond = featured ? getBond(state, featured.id) : {friendship:0,trust:0,respect:0,stage:'Знакомство',meetings:0};
+  const bondValue = featured ? Math.max(bond.friendship,bond.trust,bond.respect) : 0;
   const assignments = state.assignments.filter(item => item.day === state.world.day);
-  const peopleHere = CHARACTERS.filter(character => state.unlocked.includes(character.id) && character.startLocation === place.id);
   const taskOptions = [['cook','Готовка'],['tidy','Уборка'],['shop','Покупки'],['study','Учёба'],['train','Тренировка'],['garden','Сад'],['clinic','Помощь в больнице'],['rest','Отдых']];
-  return `${heading('Коноха','Свободно перемещайся по деревне, занимайся своими делами и узнавай истории жителей.')}
-    <section class="world-hero" data-scene="${place.id}" data-weather="${weather.id}" style="--scene-image:url('${sceneImage || 'assets/backgrounds/konoha-main.webp'}')">
-      <div class="hero-copy"><div class="eyebrow">СЕЙЧАС · ДЕНЬ ${state.world.day}</div><h3>${place.icon} ${place.name}</h3><p>${place.desc}</p><div class="hero-meta"><span>${weather.icon} ${weather.label}</span><span>🌿 ${seasonLabel(state)}</span><span>◷ ${timePeriod(state.world.minute)} · ${clockLabel(state.world.minute)}</span></div></div>
-      <div class="hero-actions"><button class="btn btn-primary" data-action="sleep">Спать до утра</button><button class="btn btn-ghost" data-action="skip-time" data-hours="2">Пропустить 2 часа</button></div>
-    </section>
-    <div class="world-grid">
-      <section class="panel-card"><div class="card-head"><h3><img class="ui-inline-icon" src="assets/ui/map.svg" alt=""> Карта Конохи</h3><small>НАЖМИ НА МЕСТО ДЛЯ ПЕРЕМЕЩЕНИЯ</small></div><div class="map-grid">${LOCATIONS.map(location=>`<button class="map-point ${location.id===place.id?'current':''}" style="--map-bg:url('${location.bg || 'assets/backgrounds/konoha-main.webp'}')" data-action="travel" data-id="${location.id}"><span class="pin">${location.icon}</span><strong>${location.name}</strong><small>${location.area}</small></button>`).join('')}</div></section>
-      <section class="panel-card"><div class="card-head"><h3>Чем заняться</h3><small>ОДНО ДЕЙСТВИЕ = 25 МИНУТ</small></div><div class="quick-actions">
-        <button class="action-tile" data-action="activity" data-type="rest"><span><img class="tile-icon" src="assets/ui/tea.svg" alt=""></span>Отдохнуть<small>Восстановить силы</small></button>
-        <button class="action-tile" data-action="activity" data-type="meal"><span><img class="tile-icon" src="assets/ui/bento.svg" alt=""></span>Поесть<small>Потратить 12 рё</small></button>
-        <button class="action-tile" data-action="activity" data-type="train"><span><img class="tile-icon" src="assets/ui/chakra.svg" alt=""></span>Тренировка<small>Контроль чакры</small></button>
-        <button class="action-tile" data-action="activity" data-type="help"><span><img class="tile-icon" src="assets/ui/cropped/chat.png" alt=""></span>Помочь жителям<small>Репутация и находки</small></button>
-        <button class="action-tile" data-action="activity" data-type="search"><span><img class="tile-icon" src="assets/ui/cropped/location.png" alt=""></span>Осмотреться<small>Найти полезную мелочь</small></button>
-        <button class="action-tile" data-action="activity" data-type="focus"><span><img class="tile-icon" src="assets/ui/cropped/mood.png" alt=""></span>Медитация<small>Восстановить чакру</small></button>
-        <button class="action-tile patrol-tile" data-action="patrol"><span><img class="tile-icon" src="assets/ui/kunai.svg" alt=""></span>Патруль территории<small>Случайная встреча и тактический бой</small></button>
-      </div><p class="chat-hint">${weather.effect}</p>${peopleHere.length?`<div class="nearby"><b>Неподалёку:</b> ${peopleHere.map(character=>`<button class="text-link" data-action="open-person" data-id="${character.id}">${character.name}</button>`).join(' · ')}</div>`:''}</section>
-    </div>
-    <section class="panel-card routine-card"><div class="card-head"><h3>Планы на день</h3><small>НАЗНАЧЬ ЗАНЯТИЕ СЕБЕ ИЛИ УЧАСТНИКУ КОМАНДЫ</small></div>
-      <form id="assignment-form" class="assignment-form"><label>Кто<select name="actor"><option value="player">${escapeHTML(state.player.name)}</option>${CHARACTERS.filter(character=>state.unlocked.includes(character.id)).map(character=>`<option value="${character.id}">${character.name}</option>`).join('')}</select></label><label>Занятие<select name="task">${taskOptions.map(([id,label])=>`<option value="${id}">${label}</option>`).join('')}</select></label><button class="btn btn-primary" type="submit">Назначить</button></form>
-      ${assignments.length?`<div class="plan-list">${assignments.map(item=>`<div class="plan-chip"><span>✓</span><b>${escapeHTML(item.actorName)}</b><small>${taskOptions.find(([id])=>id===item.task)?.[1]||item.task}</small><em>${item.done?'Выполнено':'Запланировано'}</em></div>`).join('')}</div>`:'<div class="empty-inline">На сегодня пока нет планов. Назначь занятия — они завершатся, когда наступит следующий день.</div>'}
-    </section>
-    <section class="story-feed"><div class="card-head"><h3>Хроника дня</h3><small>ПОСЛЕДНИЕ СОБЫТИЯ</small></div>${state.feed.slice(0,6).map((line,index)=>`<div class="feed-line"><time>${index===0?'СЕЙЧАС':'ИСТОРИЯ'}</time>${escapeHTML(line)}</div>`).join('')}</section>`;
-}
+  const sceneArt = featured?.art?.[0]?.src || '';
+  const lastResult = state.ui.lastActionResult || `Ты находишься в месте «${place.name}». ${place.desc} Напиши, что хочешь сделать, или выбери персонажа для разговора.`;
+  return `${heading('Жизнь в Конохе','Один мир, свободные действия и разговоры: напиши, куда идёшь, что делаешь или кому отвечаешь.')}
+    <div class="vn-home-layout">
+      <aside class="vn-roster panel-card">
+        <div class="vn-panel-title"><div><span class="eyebrow">КОНОХА</span><h3>Персонажи</h3></div><b>${available.length}</b></div>
+        <div class="vn-roster-list">${available.map(character=>{
+          const currentBond = getBond(state,character.id);
+          const selected = featured?.id === character.id;
+          return `<button class="vn-roster-item ${selected?'selected':''}" data-action="select-scene-character" data-id="${character.id}" aria-pressed="${selected}">${avatar(character)}<span class="vn-roster-name"><b>${escapeHTML(character.name)}</b><small>${escapeHTML(character.role)}</small></span><span class="vn-roster-heart">${Math.max(currentBond.friendship,currentBond.trust)}<i>♥</i></span></button>`;
+        }).join('')}</div>
+        <button class="vn-roster-all" data-view="people">Все профили и истории <span>↗</span></button>
+      </aside>
 
+      <section class="vn-center-column">
+        <section class="vn-stage" data-weather="${weather.id}" style="--scene-image:url('${sceneImage || 'assets/backgrounds/konoha-main.webp'}')">
+          <div class="vn-stage-shade"></div>
+          <div class="vn-stage-topline"><span class="vn-location-pill"><img src="assets/ui/cropped/location.png" alt="">${escapeHTML(place.name)}</span><span>${weather.icon} ${weather.label} · ${seasonLabel(state)} · ${timePeriod(state.world.minute)} ${clockLabel(state.world.minute)}</span></div>
+          <div class="vn-stage-copy"><div class="eyebrow">ДЕНЬ ${state.world.day} · ${escapeHTML(place.area.toUpperCase())}</div><h3>${escapeHTML(place.name)}</h3><p>${escapeHTML(place.desc)}</p></div>
+          ${featured?`<button class="vn-stage-character" data-action="open-person" data-id="${featured.id}" aria-label="Открыть профиль ${escapeHTML(featured.name)}"><img src="${sceneArt}" alt="${escapeHTML(featured.name)}" loading="eager"><span class="vn-stage-nameplate"><b>${escapeHTML(featured.name)}</b><small>${escapeHTML(featured.role)}</small></span></button>`:''}
+          <div class="vn-stage-bottom"><span>✦ ${peopleHere.length ? `${peopleHere.length} знакомых могут быть неподалёку` : 'Улица живёт своей жизнью'}</span><span>Рё ${stats.coins}</span></div>
+        </section>
+
+        <section class="vn-dialogue-card" aria-live="polite">
+          <div class="vn-master-mark">GM</div>
+          <div class="vn-dialogue-copy"><span class="vn-speaker-label">ИГРОВОЙ МАСТЕР · ХРОНИКА</span><p>${escapeHTML(lastResult)}</p></div>
+        </section>
+
+        <div class="vn-input-grid">
+          <section class="panel-card vn-input-card action-input-card">
+            <div class="vn-panel-title"><div><span class="eyebrow">СВОБОДНЫЙ RP</span><h3>Что ты делаешь?</h3></div><img src="assets/ui/cropped/location.png" alt=""></div>
+            <form id="world-action-form" class="vn-input-form">
+              <textarea name="action" rows="3" maxlength="420" placeholder="Например: иду в больницу, ищу Сакуру и предлагаю помочь; затем покупаю чай на рынке…" required>${escapeHTML(state.ui.lastActionText || '')}</textarea>
+              <div class="vn-prompt-chips"><button type="button" data-sample="Иду в библиотеку и ищу книгу о контроле чакры.">В библиотеку</button><button type="button" data-sample="Иду на рынок и покупаю зелёный чай.">На рынок</button><button type="button" data-sample="Осматриваю это место и ищу полезные вещи.">Осмотреться</button><button type="button" data-sample="Тренируюсь на площадке и отрабатываю защитную стойку.">Тренировка</button></div>
+              <div class="vn-form-footer"><small>Можно писать обычным языком: перемещение, поиск, покупки, отдых, тренировка и бытовые дела.</small><button class="btn btn-primary" type="submit">Выполнить действие <span>↗</span></button></div>
+            </form>
+          </section>
+          <section class="panel-card vn-input-card dialogue-input-card">
+            <div class="vn-panel-title"><div><span class="eyebrow">СВОБОДНЫЙ ДИАЛОГ</span><h3>Что ты скажешь?</h3></div><img src="assets/ui/cropped/chat.png" alt=""></div>
+            <form id="world-dialogue-form" class="vn-input-form">
+              <label class="vn-select-label" for="world-dialogue-target">С кем говоришь?</label>
+              <select id="world-dialogue-target" name="characterId">${available.map(character=>`<option value="${character.id}" ${featured?.id===character.id?'selected':''}>${escapeHTML(character.name)}</option>`).join('')}</select>
+              <textarea name="message" rows="3" maxlength="500" placeholder="Напиши реплику своими словами…" required></textarea>
+              <div class="vn-form-footer"><small>Персонаж ответит с учётом своего характера и ваших прошлых встреч.</small><button class="btn btn-soft" type="submit">Отправить реплику <span>➤</span></button></div>
+            </form>
+          </section>
+        </div>
+
+        <details class="panel-card vn-map-drawer">
+          <summary><span><img src="assets/ui/map.svg" alt=""> Карта Конохи и окрестностей</span><small>${place.name} · ${LOCATIONS.length} мест</small></summary>
+          <div class="map-grid vn-map-grid">${LOCATIONS.map(location=>`<button class="map-point ${location.id===place.id?'current':''}" style="--map-bg:url('${location.bg || 'assets/backgrounds/konoha-main.webp'}')" data-action="travel" data-id="${location.id}"><span class="pin">${location.icon}</span><strong>${escapeHTML(location.name)}</strong><small>${escapeHTML(location.area)}</small></button>`).join('')}</div>
+        </details>
+
+        <details class="panel-card vn-plans-drawer">
+          <summary><span>Планы на день</span><small>${assignments.length} назначено</small></summary>
+          <form id="assignment-form" class="assignment-form"><label>Кто<select name="actor"><option value="player">${escapeHTML(state.player.name)}</option>${available.map(character=>`<option value="${character.id}">${escapeHTML(character.name)}</option>`).join('')}</select></label><label>Занятие<select name="task">${taskOptions.map(([id,label])=>`<option value="${id}">${label}</option>`).join('')}</select></label><button class="btn btn-primary" type="submit">Назначить</button></form>
+          ${assignments.length?`<div class="plan-list">${assignments.map(item=>`<div class="plan-chip"><span>✓</span><b>${escapeHTML(item.actorName)}</b><small>${taskOptions.find(([id])=>id===item.task)?.[1]||item.task}</small><em>${item.done?'Выполнено':'Запланировано'}</em></div>`).join('')}</div>`:'<div class="empty-inline">Пока нет планов. Выбери дела для себя или знакомых.</div>'}
+        </details>
+      </section>
+
+      <aside class="vn-right-rail">
+        ${featured?`<section class="panel-card vn-profile-card"><div class="vn-panel-title"><div><span class="eyebrow">СЕЙЧАС В ФОКУСЕ</span><h3>${escapeHTML(featured.name)}</h3></div><span class="vn-heart-badge">♥ ${bondValue}</span></div><p class="vn-profile-role">${escapeHTML(featured.role)}</p><p class="vn-profile-desc">${escapeHTML(featured.personality)}</p><div class="vn-bond-mini"><div><span>Дружба</span><b>${bond.friendship}/100</b></div><i><em style="width:${bond.friendship}%"></em></i><div><span>Доверие</span><b>${bond.trust}/100</b></div><i><em style="width:${bond.trust}%"></em></i><div><span>Уважение</span><b>${bond.respect}/100</b></div><i><em style="width:${bond.respect}%"></em></i></div><div class="vn-like-tags">${featured.likes.slice(0,3).map(like=>`<span>${escapeHTML(like)}</span>`).join('')}</div><div class="vn-profile-actions"><button data-action="open-person" data-id="${featured.id}"><img src="assets/ui/cropped/chat.png" alt="">Профиль и чат</button><button data-action="person-action" data-id="${featured.id}" data-type="invite"><img src="assets/ui/cropped/heart.png" alt="">Прогулка</button><button data-action="person-action" data-id="${featured.id}" data-type="help"><img src="assets/ui/cropped/gift.png" alt="">Помощь</button></div></section>`:''}
+        <section class="panel-card vn-quick-panel"><div class="vn-panel-title"><div><span class="eyebrow">БЫСТРЫЕ ДЕЛА</span><h3>На сегодня</h3></div><img src="assets/ui/cropped/star.png" alt=""></div><div class="vn-quick-grid">
+          <button data-action="activity" data-type="rest"><img src="assets/ui/tea.svg" alt=""><b>Отдохнуть</b><small>Силы +</small></button>
+          <button data-action="activity" data-type="meal"><img src="assets/ui/bento.svg" alt=""><b>Поесть</b><small>12 рё</small></button>
+          <button data-action="activity" data-type="train"><img src="assets/ui/chakra.svg" alt=""><b>Тренировка</b><small>Чакра +</small></button>
+          <button data-action="activity" data-type="search"><img src="assets/ui/cropped/location.png" alt=""><b>Обыскать</b><small>Находки</small></button>
+          <button class="vn-patrol-action" data-action="patrol"><img src="assets/ui/kunai.svg" alt=""><b>Патруль</b><small>Случайная встреча</small></button>
+          <button data-action="sleep"><img src="assets/ui/cropped/sleep.png" alt=""><b>Спать</b><small>До утра</small></button>
+        </div></section>
+        <section class="panel-card vn-time-panel"><div class="vn-panel-title"><div><span class="eyebrow">ПЕРСОНАЖ</span><h3>${escapeHTML(state.player.name)}</h3></div><img src="assets/ui/cropped/mood.png" alt=""></div><div class="vn-stat-compact"><span>Выносливость</span><b>${stats.stamina}/100</b></div><div class="vn-stat-compact"><span>Чакра</span><b>${stats.chakra}/100</b></div><div class="vn-stat-compact"><span>Внимание</span><b>${stats.focus}/100</b></div><button class="vn-time-skip" data-action="skip-time" data-hours="2">Пропустить 2 часа ↗</button></section>
+      </aside>
+    </div>
+    <section class="story-feed vn-feed"><div class="card-head"><h3>Хроника дня</h3><small>ПОСЛЕДНИЕ СОБЫТИЯ</small></div>${state.feed.slice(0,5).map((line,index)=>`<div class="feed-line"><time>${index===0?'СЕЙЧАС':'ИСТОРИЯ'}</time>${escapeHTML(line)}</div>`).join('')}</section>`;
+}
 function renderPersonCard(state,character) {
   const bond = getBond(state,character.id);
   const value = Math.max(bond.friendship,bond.trust,bond.respect);
@@ -769,8 +828,8 @@ return { escapeHTML, renderView, renderStatus, populateOrigins, updateOriginNote
 "src/main.js": function(__require) {
 const { CHARACTERS,getCharacter } = __require("src/data/characters.js");
 const { ENEMIES,getEnemy } = __require("src/data/enemies.js");
-const { ORIGINS,getLocation } = __require("src/data/world.js");
-const { createInitialState,loadState,saveState,clearSave,addFeed,updateBond,removeItem } = __require("src/core/store.js");
+const { ORIGINS,LOCATIONS,getLocation } = __require("src/data/world.js");
+const { createInitialState,loadState,saveState,clearSave,addFeed,updateBond,removeItem,addItem } = __require("src/core/store.js");
 const { talkToCharacter } = __require("src/core/gm.js");
 const { travelTo,doActivity,skipTime,sleepUntilMorning,assignDailyTask,tickAction } = __require("src/core/life.js");
 const { renderView,renderStatus,populateOrigins,updateOriginNote,renderSettings,escapeHTML } = __require("src/ui/render.js");
@@ -808,6 +867,7 @@ function render() {
   if (!state) return;
   renderStatus(state);
   elements.view.innerHTML = renderView(state);
+  document.getElementById('app').dataset.view = state.ui.view;
   document.getElementById('app').dataset.textSize = state.settings.textSize;
   document.getElementById('app').dataset.contrast = state.settings.contrast;
   document.getElementById('app').dataset.motion = state.settings.animations ? 'on' : 'off';
@@ -934,6 +994,148 @@ function giveItemToPerson(characterId,itemId) {
   render();
 }
 
+const LOCATION_ALIASES = [
+  ['main-street',['главную улицу','главной улице','главная улица','центральную улицу','центр деревни','центр']],
+  ['ichiraku',['ичираку','лапшичную','лапшичная','за раменом']],
+  ['flower-shop',['цветочную лавку','цветочная лавка','цветочный магазин','за цветами']],
+  ['market',['на рынок','рынок','торговый квартал','магазины']],
+  ['training',['тренировочную площадку','тренировочная площадка','полигон','на площадку']],
+  ['hospital',['в больницу','больницу','больница','госпиталь','медицинский корпус','медкорпус']],
+  ['hokage',['резиденцию хокаге','кабинет хокаге','резиденция хокаге','к хокаге']],
+  ['tea-house',['чайный домик','чайную','чайная','домик у сада']],
+  ['river',['берег реки','к реке','на реку','реку','набережную']],
+  ['forest',['лесную тропу','лесная тропа','в лес','к лесу','лес']],
+  ['memorial',['мемориальный парк','парк памяти','мемориал']],
+  ['gate',['главные ворота','к воротам','на ворота','ворота']],
+  ['library',['в библиотеку','библиотеку','библиотека','читальный зал','архив']],
+  ['garden',['общественный сад','в сад','к саду','сад']],
+  ['home',['домой','к себе домой','в свой дом','дом']],
+  ['academy',['в академию','академию','академия','учебный двор']],
+  ['campsite',['лесной привал','к привалу','в лагерь','лагерь','стоянку']]
+].flatMap(([id,aliases])=>aliases.map(alias=>({id,alias}))).sort((a,b)=>b.alias.length-a.alias.length);
+
+function findMentionedLocation(text) {
+  const clean = String(text || '').toLowerCase().replace(/ё/g,'е');
+  return LOCATION_ALIASES.find(entry=>clean.includes(entry.alias.replace(/ё/g,'е')))?.id || '';
+}
+
+function findMentionedCharacter(text) {
+  const clean = String(text || '').toLocaleLowerCase('ru-RU').replace(/ё/g,'е');
+  return CHARACTERS.find(character => {
+    if (!state.unlocked.includes(character.id)) return false;
+    const base = character.name.toLocaleLowerCase('ru-RU').replace(/ё/g,'е');
+    const stem = base.length > 4 ? base.slice(0,-1) : base;
+    const variants = [...new Set([base,stem,`${stem}а`,`${stem}у`,`${stem}е`,`${stem}ы`,`${stem}и`,`${stem}ой`,`${stem}ом`])];
+    return variants.some(variant => new RegExp(`(?:^|[^\p{L}])${variant}(?=$|[^\p{L}])`,'u').test(clean));
+  });
+}
+
+function setActionResult(input,result) {
+  state.ui.lastActionText = String(input).slice(0,420);
+  state.ui.lastActionResult = result;
+  addFeed(state,result);
+}
+
+function executeFreeAction(rawText) {
+  const raw = String(rawText || '').trim().slice(0,420);
+  if (!raw || !state) return;
+  const clean = raw.toLowerCase().replace(/ё/g,'е');
+  state.ui.lastActionText = raw;
+  let resultParts = [];
+  const movement = /(?:^|\s)(иду|пойду|пойти|схожу|сходить|направляюсь|отправляюсь|двигаюсь|возвращаюсь|захожу|зайду|перехожу|перемещаюсь|прогуляюсь|бегу|подхожу|выхожу)(?:\s|$)/i.test(clean);
+  const destinationId = findMentionedLocation(clean);
+  if (destinationId && (movement || /^(?:в|на|к)\s/.test(clean))) {
+    const destination = getLocation(destinationId);
+    if (travelTo(state,destinationId)) { const local = CHARACTERS.find(item=>state.unlocked.includes(item.id) && item.startLocation===destinationId); if (local) state.ui.sceneCharacterId=local.id; resultParts.push(`Ты направляешься в «${destination.name}». ${destination.desc}`); }
+    else resultParts.push(`Ты уже находишься в месте «${destination.name}».`);
+  }
+
+  const character = findMentionedCharacter(clean);
+  const speaksToCharacter = character && /(?:говорю|сказал|спрашиваю|спросил|поговорить|поговорю|обращаюсь|здороваюсь|приветствую|поздоровал|привет|здравствуй|подхожу|иду к|зову|отвечаю|передаю|предлагаю помощь|помогаю|приглашаю|дарю)/i.test(clean);
+  if (speaksToCharacter) {
+    state.ui.sceneCharacterId = character.id;
+    state.ui.targetId = character.id;
+    state.ui.view = 'people';
+    appendDialogue(character.id,'player',raw);
+    const response = talkToCharacter(state,character,raw);
+    appendDialogue(character.id,'npc',response.reply);
+    const line = `${character.name} замечает тебя и отвечает: ${response.reply}`;
+    state.ui.lastActionText = raw;
+    state.ui.lastActionResult = line;
+    addFeed(state,`${state.player.name}: ${raw}`);
+    render();
+    return;
+  }
+
+  if (character && !destinationId) {
+    state.ui.sceneCharacterId = character.id;
+    state.ui.targetId = character.id;
+    state.ui.view = 'people';
+    const approach = `Ты подходишь к ${character.name}. Она замечает тебя и готова поговорить.`;
+    appendDialogue(character.id,'player',raw);
+    appendDialogue(character.id,'npc',approach);
+    state.ui.lastActionResult = approach;
+    addFeed(state,`${state.player.name}: ${raw}`);
+    render();
+    return;
+  }
+
+  let activityType = '';
+  if (/(ложусь спать|иду спать|засыпаю|отправляюсь спать)/i.test(clean)) {
+    sleepUntilMorning(state);
+    resultParts.push('Ты устраиваешься поудобнее и отдыхаешь до утра.');
+  } else if (/(тренирую|тренировка|отрабатываю прием|отрабатываю технику|контроль чакры)/i.test(clean)) activityType = 'train';
+  else if (/(осматрива|обыскива|ищу|исследую|проверяю окрестности|собираю находки)/i.test(clean)) activityType = 'search';
+  else if (/(отдыхаю|прилег|сажусь отдохнуть|расслабляюсь|сижу на скамейке)/i.test(clean)) activityType = 'rest';
+  else if (/(ем|перекусываю|заказываю рамен|обедаю|ужинаю|поесть)/i.test(clean)) activityType = 'meal';
+  else if (/(медитир|сосредоточиваюсь|концентрируюсь)/i.test(clean)) activityType = 'focus';
+  else if (/(помогаю|помочь|поддерживаю|лечу|помогаю медикам)/i.test(clean)) activityType = state.world.location==='hospital' ? 'clinic' : 'help';
+  else if (/(готовлю|приготовить еду|варю чай|готовлю бэнто)/i.test(clean)) activityType = 'cook';
+  else if (/(читаю|изучаю свиток|изучаю книгу|занимаюсь в библиотеке)/i.test(clean)) activityType = 'read';
+  else if (/(поливаю|ухаживаю за садом|сажаю цветы|собираю цветы)/i.test(clean)) activityType = 'garden';
+  else if (/(убираю|наводю порядок|наводжу порядок|прибираюсь)/i.test(clean)) activityType = 'tidy';
+
+  if (/(покупаю|покупка|купить|приобретаю)/i.test(clean)) {
+    const price = state.world.location === 'flower-shop' ? 16 : 12;
+    if (state.player.stats.coins >= price) {
+      state.player.stats.coins -= price;
+      const item = state.world.location === 'flower-shop'
+        ? {id:'flower',name:'Букет цветов',desc:'Небольшой букет из цветочной лавки.',kind:'gift',qty:1}
+        : {id:'tea',name:'Зелёный чай',desc:'Покупка с местного рынка.',kind:'gift',qty:1};
+      addItem(state,item);
+      tickAction(state,20);
+      resultParts.push(`Покупка завершена: ${item.name}. Потрачено ${price} рё.`);
+    } else resultParts.push('Не хватает рё на эту покупку. Можно поискать небольшую подработку или выбрать другое занятие.');
+  } else if (activityType) {
+    resultParts.push(doActivity(state,activityType));
+  } else if (!destinationId || !movement) {
+    tickAction(state,12);
+    resultParts.push(`Ты выполняешь задуманное: «${raw}». ${getLocation(state.world.location).desc}`);
+  }
+
+  const weatherLabels = {sunny:'светит солнце',rain:'идёт дождь',snow:'падает снег',wind:'дует ветер',cloudy:'небо затянуто облаками',fog:'улицы скрыты туманом'};
+  if (state.world.weather && weatherLabels[state.world.weather]) resultParts.push(`Вокруг ${weatherLabels[state.world.weather]}.`);
+  const output = resultParts.join(' ') || `Ты продолжаешь свой день в ${getLocation(state.world.location).name}.`;
+  setActionResult(raw,output);
+  render();
+}
+
+function sendWorldDialogue(characterId,rawText) {
+  const character = getCharacter(characterId);
+  const text = String(rawText || '').trim().slice(0,500);
+  if (!character || !state.unlocked.includes(character.id) || !text) return;
+  state.ui.sceneCharacterId = character.id;
+  state.ui.targetId = character.id;
+  state.ui.view = 'people';
+  appendDialogue(character.id,'player',text);
+  const response = talkToCharacter(state,character,text);
+  appendDialogue(character.id,'npc',response.reply);
+  state.ui.lastActionText = text;
+  state.ui.lastActionResult = `${character.name}: ${response.reply}`;
+  addFeed(state,`${state.player.name} поговорил с ${character.name}.`);
+  render();
+}
+
 function exportSave() {
   const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
   const url = URL.createObjectURL(blob);
@@ -1053,6 +1255,8 @@ function importSaveFile(file) {
 
 // Click delegation keeps the game modular and works with dynamically rendered cards.
 document.addEventListener('click',event=>{
+  const sample = event.target.closest('[data-sample]');
+  if (sample?.dataset?.sample) { const input = document.querySelector('#world-action-form textarea[name=action]'); if (input) { input.value = sample.dataset.sample || ''; input.focus(); } return; }
   const button = event.target.closest('[data-action]');
   if (event.target.classList.contains('modal-backdrop')) { elements.modal.innerHTML = ''; return; }
   if (!button) return;
@@ -1065,12 +1269,13 @@ document.addEventListener('click',event=>{
     case 'close-modal': elements.modal.innerHTML=''; break;
     case 'skip-time': skipTime(state,Number(hours)||1); render(); break;
     case 'sleep': sleepUntilMorning(state); render(); toast('Наступило утро.'); break;
-    case 'travel': if (travelTo(state,id)) render(); else toast('Ты уже находишься здесь.'); break;
+    case 'travel': if (travelTo(state,id)) { const local = CHARACTERS.find(character=>state.unlocked.includes(character.id) && character.startLocation===id); if (local) state.ui.sceneCharacterId=local.id; render(); } else toast('Ты уже находишься здесь.'); break;
     case 'activity': doActivity(state,type); render(); break;
     case 'patrol': startPatrol(); break;
     case 'combat-move': combatMove(type); break;
     case 'close-encounter': state.encounter=null; elements.modal.innerHTML=''; render(); break;
-    case 'open-person': state.ui.view='people'; state.ui.targetId=id; render(); break;
+    case 'open-person': state.ui.view='people'; state.ui.targetId=id; state.ui.sceneCharacterId=id; render(); break;
+    case 'select-scene-character': state.ui.sceneCharacterId=id; render(); break;
     case 'back-people': state.ui.targetId=''; render(); break;
     case 'person-action': speakAsAction(id,type); break;
     case 'secret-hint':
@@ -1109,6 +1314,15 @@ document.addEventListener('submit',event=>{
     event.preventDefault();
     const form = new FormData(event.target);
     startGame({name:form.get('name'),origin:form.get('origin'),style:form.get('style'),look:form.get('look'),mark:form.get('mark')});
+  }
+  if (event.target.id === 'world-action-form') {
+    event.preventDefault();
+    executeFreeAction(new FormData(event.target).get('action'));
+  }
+  if (event.target.id === 'world-dialogue-form') {
+    event.preventDefault();
+    const form = new FormData(event.target);
+    sendWorldDialogue(form.get('characterId'),form.get('message'));
   }
   if (event.target.id === 'chat-form') {
     event.preventDefault();

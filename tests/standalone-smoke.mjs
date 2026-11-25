@@ -71,6 +71,20 @@ const form = {id:'creation-form',data:{name:'Проверка',origin:'shinobi',
 submit({target:form,preventDefault(){}});
 assert.equal(getElement('game-screen').classList.contains('hidden'),false,'creation form must start the game');
 assert.ok(getElement('view-root').innerHTML.includes('Карта Конохи'),'game screen must render the map');
+assert.ok(getElement('view-root').innerHTML.includes('world-action-form'),'world screen must show free-text actions');
+assert.ok(getElement('view-root').innerHTML.includes('world-dialogue-form'),'world screen must show free-text dialogue');
+const worldActionForm = {id:'world-action-form',data:{action:'Я иду в больницу.'}};
+submit({target:worldActionForm,preventDefault(){}});
+assert.equal(context.window.NEG_TEST.state().world.location,'hospital','free-text movement must navigate to a named location');
+assert.ok(context.window.NEG_TEST.state().ui.lastActionResult.includes('направляешься'),'free-text action must return a narrated result');
+const worldDialogueForm = {id:'world-dialogue-form',data:{characterId:'sakura',message:'Привет, Сакура! Как прошёл твой день?'}};
+submit({target:worldDialogueForm,preventDefault(){}});
+assert.equal(context.window.NEG_TEST.state().ui.view,'people','free-text dialogue must open the selected character conversation');
+assert.ok(context.window.NEG_TEST.state().dialogues.sakura.some(message=>message.from==='player' && message.text.includes('Как прошёл')),'free-text dialogue must be saved in the character history');
+const naturalActionForm = {id:'world-action-form',data:{action:'Иду к Хинате и спрашиваю, как прошёл её день.'}};
+submit({target:naturalActionForm,preventDefault(){}});
+assert.equal(context.window.NEG_TEST.state().ui.targetId,'hinata','free-text RP must resolve an inflected character name');
+assert.ok(context.window.NEG_TEST.state().dialogues.hinata.some(message=>message.from==='player' && message.text.includes('спрашиваю')),'action text can include dialogue and resolve it to a character');
 assert.ok(JSON.parse(local.get('naruto-enot-garem-save-v2')).player.name === 'Проверка','new game must save progress');
 
 const patrolButton = {dataset:{action:'patrol'},textContent:'Патруль',closest(){return this;}};

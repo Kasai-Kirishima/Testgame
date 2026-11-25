@@ -1,7 +1,7 @@
 import {CHARACTERS,getCharacter} from './data/characters.js';
 import {ENEMIES,getEnemy} from './data/enemies.js';
-import {ORIGINS,getLocation} from './data/world.js';
-import {createInitialState,loadState,saveState,clearSave,addFeed,updateBond,removeItem} from './core/store.js';
+import {ORIGINS,LOCATIONS,getLocation} from './data/world.js';
+import {createInitialState,loadState,saveState,clearSave,addFeed,updateBond,removeItem,addItem} from './core/store.js';
 import {talkToCharacter} from './core/gm.js';
 import {travelTo,doActivity,skipTime,sleepUntilMorning,assignDailyTask,tickAction} from './core/life.js';
 import {renderView,renderStatus,populateOrigins,updateOriginNote,renderSettings,escapeHTML} from './ui/render.js';
@@ -33,6 +33,7 @@ function render() {
   if (!state) return;
   renderStatus(state);
   elements.view.innerHTML = renderView(state);
+  document.getElementById('app').dataset.view = state.ui.view;
   document.getElementById('app').dataset.textSize = state.settings.textSize;
   document.getElementById('app').dataset.contrast = state.settings.contrast;
   document.getElementById('app').dataset.motion = state.settings.animations ? 'on' : 'off';
@@ -159,6 +160,148 @@ function giveItemToPerson(characterId,itemId) {
   render();
 }
 
+const LOCATION_ALIASES = [
+  ['main-street',['главную улицу','главной улице','главная улица','центральную улицу','центр деревни','центр']],
+  ['ichiraku',['ичираку','лапшичную','лапшичная','за раменом']],
+  ['flower-shop',['цветочную лавку','цветочная лавка','цветочный магазин','за цветами']],
+  ['market',['на рынок','рынок','торговый квартал','магазины']],
+  ['training',['тренировочную площадку','тренировочная площадка','полигон','на площадку']],
+  ['hospital',['в больницу','больницу','больница','госпиталь','медицинский корпус','медкорпус']],
+  ['hokage',['резиденцию хокаге','кабинет хокаге','резиденция хокаге','к хокаге']],
+  ['tea-house',['чайный домик','чайную','чайная','домик у сада']],
+  ['river',['берег реки','к реке','на реку','реку','набережную']],
+  ['forest',['лесную тропу','лесная тропа','в лес','к лесу','лес']],
+  ['memorial',['мемориальный парк','парк памяти','мемориал']],
+  ['gate',['главные ворота','к воротам','на ворота','ворота']],
+  ['library',['в библиотеку','библиотеку','библиотека','читальный зал','архив']],
+  ['garden',['общественный сад','в сад','к саду','сад']],
+  ['home',['домой','к себе домой','в свой дом','дом']],
+  ['academy',['в академию','академию','академия','учебный двор']],
+  ['campsite',['лесной привал','к привалу','в лагерь','лагерь','стоянку']]
+].flatMap(([id,aliases])=>aliases.map(alias=>({id,alias}))).sort((a,b)=>b.alias.length-a.alias.length);
+
+function findMentionedLocation(text) {
+  const clean = String(text || '').toLowerCase().replace(/ё/g,'е');
+  return LOCATION_ALIASES.find(entry=>clean.includes(entry.alias.replace(/ё/g,'е')))?.id || '';
+}
+
+function findMentionedCharacter(text) {
+  const clean = String(text || '').toLocaleLowerCase('ru-RU').replace(/ё/g,'е');
+  return CHARACTERS.find(character => {
+    if (!state.unlocked.includes(character.id)) return false;
+    const base = character.name.toLocaleLowerCase('ru-RU').replace(/ё/g,'е');
+    const stem = base.length > 4 ? base.slice(0,-1) : base;
+    const variants = [...new Set([base,stem,`${stem}а`,`${stem}у`,`${stem}е`,`${stem}ы`,`${stem}и`,`${stem}ой`,`${stem}ом`])];
+    return variants.some(variant => new RegExp(`(?:^|[^\p{L}])${variant}(?=$|[^\p{L}])`,'u').test(clean));
+  });
+}
+
+function setActionResult(input,result) {
+  state.ui.lastActionText = String(input).slice(0,420);
+  state.ui.lastActionResult = result;
+  addFeed(state,result);
+}
+
+function executeFreeAction(rawText) {
+  const raw = String(rawText || '').trim().slice(0,420);
+  if (!raw || !state) return;
+  const clean = raw.toLowerCase().replace(/ё/g,'е');
+  state.ui.lastActionText = raw;
+  let resultParts = [];
+  const movement = /(?:^|\s)(иду|пойду|пойти|схожу|сходить|направляюсь|отправляюсь|двигаюсь|возвращаюсь|захожу|зайду|перехожу|перемещаюсь|прогуляюсь|бегу|подхожу|выхожу)(?:\s|$)/i.test(clean);
+  const destinationId = findMentionedLocation(clean);
+  if (destinationId && (movement || /^(?:в|на|к)\s/.test(clean))) {
+    const destination = getLocation(destinationId);
+    if (travelTo(state,destinationId)) { const local = CHARACTERS.find(item=>state.unlocked.includes(item.id) && item.startLocation===destinationId); if (local) state.ui.sceneCharacterId=local.id; resultParts.push(`Ты направляешься в «${destination.name}». ${destination.desc}`); }
+    else resultParts.push(`Ты уже находишься в месте «${destination.name}».`);
+  }
+
+  const character = findMentionedCharacter(clean);
+  const speaksToCharacter = character && /(?:говорю|сказал|спрашиваю|спросил|поговорить|поговорю|обращаюсь|здороваюсь|приветствую|поздоровал|привет|здравствуй|подхожу|иду к|зову|отвечаю|передаю|предлагаю помощь|помогаю|приглашаю|дарю)/i.test(clean);
+  if (speaksToCharacter) {
+    state.ui.sceneCharacterId = character.id;
+    state.ui.targetId = character.id;
+    state.ui.view = 'people';
+    appendDialogue(character.id,'player',raw);
+    const response = talkToCharacter(state,character,raw);
+    appendDialogue(character.id,'npc',response.reply);
+    const line = `${character.name} замечает тебя и отвечает: ${response.reply}`;
+    state.ui.lastActionText = raw;
+    state.ui.lastActionResult = line;
+    addFeed(state,`${state.player.name}: ${raw}`);
+    render();
+    return;
+  }
+
+  if (character && !destinationId) {
+    state.ui.sceneCharacterId = character.id;
+    state.ui.targetId = character.id;
+    state.ui.view = 'people';
+    const approach = `Ты подходишь к ${character.name}. Она замечает тебя и готова поговорить.`;
+    appendDialogue(character.id,'player',raw);
+    appendDialogue(character.id,'npc',approach);
+    state.ui.lastActionResult = approach;
+    addFeed(state,`${state.player.name}: ${raw}`);
+    render();
+    return;
+  }
+
+  let activityType = '';
+  if (/(ложусь спать|иду спать|засыпаю|отправляюсь спать)/i.test(clean)) {
+    sleepUntilMorning(state);
+    resultParts.push('Ты устраиваешься поудобнее и отдыхаешь до утра.');
+  } else if (/(тренирую|тренировка|отрабатываю прием|отрабатываю технику|контроль чакры)/i.test(clean)) activityType = 'train';
+  else if (/(осматрива|обыскива|ищу|исследую|проверяю окрестности|собираю находки)/i.test(clean)) activityType = 'search';
+  else if (/(отдыхаю|прилег|сажусь отдохнуть|расслабляюсь|сижу на скамейке)/i.test(clean)) activityType = 'rest';
+  else if (/(ем|перекусываю|заказываю рамен|обедаю|ужинаю|поесть)/i.test(clean)) activityType = 'meal';
+  else if (/(медитир|сосредоточиваюсь|концентрируюсь)/i.test(clean)) activityType = 'focus';
+  else if (/(помогаю|помочь|поддерживаю|лечу|помогаю медикам)/i.test(clean)) activityType = state.world.location==='hospital' ? 'clinic' : 'help';
+  else if (/(готовлю|приготовить еду|варю чай|готовлю бэнто)/i.test(clean)) activityType = 'cook';
+  else if (/(читаю|изучаю свиток|изучаю книгу|занимаюсь в библиотеке)/i.test(clean)) activityType = 'read';
+  else if (/(поливаю|ухаживаю за садом|сажаю цветы|собираю цветы)/i.test(clean)) activityType = 'garden';
+  else if (/(убираю|наводю порядок|наводжу порядок|прибираюсь)/i.test(clean)) activityType = 'tidy';
+
+  if (/(покупаю|покупка|купить|приобретаю)/i.test(clean)) {
+    const price = state.world.location === 'flower-shop' ? 16 : 12;
+    if (state.player.stats.coins >= price) {
+      state.player.stats.coins -= price;
+      const item = state.world.location === 'flower-shop'
+        ? {id:'flower',name:'Букет цветов',desc:'Небольшой букет из цветочной лавки.',kind:'gift',qty:1}
+        : {id:'tea',name:'Зелёный чай',desc:'Покупка с местного рынка.',kind:'gift',qty:1};
+      addItem(state,item);
+      tickAction(state,20);
+      resultParts.push(`Покупка завершена: ${item.name}. Потрачено ${price} рё.`);
+    } else resultParts.push('Не хватает рё на эту покупку. Можно поискать небольшую подработку или выбрать другое занятие.');
+  } else if (activityType) {
+    resultParts.push(doActivity(state,activityType));
+  } else if (!destinationId || !movement) {
+    tickAction(state,12);
+    resultParts.push(`Ты выполняешь задуманное: «${raw}». ${getLocation(state.world.location).desc}`);
+  }
+
+  const weatherLabels = {sunny:'светит солнце',rain:'идёт дождь',snow:'падает снег',wind:'дует ветер',cloudy:'небо затянуто облаками',fog:'улицы скрыты туманом'};
+  if (state.world.weather && weatherLabels[state.world.weather]) resultParts.push(`Вокруг ${weatherLabels[state.world.weather]}.`);
+  const output = resultParts.join(' ') || `Ты продолжаешь свой день в ${getLocation(state.world.location).name}.`;
+  setActionResult(raw,output);
+  render();
+}
+
+function sendWorldDialogue(characterId,rawText) {
+  const character = getCharacter(characterId);
+  const text = String(rawText || '').trim().slice(0,500);
+  if (!character || !state.unlocked.includes(character.id) || !text) return;
+  state.ui.sceneCharacterId = character.id;
+  state.ui.targetId = character.id;
+  state.ui.view = 'people';
+  appendDialogue(character.id,'player',text);
+  const response = talkToCharacter(state,character,text);
+  appendDialogue(character.id,'npc',response.reply);
+  state.ui.lastActionText = text;
+  state.ui.lastActionResult = `${character.name}: ${response.reply}`;
+  addFeed(state,`${state.player.name} поговорил с ${character.name}.`);
+  render();
+}
+
 function exportSave() {
   const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
   const url = URL.createObjectURL(blob);
@@ -278,6 +421,8 @@ function importSaveFile(file) {
 
 // Click delegation keeps the game modular and works with dynamically rendered cards.
 document.addEventListener('click',event=>{
+  const sample = event.target.closest('[data-sample]');
+  if (sample?.dataset?.sample) { const input = document.querySelector('#world-action-form textarea[name=action]'); if (input) { input.value = sample.dataset.sample || ''; input.focus(); } return; }
   const button = event.target.closest('[data-action]');
   if (event.target.classList.contains('modal-backdrop')) { elements.modal.innerHTML = ''; return; }
   if (!button) return;
@@ -290,12 +435,13 @@ document.addEventListener('click',event=>{
     case 'close-modal': elements.modal.innerHTML=''; break;
     case 'skip-time': skipTime(state,Number(hours)||1); render(); break;
     case 'sleep': sleepUntilMorning(state); render(); toast('Наступило утро.'); break;
-    case 'travel': if (travelTo(state,id)) render(); else toast('Ты уже находишься здесь.'); break;
+    case 'travel': if (travelTo(state,id)) { const local = CHARACTERS.find(character=>state.unlocked.includes(character.id) && character.startLocation===id); if (local) state.ui.sceneCharacterId=local.id; render(); } else toast('Ты уже находишься здесь.'); break;
     case 'activity': doActivity(state,type); render(); break;
     case 'patrol': startPatrol(); break;
     case 'combat-move': combatMove(type); break;
     case 'close-encounter': state.encounter=null; elements.modal.innerHTML=''; render(); break;
-    case 'open-person': state.ui.view='people'; state.ui.targetId=id; render(); break;
+    case 'open-person': state.ui.view='people'; state.ui.targetId=id; state.ui.sceneCharacterId=id; render(); break;
+    case 'select-scene-character': state.ui.sceneCharacterId=id; render(); break;
     case 'back-people': state.ui.targetId=''; render(); break;
     case 'person-action': speakAsAction(id,type); break;
     case 'secret-hint':
@@ -334,6 +480,15 @@ document.addEventListener('submit',event=>{
     event.preventDefault();
     const form = new FormData(event.target);
     startGame({name:form.get('name'),origin:form.get('origin'),style:form.get('style'),look:form.get('look'),mark:form.get('mark')});
+  }
+  if (event.target.id === 'world-action-form') {
+    event.preventDefault();
+    executeFreeAction(new FormData(event.target).get('action'));
+  }
+  if (event.target.id === 'world-dialogue-form') {
+    event.preventDefault();
+    const form = new FormData(event.target);
+    sendWorldDialogue(form.get('characterId'),form.get('message'));
   }
   if (event.target.id === 'chat-form') {
     event.preventDefault();

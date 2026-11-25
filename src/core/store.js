@@ -38,7 +38,7 @@ export function createInitialState(player = {}) {
     unlocked,
     assignments: [],
     settings: {autosave:true,animations:true,textSize:'normal',contrast:'normal',musicLink:true,confirmReset:true},
-    ui: {screen:'world',view:'world',targetId:'',showHelp:true}
+    ui: {screen:'world',view:'world',targetId:'',sceneCharacterId:'hinata',lastActionText:'',lastActionResult:'Ты прибыл в Коноху. Напиши, куда хочешь пойти, что сделать или с кем поговорить.',showHelp:true}
   };
 }
 

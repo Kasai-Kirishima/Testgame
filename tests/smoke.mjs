@@ -62,7 +62,7 @@ assert.ok(state.world.minute >= 0 && state.world.minute < 1440,'Время до�
 
 state.ui.view='world';
 assert.match(renderView(state),/Карта Конохи/,'Экран мира должен выводить карту');
-assert.match(renderView(state),/Патруль территории/,'На карте доступен патруль');
+assert.match(renderView(state),/data-action="patrol"/,'На карте доступен патруль');
 for (const location of LOCATIONS) assert.ok(fs.existsSync(path.join(root,location.bg)),`${location.name}: локальный фон должен существовать`);
 state.ui.view='people';
 state.ui.targetId='';
