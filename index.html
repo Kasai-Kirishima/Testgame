@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <meta name="theme-color" content="#171914">
-  <title>Тихий Сон — Quiet Dream 1.5</title>
+  <title>Тихий Сон — Quiet Dream 1.5.1</title>
   <link rel="stylesheet" href="style.css">
   <script type="importmap">
     {
@@ -41,7 +41,7 @@
         <div class="console-foot"><span id="menu-save-meta">АВТОСОХРАНЕНИЕ ПОКА ОТСУТСТВУЕТ</span><span>↑ ↓ ВЫБОР&nbsp;&nbsp; ENTER ПОДТВЕРДИТЬ</span></div>
       </section>
     </div>
-    <div class="menu-version">QUIET DREAM <span>·</span> BUILD 1.5</div>
+    <div class="menu-version">QUIET DREAM <span>·</span> BUILD 1.5.1</div>
   </main>
 
   <div id="creator" class="screen hidden">
@@ -143,7 +143,7 @@
   <script src="src/data/character-data.js"></script>
   <script src="src/ui/item-icons.js"></script>
   <script src="src/boot.js"></script>
-  <script type="module" src="src/engine/Local3D.js"></script>
+  <script type="module" src="src/engine/Local3D.js" onerror="window.QD_BOOT?.showFallback('Локальный 3D-модуль не загрузился. Используется автономный режим.')"></script>
   <script type="module" src="src/main.js" onerror="window.QD_BOOT?.showFallback('Не удалось загрузить Three.js с CDN. Включён автономный игровой режим.')"></script>
 </body>
 </html>

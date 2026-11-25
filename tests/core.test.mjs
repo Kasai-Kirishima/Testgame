@@ -207,6 +207,17 @@ test('startup fallback is loaded before the optional Three.js module', async () 
   assert.match(boot, /qd-fallback-save/);
 });
 
+test('offline fallback draws a world and character preview without WebGL', async () => {
+  const fs = await import('node:fs');
+  const boot = fs.readFileSync(new URL('../src/boot.js', import.meta.url), 'utf8');
+  const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.match(boot, /function drawFallback2D\(/);
+  assert.match(boot, /function drawCharacterFallback\(/);
+  assert.match(boot, /if\(!rendered\)drawCharacterFallback/);
+  assert.match(boot, /else\{force2DFallback=true;drawFallback2D/);
+  assert.match(html, /src=\"src\/engine\/Local3D\.js\" onerror=/);
+});
+
 test('character creator spends positive-trait points and refunds negative-trait points', () => {
   assert.equal(PROFESSIONS.length, 23);
   assert.equal(TRAITS.length, 28);

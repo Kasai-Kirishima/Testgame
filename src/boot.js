@@ -85,7 +85,57 @@
     return {name:$('#char-name').value.trim()||'Странник',profession:profession.name,traits:[...traitsSelected],stats,age:Math.max(18,Math.min(70,Number($('#char-age').value)||27)),height:Math.max(150,Math.min(205,Number($('#char-height').value)||178)),weight:Math.max(45,Math.min(125,Number($('#char-weight').value)||76)),build:$('#char-build').value,skin:$('#char-skin').value,hair:$('#char-hair').value,hairStyle:$('#char-hair-style').value,clothes:$('#char-clothes').value,eyes:$('#char-eyes').value,tattoo:$('#char-tattoo').value};
   }
   let previewAngle=0;
-  function updateCharacterPreview(){if(!window.QDLocal3D?.renderCharacter)return;const p=currentProfile();for(const id of ['#character-preview-traits','#character-preview']){const c=$(id);if(c&&c.getClientRects().length)window.QDLocal3D.renderCharacter(c,p,previewAngle);}}
+  const previewFallbackLayers=new WeakMap();
+  function drawCharacterFallback(canvas,profile,angle=0){
+    if(!canvas)return false;
+    const rect=canvas.getBoundingClientRect(),w=Math.max(160,Math.round(rect.width||canvas.clientWidth||300)),h=Math.max(180,Math.round(rect.height||canvas.clientHeight||280));
+    let target=canvas,ctx=null;
+    try{ctx=target.getContext('2d');}catch{}
+    if(!ctx){
+      const parent=canvas.parentElement;if(!parent)return false;
+      let layer=previewFallbackLayers.get(canvas);
+      if(!layer||!layer.isConnected){layer=document.createElement('canvas');layer.className='qd-preview-fallback-layer';layer.setAttribute('aria-hidden','true');parent.appendChild(layer);previewFallbackLayers.set(canvas,layer);}
+      if(getComputedStyle(parent).position==='static')parent.style.position='relative';
+      const pr=parent.getBoundingClientRect();layer.style.position='absolute';layer.style.left=`${rect.left-pr.left}px`;layer.style.top=`${rect.top-pr.top}px`;layer.style.width=`${w}px`;layer.style.height=`${h}px`;layer.style.zIndex='2';layer.style.pointerEvents='none';
+      target=layer;target.width=Math.round(w*Math.min(devicePixelRatio||1,1.5));target.height=Math.round(h*Math.min(devicePixelRatio||1,1.5));ctx=target.getContext('2d');
+    }else{
+      const dpr=Math.min(devicePixelRatio||1,1.5);target.width=Math.round(w*dpr);target.height=Math.round(h*dpr);
+    }
+    if(!ctx)return false;
+    const dpr=target.width/w;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+    const bg=ctx.createLinearGradient(0,0,0,h);bg.addColorStop(0,'#303c35');bg.addColorStop(.62,'#5c604d');bg.addColorStop(1,'#171c17');ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
+    ctx.fillStyle='rgba(192,151,91,.08)';ctx.beginPath();ctx.ellipse(w*.5,h*.34,w*.39,h*.28,0,0,Math.PI*2);ctx.fill();
+    const scale=Math.min(w/320,h/320),cx=w*.5,foot=h*.94,skin=profile.skin||'#c78e68';
+    const hair=profile.hair==='Рыжие'?'#9b4d2c':profile.hair==='Светлые'?'#b49a68':profile.hair==='Русые'?'#765638':'#332921';
+    const coat=profile.clothes==='Дождевик'?'#4c5753':profile.clothes==='Флисовая кофта'?'#586254':profile.clothes==='Рабочая одежда'?'#685c43':'#465348';
+    ctx.save();ctx.translate(cx,foot);ctx.scale(scale,scale);ctx.rotate(Math.sin(angle)*.16);
+    ctx.fillStyle='rgba(0,0,0,.42)';ctx.beginPath();ctx.ellipse(0,-4,76,12,0,0,Math.PI*2);ctx.fill();
+    // Backpack silhouette
+    ctx.fillStyle='#363b31';ctx.beginPath();ctx.roundRect(-48,-206,96,105,16);ctx.fill();
+    // Legs and boots
+    ctx.fillStyle='#343831';ctx.beginPath();ctx.roundRect(-35,-121,27,103,10);ctx.roundRect(8,-121,27,103,10);ctx.fill();
+    ctx.fillStyle='#20231f';ctx.beginPath();ctx.roundRect(-41,-28,39,17,6);ctx.roundRect(5,-28,39,17,6);ctx.fill();
+    // Torso and coat
+    const jacket=ctx.createLinearGradient(-55,-225,55,-110);jacket.addColorStop(0,'#65705d');jacket.addColorStop(.5,coat);jacket.addColorStop(1,'#303a32');
+    ctx.fillStyle=jacket;ctx.beginPath();ctx.moveTo(-29,-227);ctx.quadraticCurveTo(-54,-219,-58,-186);ctx.lineTo(-49,-112);ctx.quadraticCurveTo(0,-96,49,-112);ctx.lineTo(58,-186);ctx.quadraticCurveTo(54,-219,29,-227);ctx.closePath();ctx.fill();
+    // Arms and hands
+    ctx.lineCap='round';ctx.strokeStyle=coat;ctx.lineWidth=22;ctx.beginPath();ctx.moveTo(-35,-210);ctx.lineTo(-57,-143);ctx.moveTo(35,-210);ctx.lineTo(57,-143);ctx.stroke();ctx.strokeStyle=skin;ctx.lineWidth=15;ctx.beginPath();ctx.moveTo(-57,-143);ctx.lineTo(-60,-126);ctx.moveTo(57,-143);ctx.lineTo(60,-126);ctx.stroke();
+    // Collar, zipper, pockets and straps
+    ctx.fillStyle='#252d27';ctx.beginPath();ctx.moveTo(-27,-222);ctx.lineTo(0,-196);ctx.lineTo(27,-222);ctx.lineTo(18,-235);ctx.lineTo(-18,-235);ctx.closePath();ctx.fill();
+    ctx.strokeStyle='#c4ad7c';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,-194);ctx.lineTo(0,-113);ctx.stroke();
+    ctx.fillStyle='#515b4c';ctx.fillRect(-41,-171,24,24);ctx.fillRect(17,-171,24,24);
+    ctx.strokeStyle='rgba(218,202,159,.55)';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-24,-224);ctx.lineTo(-13,-116);ctx.moveTo(24,-224);ctx.lineTo(13,-116);ctx.stroke();
+    // Neck and head
+    ctx.fillStyle=skin;ctx.beginPath();ctx.roundRect(-11,-252,22,27,7);ctx.fill();ctx.beginPath();ctx.ellipse(0,-273,25,33,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=hair;ctx.beginPath();ctx.ellipse(0,-291,26,18,0,Math.PI,Math.PI*2);ctx.lineTo(24,-271);ctx.quadraticCurveTo(0,-284,-24,-271);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#eee3d0';ctx.beginPath();ctx.arc(-9,-274,3.4,0,Math.PI*2);ctx.arc(9,-274,3.4,0,Math.PI*2);ctx.fill();ctx.fillStyle=profile.eyes==='Голубые'?'#6b9fb5':profile.eyes==='Зелёные'?'#6b8b53':profile.eyes==='Серые'?'#8b9392':'#563d2d';ctx.beginPath();ctx.arc(-9,-274,1.8,0,Math.PI*2);ctx.arc(9,-274,1.8,0,Math.PI*2);ctx.fill();
+    if(profile.hairStyle==='Длинные волосы'||profile.hairStyle==='Средняя'){ctx.fillStyle=hair;ctx.beginPath();ctx.roundRect(-26,-286,8,48,4);ctx.roundRect(18,-286,8,48,4);ctx.fill();}
+    if(profile.tattoo&&profile.tattoo!=='Нет'){ctx.strokeStyle='#252a25';ctx.lineWidth=2;ctx.beginPath();if(profile.tattoo==='Левая рука'||profile.tattoo==='Обе руки')ctx.moveTo(-56,-143),ctx.lineTo(-59,-134);if(profile.tattoo==='Правая рука'||profile.tattoo==='Обе руки')ctx.moveTo(56,-143),ctx.lineTo(59,-134);ctx.stroke();}
+    ctx.restore();
+    ctx.fillStyle='rgba(230,220,194,.55)';ctx.font='9px Arial';ctx.textAlign='center';ctx.fillText('ПРЕДПРОСМОТР · РЕЗЕРВНЫЙ РЕЖИМ',w/2,h-7);
+    return true;
+  }
+  function updateCharacterPreview(){const p=currentProfile();for(const id of ['#character-preview-traits','#character-preview']){const c=$(id);if(!c||!c.getClientRects().length)continue;let rendered=false;try{rendered=!!window.QDLocal3D?.renderCharacter?.(c,p,previewAngle);}catch(error){console.warn('[Quiet Dream] 3D character preview unavailable:',error);}if(!rendered)drawCharacterFallback(c,p,previewAngle);}}
 
   function ensureFallbackDOM() {
     if ($('#qd-fallback-game')) return;
@@ -113,6 +163,7 @@
     if (!canvas) return;
     canvas.style.width = `${innerWidth}px`; canvas.style.height = `${innerHeight}px`;
     if (fallbackRenderer) fallbackRenderer.resize?.();
+    if(fallback2DLayer){const dpr=Math.min(devicePixelRatio||1,1.5);fallback2DLayer.width=Math.round(innerWidth*dpr);fallback2DLayer.height=Math.round(innerHeight*dpr);}
   }
   function itemIcon(name, info = {}) {
     const kit = window.QDItemIcons;
@@ -260,21 +311,43 @@
     if(game.clock-game.lastSave>180){saveFallback();}
     renderHud();
   }
-  // The local fallback is rendered only by the real WebGL mesh renderer in Local3D.js.
+  let fallback2DLayer=null,fallback2DContext=null,force2DFallback=false;
+  function ensureFallback2DLayer(){
+    if(fallback2DLayer?.isConnected)return;
+    const wrap=$('#qd-fallback-game');if(!wrap)return;
+    fallback2DLayer=document.createElement('canvas');fallback2DLayer.id='qd-fallback-2d-world';fallback2DLayer.setAttribute('aria-hidden','true');
+    wrap.insertBefore(fallback2DLayer,wrap.children[1]||null);fallback2DLayer.style.cssText='position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;display:block;';
+    const dpr=Math.min(devicePixelRatio||1,1.5);fallback2DLayer.width=Math.round(innerWidth*dpr);fallback2DLayer.height=Math.round(innerHeight*dpr);fallback2DContext=fallback2DLayer.getContext('2d');
+  }
+  function drawFallback2D(camera,world){
+    ensureFallback2DLayer();const ctx=fallback2DContext;if(!ctx)return;
+    const dpr=Math.min(devicePixelRatio||1,1.5),w=innerWidth,h=innerHeight;
+    if(fallback2DLayer.width!==Math.round(w*dpr)||fallback2DLayer.height!==Math.round(h*dpr)){fallback2DLayer.width=Math.round(w*dpr);fallback2DLayer.height=Math.round(h*dpr);}
+    ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+    const sky=ctx.createLinearGradient(0,0,0,h*.72);sky.addColorStop(0,'#313c37');sky.addColorStop(.63,'#758071');sky.addColorStop(1,'#b3a07a');ctx.fillStyle=sky;ctx.fillRect(0,0,w,h);
+    const day=.5+.5*Math.sin((world.clock||0)/150-1.4);ctx.fillStyle=`rgba(231,190,119,${.11+.16*day})`;ctx.beginPath();ctx.arc(w*.78,h*.20,Math.min(w,h)*.07,0,Math.PI*2);ctx.fill();
+    const horizon=h*.47;ctx.fillStyle='#4a5542';ctx.beginPath();ctx.moveTo(0,horizon+20);for(let x=0;x<=w;x+=w/12)ctx.lineTo(x,horizon+Math.sin(x*.008+(world.clock||0)*.001)*18+Math.cos(x*.003)*13);ctx.lineTo(w,h);ctx.lineTo(0,h);ctx.closePath();ctx.fill();
+    const yaw=camera.yaw||0,cos=Math.cos(yaw),sin=Math.sin(yaw),trees=(world.trees||[]).map(t=>{const dx=t.x-camera.x,dz=t.z-camera.z;return {t,side:dx*cos-dz*sin,forward:dx*sin+dz*cos};}).filter(o=>o.forward>1&&Math.abs(o.side)<o.forward*1.35+12).sort((a,b)=>b.forward-a.forward);
+    for(const o of trees){const {t,side,forward}=o,scale=Math.max(1,Math.min(72,h*.46/(forward+4))),sx=w*.5+side*scale*.78,ground=horizon+scale*(.40+Math.sin(t.x*.14+t.z*.08)*.08),height=scale*(4.5*(t.height||1)),crown=height*.40,rad=scale*(.88*(t.w||1));if(sx<-rad*2||sx>w+rad*2)continue;
+      ctx.fillStyle='rgba(20,23,18,.22)';ctx.beginPath();ctx.ellipse(sx,ground+2,rad*.8,Math.max(1,scale*.11),0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#59432f';ctx.fillRect(sx-rad*.13,ground-height*.72,rad*.26,height*.76);
+      const palette=['#8d4d2d','#a65d2e','#bd8038','#6c713d'];ctx.fillStyle=palette[t.shade%palette.length];ctx.beginPath();ctx.ellipse(sx,ground-height*.78,rad*1.18,crown*.67,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(221,165,79,.18)';ctx.beginPath();ctx.ellipse(sx-rad*.25,ground-height*.88,rad*.55,crown*.28,-.35,0,Math.PI*2);ctx.fill();
+    }
+    // First-person sleeves and hands remain visible even without WebGL.
+    if(!world.thirdPerson){ctx.fillStyle='#414b40';ctx.beginPath();ctx.moveTo(0,h);ctx.lineTo(0,h*.88);ctx.lineTo(w*.31,h*.84);ctx.lineTo(w*.43,h);ctx.closePath();ctx.fill();ctx.beginPath();ctx.moveTo(w,h);ctx.lineTo(w,h*.88);ctx.lineTo(w*.69,h*.84);ctx.lineTo(w*.57,h);ctx.closePath();ctx.fill();ctx.fillStyle='#b88969';ctx.beginPath();ctx.ellipse(w*.40,h*.91,Math.max(9,w*.025),Math.max(8,h*.018),-.2,0,Math.PI*2);ctx.ellipse(w*.60,h*.91,Math.max(9,w*.025),Math.max(8,h*.018),.2,0,Math.PI*2);ctx.fill();}
+    else{ctx.fillStyle='#303832';ctx.beginPath();ctx.ellipse(w*.5,h*.83,18,11,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#53604f';ctx.fillRect(w*.5-11,h*.65,22,h*.18);ctx.fillStyle=world.profile?.skin||'#c78e68';ctx.beginPath();ctx.arc(w*.5,h*.62,10,0,Math.PI*2);ctx.fill();}
+    const vignette=ctx.createRadialGradient(w*.5,h*.48,h*.12,w*.5,h*.48,h*.75);vignette.addColorStop(0,'rgba(0,0,0,0)');vignette.addColorStop(1,'rgba(8,12,9,.42)');ctx.fillStyle=vignette;ctx.fillRect(0,0,w,h);
+  }
+  // The fallback scene always has a Canvas2D renderer if WebGL modules or contexts fail.
   function drawFrame(time) {
     if(!fallbackActive||!game)return;
     const dt=Math.min((time-lastFrame)/1000,.05)||0;lastFrame=time;update(dt);
-    if(!window.QDLocal3D){animation=requestAnimationFrame(drawFrame);return;}
-    try {
-      if(!fallbackRenderer) fallbackRenderer=window.QDLocal3D.createWorld(canvas);
-      const cam={x:game.x,y:window.QDLocal3D.terrainHeight(game.x,game.z)+1.72,z:game.z,yaw:game.yaw,pitch:game.pitch||0,flash:game.flash,clock:game.clock,thirdPerson:!!game.thirdPerson};
-      fallbackRenderer.render(cam,game);
-      const near=nearestLoot();$('#qdf-prompt').textContent=near?`[ E ]  Подобрать: ${near.name}`:'';
-    } catch(error) {
-      console.error('[Quiet Dream] Local 3D renderer failed:',error);
-      $('#qdf-weather').textContent='ОШИБКА 3D · WebGL НЕ ДОСТУПЕН';
-      const gl=canvas.getContext('webgl'); if(!gl){const p=canvas.parentElement.querySelector('.qdf-hint');if(p)p.textContent='Включи аппаратное ускорение / WebGL в браузере.';}
-    }
+    const cam={x:game.x,y:(window.QDLocal3D?.terrainHeight?.(game.x,game.z)??0)+1.72,z:game.z,yaw:game.yaw,pitch:game.pitch||0,flash:game.flash,clock:game.clock,thirdPerson:!!game.thirdPerson};
+    if(!force2DFallback&&window.QDLocal3D){
+      try{if(!fallbackRenderer)fallbackRenderer=window.QDLocal3D.createWorld(canvas);fallbackRenderer.render(cam,game);}
+      catch(error){console.error('[Quiet Dream] WebGL renderer unavailable; switching to 2D:',error);force2DFallback=true;fallbackRenderer=null;$('#qdf-weather').textContent='АВТОНОМНЫЙ РЕЖИМ · 2D';drawFallback2D(cam,game);}
+    }else{force2DFallback=true;drawFallback2D(cam,game);}
+    const near=nearestLoot();$('#qdf-prompt').textContent=near?`[ E ]  Подобрать: ${near.name}`:'';
     animation=requestAnimationFrame(drawFrame);
   }
   function startLoop(){cancelAnimationFrame(animation);lastFrame=performance.now();animation=requestAnimationFrame(drawFrame);}
@@ -322,6 +395,13 @@
 
   function onBootError(reason) { showFallback(reason || 'Не удалось загрузить игровой движок.'); }
   window.addEventListener('qd-local3d-ready',updateCharacterPreview);
+  // Keep both creator previews alive even when the main Three.js engine starts but the optional local renderer does not.
+  $('#new-game')?.addEventListener('click',()=>requestAnimationFrame(updateCharacterPreview));
+  $('#to-appearance')?.addEventListener('click',()=>requestAnimationFrame(updateCharacterPreview));
+  $('#back-traits')?.addEventListener('click',()=>requestAnimationFrame(updateCharacterPreview));
+  $('#random-appearance')?.addEventListener('click',()=>requestAnimationFrame(updateCharacterPreview));
+  $('#random-traits')?.addEventListener('click',()=>requestAnimationFrame(updateCharacterPreview));
+  ['#char-name','#char-age','#char-height','#char-weight','#char-build','#char-skin','#char-hair','#char-hair-style','#char-clothes','#char-eyes','#char-tattoo'].forEach(id=>{const field=$(id);field?.addEventListener('input',updateCharacterPreview);field?.addEventListener('change',updateCharacterPreview);});
   window.addEventListener('blur',()=>{if(game)game.keys={};});
   window.QD_BOOT = { showFallback:onBootError, startFallback, get available(){return fallbackAvailable;}, get active(){return fallbackActive;}, currentProfile, randomCharacter };
   // The classic bootstrap stays alive if the module import fails before any game handlers are registered.
