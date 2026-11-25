@@ -1,0 +1,13 @@
+{
+  "name": "Naruto Enot Garem — Коноха зовёт",
+  "short_name": "Коноха",
+  "description": "Фанатская социальная визуальная новелла в мире Конохи.",
+  "lang": "ru",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#101917",
+  "theme_color": "#111a18",
+  "icons": [
+    {"src":"assets/leaf.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}
