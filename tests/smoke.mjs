@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {createInitialState,getBond} from '../src/core/store.js';
 import {CHARACTERS,getCharacter} from '../src/data/characters.js';
 import {ORIGINS,LOCATIONS} from '../src/data/world.js';
@@ -6,12 +9,17 @@ import {travelTo,doActivity,assignDailyTask,sleepUntilMorning,skipTime} from '..
 import {talkToCharacter,analyzeText} from '../src/core/gm.js';
 import {renderView} from '../src/ui/render.js';
 
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const state = createInitialState({name:'Тестовый игрок',origin:'shinobi'});
 assert.equal(CHARACTERS.length,28,'В списке должно быть 28 персонажей');
 assert.equal(ORIGINS.length,10,'Должно быть 10 вариантов происхождения');
-assert.equal(LOCATIONS.length,15,'Карта должна содержать 15 мест');
+assert.equal(LOCATIONS.length,17,'Карта должна содержать 17 мест');
 assert.equal(state.unlocked.length,27,'Все персонажи, кроме секретного Хаку, доступны в начале');
 assert.equal(getCharacter('haku').secret,true,'Хаку должен быть секретным персонажем');
+for (const character of CHARACTERS) {
+  assert.equal(character.art.length,3,`${character.name}: должно быть три варианта арта`);
+  for (const art of character.art) assert.ok(fs.existsSync(path.join(root,art.src)),`${character.name}: файл арта ${art.src} должен существовать`);
+}
 
 const initialMinute = state.world.minute;
 travelTo(state,'ichiraku');
@@ -54,11 +62,14 @@ assert.ok(state.world.minute >= 0 && state.world.minute < 1440,'Время до�
 
 state.ui.view='world';
 assert.match(renderView(state),/Карта Конохи/,'Экран мира должен выводить карту');
+assert.match(renderView(state),/Патруль территории/,'На карте доступен патруль');
+for (const location of LOCATIONS) assert.ok(fs.existsSync(path.join(root,location.bg)),`${location.name}: локальный фон должен существовать`);
 state.ui.view='people';
 state.ui.targetId='';
 assert.match(renderView(state),/Жители и союзники/,'Экран персонажей должен рендериться');
 state.ui.targetId='ayame';
 assert.match(renderView(state),/chat-form/,'Карточка персонажа должна включать свободный чат');
+assert.match(renderView(state),/character-art-grid/,'Карточка персонажа должна показывать галерею артов');
 state.ui.view='scroll';
 assert.match(renderView(state),/Свиток дел/,'Экран заданий должен рендериться');
 state.ui.view='bag';

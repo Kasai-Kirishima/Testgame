@@ -32,6 +32,10 @@ const cast = [
 export const CHARACTERS = cast.map(([id,name,role,personality,notes,likes,icon,c1,c2,startLocation,style]) => ({
   id,name,role,personality,notes,likes,icon,colors:[c1,c2],startLocation,style,
   intro:`${name} здесь. ${personality}`,
+  art:['daily','shinobi','festival'].map((variant,index)=>({
+    src:`assets/characters/${id}/${variant}.${['anko','ayame','konan','sakura','hanabi','hinata'].includes(id)?'webp':'svg'}`,
+    label:['Повседневный образ','Тренировка шиноби','Вечерний фестиваль'][index]
+  })),
   secret:id==='haku'
 }));
 export const getCharacter = id => CHARACTERS.find(character => character.id === id);

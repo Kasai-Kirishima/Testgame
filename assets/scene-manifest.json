@@ -1,0 +1,66 @@
+{
+  "backgrounds": {
+    "konoha-main": "assets/backgrounds/konoha-main.webp",
+    "training-ground": "assets/backgrounds/training-ground.webp",
+    "ichiraku": "assets/backgrounds/ichiraku.webp",
+    "tatami-home": "assets/backgrounds/tatami-home.webp",
+    "river-sunset": "assets/backgrounds/river-sunset.webp",
+    "festival-street": "assets/backgrounds/festival-street.webp",
+    "clinic": "assets/backgrounds/clinic.webp",
+    "library": "assets/backgrounds/library.webp",
+    "flower-shop": "assets/backgrounds/flower-shop.webp",
+    "hokage-office": "assets/backgrounds/hokage-office.webp",
+    "village-gate": "assets/backgrounds/village-gate.webp",
+    "memorial-garden": "assets/backgrounds/memorial-garden.webp",
+    "market-street": "assets/backgrounds/market-street.webp",
+    "academy-courtyard": "assets/backgrounds/academy-courtyard.webp",
+    "bathhouse-garden": "assets/backgrounds/bathhouse-garden.webp",
+    "rainy-alley": "assets/backgrounds/rainy-alley.webp",
+    "mountain-trail": "assets/backgrounds/mountain-trail.webp",
+    "campsite": "assets/backgrounds/campsite.webp"
+  },
+  "enemies": [
+    {
+      "id": "masked-scout",
+      "name": "Маскированный разведчик",
+      "desc": "Разведчик, который пытается проверить границы деревни.",
+      "icon": "⚔️",
+      "image": "assets/enemies/masked-scout.webp"
+    },
+    {
+      "id": "road-rogue",
+      "name": "Дорожный налётчик",
+      "desc": "Промышляет мелкими нападениями на торговые караваны.",
+      "icon": "🗡️",
+      "image": "assets/enemies/road-rogue.webp"
+    },
+    {
+      "id": "armored-guard",
+      "name": "Наёмный страж",
+      "desc": "Защищает заброшенный склад и не любит переговоры.",
+      "icon": "🛡️",
+      "image": "assets/enemies/armored-guard.webp"
+    },
+    {
+      "id": "forest-ambusher",
+      "name": "Лесной засадник",
+      "desc": "Прячется у тропы и старается застать путников врасплох.",
+      "icon": "🌲",
+      "image": "assets/enemies/forest-ambusher.webp"
+    },
+    {
+      "id": "chakra-adept",
+      "name": "Бродячий техник",
+      "desc": "Использует простые приёмы чакры и держит дистанцию.",
+      "icon": "🌀",
+      "image": "assets/enemies/chakra-adept.webp"
+    },
+    {
+      "id": "stone-guardian",
+      "name": "Каменный страж",
+      "desc": "Старинный тренировочный голем, активирующийся возле руин.",
+      "icon": "🗿",
+      "image": "assets/enemies/stone-guardian.webp"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "source": "Extracted transparent glyph crops from the project's generated anime visual-novel UI reference.",
+  "format": "96x96 transparent PNG; use object-fit: contain.",
+  "icons": {
+    "leaf-mark.png": "Konoha-inspired brand emblem",
+    "flower.png": "sakura / season",
+    "sun.png": "clear weather / daytime",
+    "location.png": "map location / explore",
+    "coin.png": "ryo currency",
+    "gem.png": "special resource (reserved)",
+    "settings.png": "settings",
+    "save.png": "save",
+    "chat.png": "dialogue / social interaction",
+    "training.png": "training / skill",
+    "gift.png": "gift / item transfer",
+    "outfit.png": "wardrobe / outfit",
+    "heart.png": "bond / affection",
+    "home.png": "home / help",
+    "sleep.png": "sleep / rest",
+    "promise.png": "promise / commitment",
+    "mood.png": "mood / meditation"
+  }
+}
