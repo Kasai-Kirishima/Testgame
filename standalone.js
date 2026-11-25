@@ -132,6 +132,7 @@ function createInitialState(player = {}) {
       style: player.style || 'balanced',
       look: player.look || 'casual',
       mark: player.mark || 'none',
+      clan: player.clan || 'none', chakraNature: player.chakra || 'fire', specialty: player.specialty || 'taijutsu', age: Number(player.age)||20,
       stats: {...origin.stats, stamina: origin.stats.stamina, chakra: origin.stats.chakra, focus: origin.stats.focus}
     },
     world: {location:'main-street',day:1,minute:8*60,season:0,weather:'sunny',actions:0},
@@ -612,7 +613,7 @@ function heading(title,subtitle) {
 
 function avatar(character,large=false) {
   const portrait = character.art?.[0]?.src;
-  return `<div class="person-avatar ${large?'large':''}" style="--av1:${character.colors[0]};--av2:${character.colors[1]}">${portrait?`<img src="${portrait}" alt="" loading="lazy"><span class="avatar-fallback">${character.icon}</span>`:character.icon}</div>`;
+  return `<div class="person-avatar ${large?'large':''}" style="--av1:${character.colors[0]};--av2:${character.colors[1]}">${portrait?`<img src="${portrait}" alt="" loading="lazy" onerror="this.remove();this.parentElement.classList.add('portrait-missing')"><span class="avatar-fallback">${character.icon}</span>`:character.icon}</div>`;
 }
 
 function renderWorld(state) {
@@ -766,11 +767,24 @@ function renderBag(state) {
     <section class="panel-card outfit-card"><div class="card-head"><h3>Гардероб</h3><small>ОДЕЖДА ВЛИЯЕТ НА РЕАКЦИИ</small></div><div class="outfit-grid">${looks.map(([id,name,desc])=>`<button class="outfit-option ${state.player.look===id?'selected':''}" data-action="outfit" data-id="${id}"><span><img class="tile-icon" src="assets/ui/cropped/${id==='shinobi'?'training':id==='festival'?'flower':id==='travel'?'location':id==='raincoat'?'mood':'outfit'}.png" alt=""></span><b>${name}</b><small>${desc}</small></button>`).join('')}</div><p class="chat-hint">Одежда влияет на небольшие реплики и комфорт в разную погоду. Никаких штрафов за внешний вид нет.</p></section>`;
 }
 
+function renderSettingsPage(state) {
+  const s=state.settings;
+  return `${heading('Настройки','Параметры интерфейса, сохранений и игрового темпа.')}
+    <section class="panel-card settings-page-card"><div class="card-head"><h3>Интерфейс</h3><small>ПРИМЕНЯЕТСЯ СРАЗУ</small></div>
+    <label class="setting-row"><span>Автосохранение</span><input type="checkbox" data-setting="autosave" ${s.autosave?'checked':''}></label>
+    <label class="setting-row"><span>Анимации</span><input type="checkbox" data-setting="animations" ${s.animations?'checked':''}></label>
+    <label class="setting-row"><span>Размер текста</span><select data-setting="textSize"><option value="normal" ${s.textSize==='normal'?'selected':''}>Обычный</option><option value="large" ${s.textSize==='large'?'selected':''}>Крупный</option></select></label>
+    <label class="setting-row"><span>Контраст</span><select data-setting="contrast"><option value="normal" ${s.contrast==='normal'?'selected':''}>Обычный</option><option value="high" ${s.contrast==='high'?'selected':''}>Повышенный</option></select></label></section>
+    <section class="panel-card settings-page-card"><div class="card-head"><h3>Сохранение</h3></div><div class="settings-actions"><button class="btn btn-primary" data-action="save-now">Сохранить сейчас</button><button class="btn btn-soft" data-action="export-save">Экспорт сохранения</button><button class="btn btn-soft" data-action="import-save">Импорт сохранения</button><input id="import-file" type="file" accept="application/json,.json" hidden><button class="btn btn-ghost" data-action="reset-save">Удалить сохранение</button></div></section>
+    <section class="panel-card settings-page-card"><div class="card-head"><h3>О персонаже</h3></div><div class="creation-summary"><b>${escapeHTML(state.player.name)}</b><span>${escapeHTML(state.player.originName)}</span><span>Клан: ${escapeHTML(state.player.clan||'не выбран')} · Возраст: ${state.player.age||20}</span><span>Стихия чакры: ${escapeHTML(state.player.chakraNature||'неизвестна')} · Специализация: ${escapeHTML(state.player.specialty||'не выбрана')}</span></div></section>`;
+}
+
 function renderView(state) {
   switch (state.ui.view) {
     case 'people': return renderPeople(state);
     case 'scroll': return renderScroll(state);
     case 'bag': return renderBag(state);
+    case 'settings': return renderSettingsPage(state);
     case 'world':
     default: return renderWorld(state);
   }
@@ -889,6 +903,8 @@ function showScreen(name) {
     button.classList.toggle('disabled',button.disabled);
   }
 }
+
+function randomPlayerName(){const a=['Рэн','Акира','Хару','Сора','Рику','Нао','Кай','Юки','Такуми','Рё'];const b=['Хаяси','Мори','Аоки','Сайто','Като','Кобаяси'];return a[Math.floor(Math.random()*a.length)]+' '+b[Math.floor(Math.random()*b.length)];}
 
 function startGame(player) {
   state = createInitialState(player);
@@ -1263,6 +1279,7 @@ document.addEventListener('click',event=>{
   const {action,id,type,hours,item} = button.dataset;
   switch (action) {
     case 'new-game': populateOrigins(); showScreen('creation'); break;
+    case 'random-name': { const first=['Рэн','Акира','Хару','Сора','Рику','Нао','Кай','Юки','Такуми','Рё','Мицуки','Арата','Хотару','Кэн']; const last=['Хаяси','Мори','Такахаси','Куросаки','Аоки','Сайто','Фудзивара','Като','Шираиси','Кобаяси']; const field=document.getElementById('player-name'); if(field) field.value=first[Math.floor(Math.random()*first.length)]+' '+last[Math.floor(Math.random()*last.length)]; break; }
     case 'continue': { const loaded = loadState(); if (loaded) { state=loaded; showScreen('game'); } else toast('Сохранение не найдено.'); break; }
     case 'home': showScreen('title'); break;
     case 'open-settings': openSettings(); break;
@@ -1313,7 +1330,7 @@ document.addEventListener('submit',event=>{
   if (event.target.id === 'creation-form') {
     event.preventDefault();
     const form = new FormData(event.target);
-    startGame({name:form.get('name'),origin:form.get('origin'),style:form.get('style'),look:form.get('look'),mark:form.get('mark')});
+    startGame({name:form.get('name') || randomPlayerName(),origin:form.get('origin'),style:form.get('style'),look:form.get('look'),mark:form.get('mark'),clan:form.get('clan'),chakra:form.get('chakra'),specialty:form.get('specialty'),age:form.get('age')});
   }
   if (event.target.id === 'world-action-form') {
     event.preventDefault();
@@ -1344,7 +1361,7 @@ document.addEventListener('change',event=>{
   if (event.target.dataset.setting && state) {
     const key = event.target.dataset.setting;
     state.settings[key] = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
-    renderSettings(state);
+    if (state.ui.view === 'settings') render(); else renderSettings(state);
     persist();
   }
   if (event.target.id === 'import-file') importSaveFile(event.target.files?.[0]);

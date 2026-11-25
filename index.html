@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://images2.alphacoders.com" crossorigin>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="assets/css/style.css?v=0.7.0">
+  <link rel="stylesheet" href="assets/css/style.css?v=0.8.0">
   <link rel="icon" href="assets/leaf.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
 </head>
@@ -30,7 +30,7 @@
           <button class="btn btn-ghost btn-large" data-action="continue" id="continue-button">Продолжить</button>
         </div>
         <div class="title-links"><a href="https://pixabay.com/music/ambient-japanese-style-ambient-475587/" target="_blank" rel="noopener">Музыка из библиотеки ↗</a></div>
-        <div class="title-foot"><span>VERSION 0.7.0</span><span>FAN-MADE PROJECT</span><span>LOCAL SAVE</span></div>
+        <div class="title-foot"><span>VERSION 0.8.0</span><span>FAN-MADE PROJECT</span><span>LOCAL SAVE</span></div>
       </div>
     </section>
 
@@ -41,7 +41,7 @@
         <p class="muted">Выбери прошлое, имя и стиль. Происхождение повлияет на стартовые навыки и первые события.</p>
         <form id="creation-form">
           <label class="field-label" for="player-name">Имя персонажа</label>
-          <input id="player-name" name="name" maxlength="22" placeholder="Например, Рэн" required autocomplete="off">
+          <div class="name-row"><input id="player-name" name="name" maxlength="22" placeholder="Например, Рэн" autocomplete="off"><button class="btn btn-soft" type="button" data-action="random-name">🎲 Случайное имя</button></div>
           <div class="form-grid">
             <div>
               <label class="field-label" for="player-origin">Происхождение</label>
@@ -66,6 +66,22 @@
                 <option value="travel">Дорожный плащ</option>
                 <option value="raincoat">Дождевой плащ</option>
               </select>
+            </div>
+            <div>
+              <label class="field-label" for="player-clan">Клан</label>
+              <select id="player-clan" name="clan"><option value="none">Без клана</option><option>Узумаки</option><option>Учиха</option><option>Хьюга</option><option>Нара</option><option>Яманака</option><option>Акимичи</option><option>Инузука</option><option>Абураме</option><option>Хатаке</option><option>Сарутоби</option><option>Другой / неизвестный</option></select>
+            </div>
+            <div>
+              <label class="field-label" for="player-chakra">Природа чакры</label>
+              <select id="player-chakra" name="chakra"><option value="fire">Огонь</option><option value="water">Вода</option><option value="wind">Ветер</option><option value="earth">Земля</option><option value="lightning">Молния</option><option value="balanced">Пока неизвестна</option></select>
+            </div>
+            <div>
+              <label class="field-label" for="player-specialty">Специализация</label>
+              <select id="player-specialty" name="specialty"><option value="taijutsu">Тайдзюцу</option><option value="ninjutsu">Ниндзюцу</option><option value="genjutsu">Гендзюцу</option><option value="medical">Медицинские техники</option><option value="sensors">Сенсорика</option><option value="craft">Инструменты и ловушки</option><option value="none">Ещё не выбрана</option></select>
+            </div>
+            <div>
+              <label class="field-label" for="player-age">Возраст персонажа</label>
+              <select id="player-age" name="age"><option value="18">18 лет</option><option value="19">19 лет</option><option value="20" selected>20 лет</option><option value="21">21 год</option><option value="22">22 года</option><option value="25">25 лет</option><option value="30">30 лет</option></select>
             </div>
             <div>
               <label class="field-label" for="player-mark">Отличительная черта</label>
@@ -118,13 +134,14 @@
         <button data-view="people" class="nav-item"><span><img src="assets/ui/cropped/heart.png" alt=""></span>Персонажи</button>
         <button data-view="scroll" class="nav-item"><span><img src="assets/ui/scroll.svg" alt=""></span>Свиток</button>
         <button data-view="bag" class="nav-item"><span><img src="assets/ui/pouch.svg" alt=""></span>Инвентарь</button>
+        <button data-view="settings" class="nav-item"><span><img src="assets/ui/cropped/settings.png" alt=""></span>Настройки</button>
       </nav>
     </section>
 
     <div id="modal-root"></div>
     <div id="toast-root" class="toast-root" aria-live="polite"></div>
   </main>
-  <script defer src="standalone.js?v=0.7.0" onerror="document.getElementById('runtime-error').hidden=false"></script>
+  <script defer src="standalone.js?v=0.8.0" onerror="document.getElementById('runtime-error').hidden=false"></script>
   <noscript><p class="runtime-warning">Для запуска игры включи JavaScript в браузере.</p></noscript>
   <div id="runtime-error" class="runtime-warning" hidden>Не удалось загрузить игровой файл <b>standalone.js</b>. Загрузи папку проекта целиком, включая index.html, standalone.js и assets.</div>
 </body>
