@@ -1,8 +1,9 @@
-import {CHARACTERS,getCharacter,initials} from '../data/characters.js';
+import {CHARACTERS,getCharacter,getUnlockedCharacterArts,initials} from '../data/characters.js';
 import {LOCATIONS,ORIGINS,getLocation,WEATHER,SEASONS} from '../data/world.js';
 import {getBond} from '../core/store.js';
-import {clockLabel,timePeriod,getWeather,seasonLabel,getNpcLocation} from '../core/life.js';
+import {clockLabel,timePeriod,getWeather,seasonLabel,getNpcLocation,getTravelMinutes,getLocationAccess} from '../core/life.js';
 import {PETS} from '../data/pets.js';
+import {JOBS,getJob} from '../data/jobs.js';
 import {getEnemy} from '../data/enemies.js';
 
 export const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g,char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -24,122 +25,190 @@ function renderWorld(state) {
   const sceneImage = weather.id === 'rain' && place.rainBg ? place.rainBg : isNight && place.nightBg ? place.nightBg : place.bg;
   const available = CHARACTERS.filter(character => state.unlocked.includes(character.id));
   const peopleHere = available.filter(character => getNpcLocation(state,character.id) === place.id);
-  // Scheduler guarantees at most one character in each location.
   const featured = peopleHere[0] || null;
   if (state.ui.sceneCharacterId && !peopleHere.some(item=>item.id===state.ui.sceneCharacterId)) state.ui.sceneCharacterId = featured?.id || '';
   if (featured && !state.ui.sceneCharacterId) state.ui.sceneCharacterId = featured.id;
-  const bond = featured ? getBond(state,featured.id) : {friendship:0,trust:0,respect:0,stage:'Тихая локация',meetings:0};
+  const activeCharacter = peopleHere.find(item=>item.id===state.ui.sceneCharacterId) || featured;
+  const bond = activeCharacter ? getBond(state,activeCharacter.id) : {friendship:0,trust:0,respect:0,stage:'Тихая локация',meetings:0};
   const stats = state.player.stats;
-  const lastResult = state.ui.lastActionResult || `Ты находишься в месте «${place.name}». ${place.desc} Напиши действие или реплику — игровой мастер разберёт твой текст.`;
-  const quickPlaces = ['ichiraku','flower-shop','market','training','hospital','river'].map(id=>LOCATIONS.find(item=>item.id===id)).filter(Boolean);
-  const ambientPet = state.pets?.[0];
+  state.gallerySeen ||= {characters:{},backgrounds:[]};
+  state.gallerySeen.characters ||= {};
+  state.gallerySeen.backgrounds ||= [];
+  if (!state.gallerySeen.backgrounds.includes(sceneImage)) state.gallerySeen.backgrounds.push(sceneImage);
+  if (activeCharacter) {
+    state.gallerySeen.characters[activeCharacter.id] ||= [];
+    const src = activeCharacter.art?.[0]?.src;
+    if (src && !state.gallerySeen.characters[activeCharacter.id].includes(src)) state.gallerySeen.characters[activeCharacter.id].push(src);
+  }
+  const lastChat = activeCharacter ? (state.dialogues[activeCharacter.id]||[]).slice(-1)[0] : null;
+  const speaker = lastChat?.from==='npc' ? activeCharacter?.name : 'Игровой мастер';
+  const narration = lastChat?.from==='npc' ? lastChat.text : (state.ui.lastActionResult || `${place.desc} Ты можешь осмотреться, поговорить с тем, кто рядом, или отправиться дальше.`);
   const dangerMap = {forest:'forest-ambusher',gate:'road-rogue',campsite:'masked-scout'};
   const enemyId = dangerMap[place.id] || '';
   const enemyVisible = Boolean(enemyId && ((state.world.day * 13 + state.world.actions * 7 + state.world.minute) % 4 === 1));
   const ambientEnemy = enemyVisible ? getEnemy(enemyId) : null;
-  return `${heading('Хроники Конохи','Твоя история продолжается в реальном времени игрового мира.')}
-    <section class="rp-scene" style="--scene:url('${sceneImage || 'assets/backgrounds/konoha-main.webp'}')">
-      <div class="rp-scene-vignette"></div>
-      <div class="rp-scene-hud"><span class="rp-chip"><img src="assets/ui/cropped/location.png" alt="">${escapeHTML(place.name)}</span><span class="rp-chip">${weather.icon} ${weather.label} · ${seasonLabel(state)} · ${clockLabel(state.world.minute)}</span><span class="rp-chip">День ${state.world.day}</span></div>
-      ${featured?`<button class="rp-character" data-action="open-person" data-id="${featured.id}" aria-label="Открыть профиль ${escapeHTML(featured.name)}"><img src="${featured.art[0].src}" alt="${escapeHTML(featured.name)}" loading="eager"><span class="rp-character-label"><b>${escapeHTML(featured.name)}</b><small>${escapeHTML(featured.role)}</small><i>Дружба ${Math.max(bond.friendship,bond.trust,bond.respect)}/100</i></span></button>`:''}
-      ${ambientPet?`<div class="rp-pet-peek" title="${escapeHTML(ambientPet.name)}">${ambientPet.icon||'🐾'}</div>`:''}
-      ${ambientEnemy?`<button class="rp-enemy" data-action="scene-patrol" data-id="${ambientEnemy.id}" aria-label="Встреча: ${escapeHTML(ambientEnemy.name)}"><img src="${ambientEnemy.image}" alt=""><span><b>${escapeHTML(ambientEnemy.name)}</b><small>Замечена опасность · проверить</small></span></button>`:''}
-      <div class="rp-scene-caption"><small>СЕЙЧАС В КОНОХЕ</small><h3>${escapeHTML(place.name)}</h3><p>${escapeHTML(place.desc)}</p><div class="rp-scene-actions"><button class="btn btn-primary" data-view="map">Карта</button><button class="btn btn-soft" data-action="patrol">Патруль</button><button class="btn btn-ghost" data-action="skip-time" data-hours="1">+1 час</button></div></div>
-      <div class="rp-scene-foot"><span>${featured?`Рядом: ${escapeHTML(featured.name)}`:'Пока никого рядом нет — жители заняты своими делами.'}</span><span><img src="assets/ui/cropped/coin.png" alt=""> ${stats.coins} рё</span></div>
+  const ambientPet = state.pets?.[0];
+  return `<section class="rp-full-scene" aria-label="Игровая сцена">
+      <img class="rp-full-bg" src="${escapeHTML(sceneImage||'assets/backgrounds/konoha-main.webp')}" alt="${escapeHTML(place.name)}" loading="eager" decoding="async">
+      <div class="rp-full-vignette"></div>
+      <div class="rp-hud-top"><span class="rp-chip"><img src="assets/ui/cropped/location.png" alt="">${escapeHTML(place.name)}</span><span class="rp-chip">${weather.icon} ${weather.label} · ${seasonLabel(state)} · ${clockLabel(state.world.minute)}</span><span class="rp-chip">День ${state.world.day}</span></div>
+      <div class="rp-health-hud"><span>♥ ${stats.hp??100} HP</span><span>◈ ${stats.stamina} EN</span></div>
+      ${activeCharacter?`<button class="rp-cutout" data-action="open-person" data-id="${activeCharacter.id}" aria-label="Открыть досье: ${escapeHTML(activeCharacter.name)}"><img src="${escapeHTML(activeCharacter.art?.[0]?.src||'')}" alt="${escapeHTML(activeCharacter.name)}"><span class="rp-cutout-name"><b>${escapeHTML(activeCharacter.name)}</b><small>${escapeHTML(activeCharacter.role)}</small></span></button>`:''}
+      ${ambientPet?`<div class="rp-full-pet" title="${escapeHTML(ambientPet.name)}">${ambientPet.icon||'🐾'}</div>`:''}
+      ${ambientEnemy?`<button class="rp-full-enemy" data-action="scene-patrol" data-id="${ambientEnemy.id}"><img src="${ambientEnemy.image}" alt=""><span>${escapeHTML(ambientEnemy.name)} · проверить</span></button>`:''}
+      <div class="rp-place-title"><small>СЕЙЧАС В КОНОХЕ</small><h2>${escapeHTML(place.name)}</h2><p>${escapeHTML(place.desc)}</p></div>
+      <div class="rp-scene-bottom"><div class="rp-speaker-line"><b>${escapeHTML(speaker)}</b><span>${activeCharacter?`Рядом · ${escapeHTML(activeCharacter.name)}`:'Тихая сцена'}</span></div><p>${escapeHTML(narration)}</p></div>
     </section>
-    <div class="rp-writing-grid">
-      <section class="panel-card rp-write-card"><div class="ref-section-title"><span class="ref-section-icon"><img src="assets/ui/cropped/location.png" alt=""></span><div><small>СВОБОДНОЕ ДЕЙСТВИЕ</small><h3>Что делаешь?</h3></div></div>
-        <form id="world-action-form" class="vn-input-form rp-input-form"><textarea name="action" rows="3" maxlength="700" placeholder="Напиши своими словами: иду на рынок, ищу Сакуру, покупаю чай, осматриваю лавку…" required>${escapeHTML(state.ui.lastActionText || '')}</textarea><div class="ref-form-footer"><small>Пиши вручную. Можно описать несколько действий подряд.</small><button class="btn btn-primary" type="submit">Выполнить ↗</button></div></form>
-      </section>
-      <section class="panel-card rp-write-card"><div class="ref-section-title"><span class="ref-section-icon"><img src="assets/ui/cropped/chat.png" alt=""></span><div><small>СВОБОДНЫЙ ДИАЛОГ</small><h3>Что скажешь?</h3></div></div>
-        <form id="world-dialogue-form" class="vn-input-form rp-input-form"><label class="vn-select-label" for="world-dialogue-target">С кем говоришь?</label>${peopleHere.length?`<select id="world-dialogue-target" name="characterId">${peopleHere.map(character=>`<option value="${character.id}" ${featured?.id===character.id?'selected':''}>${escapeHTML(character.name)}</option>`).join('')}</select><textarea name="message" rows="3" maxlength="700" placeholder="Напиши реплику полностью своими словами…" required></textarea><div class="ref-form-footer"><small>Только твоя реплика, без готовых ответов.</small><button class="btn btn-soft" type="submit">Отправить ➤</button></div>`:`<p class="chat-hint">В этой локации сейчас никого нет. Посмотри карту или напиши знакомым через смартфон.</p><button class="btn btn-soft" type="button" data-view="phone">Открыть смартфон</button>`}</form>
-      </section>
-    </div>
-    <section class="ref-narrator panel-card"><div class="ref-narrator-mark">GM</div><div><small>ЛОКАЛЬНЫЙ ИГРОВОЙ МАСТЕР</small><p>${escapeHTML(lastResult)}</p></div></section>
-    <section class="ref-quick-locations"><div class="ref-section-heading"><div><small>МИР ВОКРУГ</small><h3>Куда направиться?</h3></div><button class="text-link" data-view="map">Все места ↗</button></div><div class="ref-location-strip">${quickPlaces.map(item=>`<button class="ref-location-card ${item.id===place.id?'current':''}" data-action="travel" data-id="${item.id}" style="--tile:url('${item.bg}')"><span>${item.icon}</span><b>${escapeHTML(item.name)}</b></button>`).join('')}</div></section>
-    <section class="ref-history panel-card"><div class="ref-section-heading"><div><small>ХРОНИКА</small><h3>Последние события</h3></div><button class="text-link" data-view="day">Распорядок ↗</button></div>${state.feed.slice(0,3).map(line=>`<p class="ref-history-line">${escapeHTML(line)}</p>`).join('')}</section>`;
+    <section class="rp-control-deck">
+      <form id="world-action-form" class="rp-text-action"><label><span>СВОБОДНОЕ ДЕЙСТВИЕ</span><small>Пиши, что делаешь, куда идёшь или что исследуешь</small></label><textarea name="action" rows="2" maxlength="700" placeholder="Например: осматриваю витрину, затем захожу в цветочную лавку…" required>${escapeHTML(state.ui.lastActionText||'')}</textarea><button class="btn btn-primary" type="submit">Выполнить ↗</button></form>
+      <form id="world-dialogue-form" class="rp-text-dialogue"><label><span>ТВОЯ РЕПЛИКА</span><small>${activeCharacter?`Разговор с ${escapeHTML(activeCharacter.name)} · только ручной ввод`:'Рядом сейчас никого нет'}</small></label>${activeCharacter?`<input type="hidden" name="characterId" value="${activeCharacter.id}"><textarea name="message" rows="2" maxlength="700" placeholder="Напиши своими словами, что говоришь…" required></textarea><button class="btn btn-soft" type="submit">Сказать ➤</button>`:`<div class="rp-empty-talk">Персонаж появится в этой сцене, когда окажется в локации. Можно отправиться по карте или немного подождать.</div><button class="btn btn-soft" type="button" data-view="map">Открыть карту</button>`}</form>
+    </section>
+    <div class="rp-bottom-shortcuts"><button data-view="locations">🌸 Локации</button><button data-view="map">⌖ Карта</button><button data-view="scroll">📜 Задания</button><button data-view="gallery">▧ Галерея</button><button data-action="skip-time" data-hours="1">◷ +1 час</button></div>`;
 }
-
 function renderMap(state) {
   const place = getLocation(state.world.location);
-  return `${heading('Карта Конохи','Выбирай направление и отправляйся в любую открытую локацию. Переход занимает игровое время.')}
-    <section class="ref-map-banner" style="--scene:url('assets/backgrounds/konoha-main.webp')"><div><small>КАРТА ДЕРЕВНИ</small><h3>Листья скрывают множество историй</h3><p>Сейчас ты находишься: <b>${escapeHTML(place.name)}</b></p></div></section>
-    <div class="ref-location-grid">${LOCATIONS.map(location=>`<button class="ref-location-tile ${location.id===place.id?'current':''}" data-action="travel" data-id="${location.id}"><span class="ref-tile-image" style="background-image:url('${location.bg}')"></span><span class="ref-tile-body"><b>${location.icon} ${escapeHTML(location.name)}</b><small>${escapeHTML(location.area)}</small><em>${escapeHTML(location.desc)}</em>${location.id===place.id?'<i class="current-stamp">ТЫ ЗДЕСЬ</i>':'<i class="travel-stamp">Перейти ↗</i>'}</span></button>`).join('')}</div>`;
+  const coords = {
+    'main-street':[49,48],'ichiraku':[30,37],'flower-shop':[66,37],market:[80,48],training:[76,73],hospital:[44,82],hokage:[51,17],
+    'tea-house':[28,56],river:[15,83],forest:[7,51],memorial:[14,18],gate:[50,5],library:[20,39],garden:[34,70],home:[56,64],
+    academy:[81,20],campsite:[6,83],bathhouse:[21,63],dojo:[89,76],archive:[19,29],residential:[64,55],rooftop:[69,22],greenhouse:[40,70]
+  };
+  const pins = LOCATIONS.map(location=>{
+    const [x,y]=coords[location.id]||[50,50];
+    const access=getLocationAccess(state,location.id); const locked=!access.allowed; const minutes=getTravelMinutes(place.id,location.id);
+    return `<button class="map-pin ${location.id===place.id?'current':''} ${locked?'locked':''}" style="left:${x}%;top:${y}%" data-action="travel" data-id="${location.id}" ${locked?'disabled':''} title="${escapeHTML(locked?access.reason:location.name)}"><span>${location.icon}</span><b>${escapeHTML(location.name)}</b><i>${location.id===place.id?'Здесь':locked?'Закрыто':`${minutes} мин`}</i></button>`;
+  }).join('');
+  return `${heading('Карта Конохи','Выбирай точку на схеме. Переход займёт игровое время; внезапный уход со встречи может повлиять на отношения.')}
+    <section class="map-ornate-banner map-ornate-banner-v2"><div><small>🌸 КАРТА КОНОХИ</small><h3>Деревня Скрытого Листа</h3><p>Текущее место: <b>${escapeHTML(place.name)}</b></p></div><button class="btn btn-soft" data-action="toggle-map-legend">${state.ui.mapLegend?'Скрыть легенду':'Открыть легенду'}</button></section>
+    ${state.ui.mapLegend?`<section class="panel-card map-legend"><b>Легенда карты</b><span>🏠 Жилые места</span><span>🍜 Еда и магазины</span><span>⚕️ Службы и госпиталь</span><span>🥋 Тренировки</span><span>🌲 Природа</span><span>🔒 Временно закрытая зона</span><p>Переход занимает от 5 до 32 игровых минут в зависимости от расстояния. Если ты договаривался о встрече, внезапный уход будет заметен собеседнику.</p></section>`:''}
+    <section class="map-overview" aria-label="Схематичная карта Конохи"><svg class="map-roads" viewBox="0 0 1000 640" preserveAspectRatio="none" aria-hidden="true"><defs><pattern id="map-grid" width="48" height="48" patternUnits="userSpaceOnUse"><path d="M48 0H0V48" fill="none" stroke="rgba(246,208,231,.06)" stroke-width="1"/></pattern></defs><rect width="1000" height="640" fill="url(#map-grid)"/><path d="M-40 250 C170 205 230 300 390 275 S720 190 1040 255 M170 -30 C220 120 350 170 500 230 S650 420 610 680 M-30 485 C180 430 280 520 445 495 S770 410 1030 485" fill="none" stroke="#c89bb9" stroke-width="25" opacity=".16" stroke-linecap="round"/><path d="M-40 250 C170 205 230 300 390 275 S720 190 1040 255 M170 -30 C220 120 350 170 500 230 S650 420 610 680 M-30 485 C180 430 280 520 445 495 S770 410 1030 485" fill="none" stroke="#e3c3d9" stroke-width="2" opacity=".22" stroke-dasharray="7 13"/><path d="M740 -20 C690 100 830 180 790 300 S860 520 1010 660" fill="none" stroke="#6fa8b2" stroke-width="50" opacity=".2"/><path d="M70 80 L230 35 390 85 470 40 690 65 930 120 950 330 875 580 660 605 450 570 240 605 50 500Z" fill="none" stroke="rgba(246,198,225,.22)" stroke-width="3" stroke-dasharray="10 10"/><g fill="rgba(195,139,176,.16)" stroke="rgba(236,188,220,.16)"><rect x="335" y="95" width="135" height="78" rx="12"/><rect x="520" y="95" width="170" height="90" rx="12"/><rect x="340" y="370" width="155" height="90" rx="12"/><rect x="560" y="365" width="125" height="100" rx="12"/></g><g fill="rgba(232,176,211,.35)" font-size="18" font-family="sans-serif"><text x="390" y="140">ЦЕНТР</text><text x="565" y="145">ТОРГОВЫЙ РЯД</text><text x="367" y="420">ЖИЛОЙ КВАРТАЛ</text><text x="575" y="420">ВОСТОК</text></g></svg>${pins}<div class="map-compass">N<br>✦</div><div class="map-scale">СХЕМА ДЕРЕВНИ · НЕ В МАСШТАБЕ</div></section>
+    <div class="map-locations-list">${LOCATIONS.map(location=>`<button class="map-list-row ${location.id===place.id?'current':''}" data-action="travel" data-id="${location.id}" ${!getLocationAccess(state,location.id).allowed?'disabled':''}><span>${location.icon}</span><b>${escapeHTML(location.name)}</b><small>${escapeHTML(location.area)}</small><em>${location.id===place.id?'Ты здесь':getLocationAccess(state,location.id).allowed?`${getTravelMinutes(place.id,location.id)} мин · Перейти`:'Закрыто 🔒'}</em></button>`).join('')}</div>`;
 }
-
 function renderDay(state) {
-  const available = CHARACTERS.filter(character=>state.unlocked.includes(character.id));
+  const companions = CHARACTERS.filter(character=>state.companions?.includes(character.id));
   const assignments = state.assignments.filter(item=>item.day===state.world.day);
   const taskOptions = [['cook','Приготовить еду'],['tidy','Уборка дома'],['shop','Покупки на рынке'],['study','Учёба и чтение'],['train','Тренировка'],['garden','Уход за садом'],['clinic','Помощь в больнице'],['rest','Отдых']];
-  return `${heading('Распорядок дня','Решай, чем займёшься сам и кому поручишь бытовые дела. Запланированное не обязательно выполнять.')}
-    <section class="ref-day-banner" style="--scene:url('assets/backgrounds/tatami-home.webp')"><div><small>ДЕНЬ ${state.world.day} · ${seasonLabel(state)}</small><h3>У каждого найдётся своё занятие</h3><p>Планы можно менять в течение дня — никто не обязан выполнять каждое поручение.</p></div></section>
-    <section class="panel-card ref-day-form-card"><div class="ref-section-title"><span class="ref-section-icon"><img src="assets/ui/cropped/home.png" alt=""></span><div><small>НОВОЕ ЗАНЯТИЕ</small><h3>Распределить дела</h3></div></div><form id="assignment-form" class="assignment-form"><label>Кто займётся?<select name="actor"><option value="player">${escapeHTML(state.player.name)}</option>${available.map(character=>`<option value="${character.id}">${escapeHTML(character.name)}</option>`).join('')}</select></label><label>Чем займётся?<select name="task">${taskOptions.map(([id,label])=>`<option value="${id}">${label}</option>`).join('')}</select></label><button class="btn btn-primary" type="submit">Назначить дело</button></form></section>
-    <section class="ref-plan-grid">${assignments.length?assignments.map(item=>`<article class="ref-plan-card"><span class="ref-plan-icon">${item.done?'✓':'✦'}</span><div><b>${escapeHTML(item.actorName)}</b><small>${escapeHTML(taskOptions.find(([id])=>id===item.task)?.[1]||item.task)}</small></div><em class="${item.done?'done':''}">${item.done?'Выполнено':'Запланировано'}</em></article>`).join(''):'<div class="empty-state">На сегодня пока нет планов. Назначь занятие себе или кому-нибудь из знакомых.</div>'}</section>
-    <section class="panel-card"><div class="card-head"><h3>Персональный распорядок жителей</h3><small>${timePeriod(state.world.minute).toUpperCase()} · МАРШРУТЫ ОБНОВЛЯЮТСЯ</small></div><div class="npc-schedule-grid">${available.filter(character=>getNpcLocation(state,character.id)).map(character=>{const placeId=getNpcLocation(state,character.id);const placeName=getLocation(placeId).name;const plan=state.assignments.find(item=>item.actorId===character.id && item.day===state.world.day && !item.done);const routine=plan?({cook:'помогает с приготовлением еды',tidy:'занята домашними делами',shop:'закупает необходимые вещи',study:'занимается учёбой',train:'тренируется',garden:'ухаживает за растениями',clinic:'помогает медикам',rest:'отдыхает'})[plan.task]:(character.likes[(state.world.day+state.world.minute+character.id.length)%character.likes.length]||'занята своими делами');return `<article class="npc-schedule-item">${avatar(character)}<div><b>${escapeHTML(character.name)}</b><small>Сейчас: ${escapeHTML(placeName)}</small><em>${escapeHTML(routine)}</em>${plan?'<small>Есть назначенное дело</small>':''}</div></article>`}).join('')}</div><p class="chat-hint">В каждой локации одновременно может находиться только один персонаж. Маршруты меняются утром, днём, вечером и ночью в зависимости от характера и интересов.</p></section>`;
+  return `${heading('Распорядок дня','Личные планы жителей скрыты. Поручения можно распределять только тем спутницам, которые согласились войти в твой ближний круг.')}
+    <section class="ref-day-banner" style="--scene:url('assets/backgrounds/tatami-home.webp')"><div><small>ДЕНЬ ${state.world.day} · ${seasonLabel(state)}</small><h3>Домашние дела и совместные планы</h3><p>Собственные занятия персонажей остаются их личным делом; поручения можно менять или отменять.</p></div></section>
+    <section class="panel-card ref-day-form-card"><div class="ref-section-title"><span class="ref-section-icon"><img src="assets/ui/cropped/home.png" alt=""></span><div><small>НОВОЕ ЗАНЯТИЕ</small><h3>Распределить дела</h3></div></div>${companions.length?`<form id="assignment-form" class="assignment-form"><label>Кто займётся?<select name="actor"><option value="player">${escapeHTML(state.player.name)}</option>${companions.map(character=>`<option value="${character.id}">${escapeHTML(character.name)}</option>`).join('')}</select></label><label>Чем займётся?<select name="task">${taskOptions.map(([id,label])=>`<option value="${id}">${label}</option>`).join('')}</select></label><button class="btn btn-primary" type="submit">Назначить дело</button></form>`:`<div class="empty-state">Пока некому поручать бытовые дела. Сначала укрепи доверие и пригласи девушку в ближний круг из её профиля.</div>`}</section>
+    <section class="ref-plan-grid">${assignments.length?assignments.map(item=>`<article class="ref-plan-card"><span class="ref-plan-icon">${item.done?'✓':'✦'}</span><div><b>${escapeHTML(item.actorName)}</b><small>${escapeHTML(taskOptions.find(([id])=>id===item.task)?.[1]||item.task)}</small></div><em class="${item.done?'done':''}">${item.done?'Выполнено':'Запланировано'}</em></article>`).join(''):'<div class="empty-state">На сегодня пока нет назначенных дел.</div>'}</section>
+    <section class="panel-card private-routine-note"><div class="card-head"><h3>Повседневная жизнь Конохи</h3><small>РАСПИСАНИЯ НЕ ПОКАЗЫВАЮТСЯ</small></div><p>У каждого жителя есть собственные планы и предпочтения. Они перемещаются самостоятельно. Ты узнаёшь, где находится персонаж, только при встрече, наблюдении или в разговоре — личное расписание целиком не раскрывается.</p></section>`;
 }
 
 function renderSettingsPage(state) {
   const s=state.settings;
-  return `${heading('Настройки','Подстрой игру под себя, управляй сохранениями и внешним видом интерфейса.')}
-    <section class="panel-card ref-settings-card"><div class="ref-section-title"><span class="ref-section-icon"><img src="assets/ui/cropped/settings.png" alt=""></span><div><small>ОБЩИЕ ПАРАМЕТРЫ</small><h3>Игровой процесс</h3></div></div>
+  return `${heading('Настройки','Тёмно-фиолетовая тема, розовые акценты и параметры сохранения.')}
+    <section class="panel-card ref-settings-card settings-ornate"><div class="ref-section-title"><span class="ref-section-icon">⚙</span><div><small>ОБЩИЕ ПАРАМЕТРЫ</small><h3>Игровой процесс</h3></div></div>
       <label class="setting-row"><span><b>Автосохранение</b><small>Записывать прогресс после действий</small></span><input class="switch" type="checkbox" data-setting="autosave" ${s.autosave?'checked':''}></label>
-      <label class="setting-row"><span><b>Анимации интерфейса</b><small>Плавные переходы и подсветка</small></span><input class="switch" type="checkbox" data-setting="animations" ${s.animations?'checked':''}></label>
+      <label class="setting-row"><span><b>Показывать имена персонажей</b><small>Подписи над фигурами в игровых сценах</small></span><input class="switch" type="checkbox" data-setting="showNames" ${s.showNames!==false?'checked':''}></label>
+      <label class="setting-row"><span><b>Анимации</b><small>Плавные переходы и эффекты сцены</small></span><input class="switch" type="checkbox" data-setting="animations" ${s.animations?'checked':''}></label>
+      <label class="setting-row"><span><b>Скрывать романтические эпизоды</b><small>Нейтральный переход сцены без подробностей</small></span><input class="switch" type="checkbox" data-setting="romanceFadeToBlack" ${s.romanceFadeToBlack!==false?'checked':''}></label>
+      <label class="setting-row"><span><b>Режим приватности</b><small>Скрывать нейтральные романтические переходы и отмечать чувствительные темы плашкой «Цензура»</small></span><input class="switch" type="checkbox" data-setting="hideSensitiveText" ${s.hideSensitiveText!==false?'checked':''}></label>
       <label class="setting-row"><span><b>Размер текста</b><small>Удобство чтения на телефоне</small></span><select class="small-select" data-setting="textSize"><option value="normal" ${s.textSize==='normal'?'selected':''}>Обычный</option><option value="large" ${s.textSize==='large'?'selected':''}>Крупный</option></select></label>
       <label class="setting-row"><span><b>Контраст</b><small>Выделение текста и элементов</small></span><select class="small-select" data-setting="contrast"><option value="normal" ${s.contrast==='normal'?'selected':''}>Обычный</option><option value="high" ${s.contrast==='high'?'selected':''}>Повышенный</option></select></label>
-      <div class="ref-music-panel"><b>Музыка из библиотеки</b><p>Японская атмосферная инструментальная композиция, открывается на странице библиотеки.</p><a href="https://pixabay.com/music/ambient-japanese-style-ambient-475587/" target="_blank" rel="noopener">Открыть Pixabay ↗</a></div>
+      <div class="settings-slider-row"><label for="music-volume"><b>Громкость музыки</b><output>${s.musicVolume??55}%</output></label><input id="music-volume" type="range" min="0" max="100" value="${s.musicVolume??55}" data-setting="musicVolume"></div>
+      <div class="settings-slider-row"><label for="effect-volume"><b>Громкость эффектов</b><output>${s.effectVolume??70}%</output></label><input id="effect-volume" type="range" min="0" max="100" value="${s.effectVolume??70}" data-setting="effectVolume"></div>
+      <div class="language-cycle"><div><b>Язык интерфейса</b><small>Пока доступен только русский</small></div><div class="language-buttons"><button data-action="language-prev" aria-label="Предыдущий язык">‹</button><strong>Русский</strong><button data-action="language-next" aria-label="Следующий язык">›</button></div></div>
+      <div class="ref-music-panel"><b>Музыка из библиотеки</b><p>Атмосферная японская инструментальная композиция. Управление громкостью будет применяться к встроенному звуку, когда он подключён.</p><a href="https://pixabay.com/music/ambient-japanese-style-ambient-475587/" target="_blank" rel="noopener">Открыть Pixabay ↗</a></div>
       <div class="ref-save-actions"><button class="btn btn-soft" data-action="save-now">Сохранить сейчас</button><button class="btn btn-soft" data-action="export-save">Экспортировать прогресс</button><button class="btn btn-soft" data-action="import-save">Импортировать прогресс</button><input id="import-file" type="file" accept="application/json,.json" hidden><button class="btn btn-ghost" data-action="reset-save">Сбросить сохранение</button></div>
     </section>`;
 }
-
 function renderPersonCard(state,character) {
   const bond = getBond(state,character.id);
   const value = Math.max(bond.friendship,bond.trust,bond.respect);
   const portrait = character.art?.[0]?.src || '';
-  return `<button class="person-card ref-person-card" data-action="open-person" data-id="${character.id}"><span class="ref-card-portrait"><img src="${portrait}" alt="${escapeHTML(character.name)}" loading="lazy"><i>${escapeHTML(character.role)}</i></span><span class="ref-card-copy"><strong>${escapeHTML(character.name)}</strong><small>${escapeHTML(character.personality)}</small><span class="bond-line"><span>${escapeHTML(bond.stage)}</span><b>${value}/100</b></span><span class="bond-track"><i style="width:${value}%"></i></span></span></button>`;
+  const statusClass=value>=75?'bond-close':value>=40?'bond-warm':value<=8?'bond-new':'bond-neutral';
+  return `<button class="person-card ref-person-card ${statusClass}" data-action="open-person" data-id="${character.id}"><span class="ref-card-portrait"><img src="${portrait}" alt="${escapeHTML(character.name)}" loading="lazy"><i>${escapeHTML(character.role)}</i></span><span class="ref-card-copy"><strong>${escapeHTML(character.name)}</strong><small>${escapeHTML(character.personality)}</small><span class="bond-line"><span>${escapeHTML(bond.stage||'Знакомая')}</span><b>${value}/100</b></span><span class="bond-track"><i style="width:${value}%"></i></span></span></button>`;
 }
 
 function renderPeople(state) {
-  const available = CHARACTERS.filter(item => state.unlocked.includes(item.id));
+  const met = new Set([...(state.metCharacters||[]),...Object.keys(state.bonds||{}).filter(id=>(state.bonds?.[id]?.meetings||0)>0)]);
+  const available = CHARACTERS.filter(item => state.unlocked.includes(item.id) && met.has(item.id));
   const secretOpen = state.unlocked.includes('haku');
-  return `${heading('Жители и союзники','У каждого свой характер, распорядок, интересы и память о ваших встречах.')}
-    <div class="people-toolbar"><span>${available.length} знакомых персонажей</span><span>Связи развиваются через поступки и разговоры</span></div>
-    <div class="people-grid">${available.map(item=>renderPersonCard(state,item)).join('')}
-      ${!secretOpen?`<button class="person-card secret-card" data-action="secret-hint"><div class="person-top"><div class="person-avatar secret-avatar">?</div><div><strong>Неизвестный гость</strong><small>Секретная встреча</small></div></div><p class="person-desc">В старом лесу иногда видят незнакомого путешественника. Следы чаще появляются зимой.</p><div class="bond-line"><span>Загадка</span><b>???</b></div></button>`:''}
-    </div>`;
+  return `${heading('Герои','Здесь появляются только те, с кем ты уже познакомился лично.')}
+    <div class="people-toolbar"><span>${available.length} знакомых персонажей</span><span>Рамка карточки отражает текущее состояние отношений</span></div>
+    ${available.length?`<div class="people-grid">${available.map(item=>renderPersonCard(state,item)).join('')}</div>`:`<section class="panel-card empty-heroes"><div class="empty-heroes-mark">🌸</div><h3>Пока нет знакомых героев</h3><p>Посещай места Конохи, замечай людей на сцене и начинай разговор. После первой личной беседы героиня появится здесь.</p><button class="btn btn-primary" data-view="world">Вернуться в RP</button></section>`}
+    ${!secretOpen?`<button class="person-card secret-card" data-action="secret-hint"><div class="person-top"><div class="person-avatar secret-avatar">?</div><div><strong>Неизвестный гость</strong><small>Секретная встреча</small></div></div><p class="person-desc">В старом лесу иногда видят незнакомого путешественника. Следы чаще появляются зимой.</p><div class="bond-line"><span>Загадка</span><b>???</b></div></button>`:''}`;
 }
-
 function renderPersonDetail(state,character) {
   const bond = getBond(state,character.id);
   const history = state.dialogues[character.id] || [];
-  const messages = history.length ? history : [{from:'npc',text:character.intro}];
   const lastMemories = state.memories[character.id] || [];
   const value = Math.max(bond.friendship,bond.trust,bond.respect);
-  return `${heading('Персонаж',`Личная история с ${character.name}. Диалоги сохраняются в этом браузере.`)}
-    <div class="person-detail">
-      <div><section class="profile-banner">${avatar(character,true)}<div><div class="eyebrow">${character.role}</div><h3>${character.name}</h3><p>${character.personality}</p><div class="trait-tags">${character.likes.map(like=>`<span class="tag">${like}</span>`).join('')}</div></div></section>
-        <section class="panel-card character-art-panel"><div class="card-head"><h3>Галерея образов</h3><small>${character.art.length===3?'3 ОБРАЗА':'ПОРТРЕТ'}</small></div><div class="character-art-grid">${character.art.map(art=>`<figure class="character-art"><img src="${art.src}" alt="${character.name} — ${art.label}" loading="lazy"><figcaption>${art.label}</figcaption></figure>`).join('')}</div></section>
-        <section class="panel-card chat-card"><div class="card-head"><h3>Свободный разговор</h3><small>ЛОКАЛЬНЫЙ ИГРОВОЙ МАСТЕР</small></div><div class="chat-log" id="chat-log">${messages.map(message=>`<div class="chat-bubble ${message.from==='player'?'player':'npc'}"><span class="chat-meta">${message.from==='player'?escapeHTML(state.player.name):character.name}</span>${escapeHTML(message.text)}</div>`).join('')}</div>
-          <form id="chat-form" class="chat-form"><input type="hidden" name="characterId" value="${character.id}"><textarea name="message" class="chat-input" rows="2" maxlength="500" placeholder="Напиши, что говоришь или делаешь…" required></textarea><button class="send-button" type="submit" aria-label="Отправить">➤</button></form><p class="chat-hint">Игровой мастер учитывает смысл фразы, характер собеседника, погоду, время и предыдущие встречи. Работает без API и интернета.</p></section>
-      </div>
-      <aside class="panel-card bond-panel"><div class="card-head"><h3>Ваша связь</h3><small>${bond.meetings} встреч</small></div><div class="bond-status">${bond.stage}</div><div class="bond-stat"><span>Дружба</span><b>${bond.friendship}/100</b><div class="bond-track"><i style="width:${bond.friendship}%"></i></div></div><div class="bond-stat"><span>Доверие</span><b>${bond.trust}/100</b><div class="bond-track"><i style="width:${bond.trust}%"></i></div></div><div class="bond-stat"><span>Уважение</span><b>${bond.respect}/100</b><div class="bond-track"><i style="width:${bond.respect}%"></i></div></div>
-        <div class="side-actions"><p class="chat-hint">Все действия и реплики вводятся вручную. Напиши, что хочешь сказать или сделать, в поле разговора.</p><button class="btn btn-ghost" data-action="back-people"><img class="button-icon" src="assets/ui/cropped/location.png" alt=""> К списку персонажей</button><button class="btn btn-soft" data-view="phone"><img class="button-icon" src="assets/ui/cropped/chat.png" alt=""> Написать в смартфоне</button></div>
-        <div class="memory-box"><b>Что запомнилось</b>${lastMemories.length?`<ul>${lastMemories.slice(0,5).map(item=>`<li>${escapeHTML(item.text)} <small>· день ${item.day}</small></li>`).join('')}</ul>`:'<p>Пока нет особых воспоминаний. Начни разговор или проведи совместное занятие.</p>'}</div>
+  const characterPlace=getNpcLocation(state,character.id);
+  const isHere=characterPlace===state.world.location;
+  const placeName=characterPlace?getLocation(characterPlace).name:'за пределами деревни';
+  const allArt=character.art||[];
+  const art=getUnlockedCharacterArts(state,character);
+  const index=Math.min(art.length-1,Math.max(0,state.ui.profileArtIndex||0));
+  const currentArt=art[index]||art[0]||allArt[0];
+  state.gallerySeen ||= {characters:{},backgrounds:[]}; state.gallerySeen.characters ||= {};
+  state.gallerySeen.characters[character.id] ||= [];
+  if(currentArt?.src&&!state.gallerySeen.characters[character.id].includes(currentArt.src)) state.gallerySeen.characters[character.id].push(currentArt.src);
+  const knownSince=state.meetingHistory?.[character.id]?.firstDay;
+  const gifts=state.giftHistory?.[character.id]||[];
+  const stageClass=value>=70?'high':value>=35?'mid':'new';
+  const meetingText=knownSince?`Знакомы с ${knownSince} дня`:'Дата знакомства пока неизвестна';
+  return `${heading(character.name,`${character.role} · ${character.personality}`)}
+    <div class="dossier-layout">
+      <aside class="panel-card dossier-stats ${stageClass}"><div class="dossier-person-head">${avatar(character,true)}<h3>${escapeHTML(character.name)}</h3><small>${escapeHTML(character.role)}</small></div>
+        <div class="dossier-status-badge">${escapeHTML(bond.stage||'Знакомы')}</div>
+        <div class="dossier-metric"><span>Дружба</span><b>${bond.friendship||0}/100</b><i><u style="width:${bond.friendship||0}%"></u></i></div>
+        <div class="dossier-metric"><span>Доверие</span><b>${bond.trust||0}/100</b><i><u style="width:${bond.trust||0}%"></u></i></div>
+        <div class="dossier-metric"><span>Уважение</span><b>${bond.respect||0}/100</b><i><u style="width:${bond.respect||0}%"></u></i></div>
+        <dl class="dossier-facts"><div><dt>Статус</dt><dd>${escapeHTML(bond.stage||'Знакомая')}</dd></div><div><dt>Встреч</dt><dd>${bond.meetings||0}</dd></div><div><dt>Знакомы</dt><dd>${escapeHTML(meetingText)}</dd></div><div><dt>Энергия</dt><dd>Неизвестна</dd></div><div><dt>Настроение</dt><dd>${isHere?'Можно понять по поведению':'Неизвестно'}</dd></div><div><dt>Личные деньги</dt><dd>Неизвестно</dd></div></dl>
+        <div class="dossier-likes"><b>Что известно</b><p>Нравится: ${character.likes.map(escapeHTML).join(', ')||'Пока неизвестно'}</p><p>Характер: ${escapeHTML(character.personality)}</p><p>Не любит: ${escapeHTML(character.dislikes||'Пока не выяснено')}</p></div>
+        ${state.companions?.includes(character.id)?'<div class="companion-state">Входит в ближний круг</div>':(bond.friendship>=35&&bond.trust>=25?`<button class="btn btn-soft full-width" data-action="invite-companion" data-id="${character.id}">Пригласить в ближний круг</button>`:'')}
+        <button class="btn btn-ghost full-width" data-action="back-people">← К героям</button>
       </aside>
+      <div class="dossier-main">
+        <section class="panel-card dossier-gallery"><div class="card-head"><h3>Галерея персонажа</h3><small>${index+1} / ${art.length} открыто</small></div>
+          <div class="dossier-art-stage"><button class="art-arrow prev" data-action="profile-art-prev" data-id="${character.id}" aria-label="Предыдущее изображение">‹</button><img src="${escapeHTML(currentArt?.src||'')}" alt="${escapeHTML(character.name)} — ${escapeHTML(currentArt?.label||'Портрет')}" data-action="view-art" data-src="${escapeHTML(currentArt?.src||'')}" loading="eager"><button class="art-arrow next" data-action="profile-art-next" data-id="${character.id}" aria-label="Следующее изображение">›</button><span class="art-caption">${escapeHTML(currentArt?.label||'Портрет')}</span></div>
+          <div class="dossier-art-dots">${art.map((item,i)=>`<button class="${i===index?'active':''}" data-action="profile-art-set" data-id="${character.id}" data-index="${i}" aria-label="${escapeHTML(item.label)}"></button>`).join('')}</div>${allArt.length>art.length?`<p class="art-unlock-hint">Следующие образы открываются по мере развития знакомства. Сейчас открыто ${art.length} из ${allArt.length}.</p>`:''}
+        </section>
+        <section class="panel-card dossier-story"><div class="card-head"><h3>История ваших встреч</h3><small>${history.length} реплик</small></div><p class="dossier-bio">${escapeHTML(character.notes||character.personality)}</p><div class="dossier-history">${history.length?history.slice(-12).map(item=>`<div class="dossier-history-line ${item.from==='player'?'from-player':'from-npc'}"><b>${item.from==='player'?escapeHTML(state.player.name):escapeHTML(character.name)}</b><p>${escapeHTML(item.text)}</p><small>День ${item.day} · ${String(Math.floor((item.minute||0)/60)).padStart(2,'0')}:${String((item.minute||0)%60).padStart(2,'0')}</small></div>`).join(''):'<p class="chat-hint">Пока здесь нет сохранённых разговоров. История будет пополняться после встреч.</p>'}</div></section>
+        <section class="panel-card dossier-gifts"><div class="card-head"><h3>Подарки и расходы</h3><small>${gifts.length} записей</small></div>${gifts.length?`<ul>${gifts.map(item=>`<li>${escapeHTML(item.name)} · ${item.price?`${item.price} рё`: 'стоимость неизвестна'} · день ${item.day}</li>`).join('')}</ul>`:'<p class="chat-hint">Пока подарков и расходов на неё не записано.</p>'}</section>
+        <section class="panel-card chat-card"><div class="card-head"><h3>Личный разговор</h3><small>${isHere?'ОНА РЯДОМ':'НЕТ НА МЕСТЕ'}</small></div>${isHere?`<form id="chat-form" class="chat-form"><input type="hidden" name="characterId" value="${character.id}"><textarea name="message" class="chat-input" rows="2" maxlength="500" placeholder="Напиши свою реплику вручную…" required></textarea><button class="send-button" type="submit">➤</button></form>`:`<div class="chat-away-note">${escapeHTML(character.name)} сейчас в локации «${escapeHTML(placeName)}». Личная беседа доступна после встречи.</div>`}</section>
+      </div>
     </div>`;
 }
-
 function renderPhone(state) {
-  const tab = state.phone?.tab || 'feed';
-  const posts = state.phone?.posts || [];
-  const messages = state.phone?.messages || [];
-  const available = CHARACTERS.filter(character=>state.unlocked.includes(character.id));
-  const stamp = minute => `${String(Math.floor(minute/60)).padStart(2,'0')}:${String(minute%60).padStart(2,'0')}`;
-  return `${heading('Смартфон','Локальная социальная сеть Конохи, сообщения и заметки. Контент меняется по ходу игры.')}
-    <section class="phone-shell"><div class="phone-notch"></div><div class="phone-statusbar"><b>木ノ葉 NET</b><span>${stamp(state.world.minute)} · ${state.world.weather==='rain'?'🌧️':'☀️'} · ${state.player.stats.coins} рё</span></div>
-      <div class="phone-app-head"><span class="phone-app-icon">葉</span><div><b>Konohagram</b><small>Деревня на связи</small></div><span class="phone-online">● онлайн</span></div>
-      <div class="phone-tabs"><button data-action="phone-tab" data-type="feed" class="${tab==='feed'?'active':''}">Лента</button><button data-action="phone-tab" data-type="messages" class="${tab==='messages'?'active':''}">Сообщения</button></div>
-      ${tab==='feed'?`<form id="social-post-form" class="phone-compose"><textarea name="post" rows="2" maxlength="220" placeholder="Что происходит? Напиши публикацию…" required></textarea><button class="btn btn-primary" type="submit">Опубликовать</button></form><div class="phone-feed">${posts.length?posts.map(post=>{const author=CHARACTERS.find(character=>character.id===post.authorId);return `<article class="phone-post"><div class="phone-post-head">${author?`<img src="${author.art[0].src}" alt="">`:'<span class="phone-player-avatar">Я</span>'}<div><b>${escapeHTML(author?.name || state.player.name)}</b><small>День ${post.day} · ${stamp(post.minute||0)}</small></div><span class="phone-post-source">${author?'персонаж':'ты'}</span></div><p>${escapeHTML(post.text)}</p><button data-action="phone-like" data-id="${post.id}" class="phone-like ${post.liked?'liked':''}">♥ ${post.likes||0} нравится</button></article>`}).join(''):'<div class="empty-state">Лента пока тихая. Опубликуй первую заметку или продолжай играть — знакомые будут появляться здесь.</div>'}</div>`:`<form id="phone-message-form" class="phone-compose"><label class="vn-select-label">Кому написать?</label><select name="characterId">${available.map(character=>`<option value="${character.id}">${escapeHTML(character.name)}</option>`).join('')}</select><textarea name="message" rows="3" maxlength="500" placeholder="Напиши сообщение вручную…" required></textarea><button class="btn btn-primary" type="submit">Отправить сообщение</button></form><div class="phone-messages">${messages.slice(-20).reverse().map(message=>{const author=CHARACTERS.find(character=>character.id===message.characterId);return `<article class="phone-message ${message.from==='player'?'outgoing':'incoming'}"><small>${escapeHTML(author?.name||'Собеседник')} · ${stamp(message.minute||0)}</small><p>${escapeHTML(message.text)}</p></article>`}).join('')||'<div class="empty-state">Здесь появятся ваши переписки. Можно написать первым.</div>'}</div>`}
-      <div class="phone-bottom"><span>⌂ Лента</span><span>♡ Друзья</span><span>◉ Профиль</span></div>
+  const app=state.phone?.app || 'home';
+  const posts=state.phone?.posts || [];
+  const messages=state.phone?.messages || [];
+  const contacts=CHARACTERS.filter(character=>state.unlocked.includes(character.id) && (state.bonds?.[character.id]?.meetings||0)>0);
+  const stamp=minute=>`${String(Math.floor(minute/60)).padStart(2,'0')}:${String(minute%60).padStart(2,'0')}`;
+  const apps=[
+    ['konohagram','◎','Konohagram','Фото и повседневная лента','photo'],
+    ['line','✉','KonohaLine','Личные сообщения','chat'],
+    ['shinobix','𝕏','ShinobiX','Короткие записи и обсуждения','text'],
+    ['scrolltube','▶','ScrollTube','Видео из жизни деревни','video']
+  ];
+  const names={konohagram:'Konohagram',line:'KonohaLine',shinobix:'ShinobiX',scrolltube:'ScrollTube'};
+  const activeName=names[app]||'Смартфон';
+  const appButton=(item)=>`<button class="phone-launch-app app-${item[0]}" data-action="phone-app" data-id="${item[0]}"><span class="phone-launch-icon">${item[1]}</span><b>${item[2]}</b><small>${item[3]}</small></button>`;
+  let content='';
+  if(app==='home') {
+    content=`<div class="phone-app-grid">${apps.map(appButton).join('')}</div><section class="phone-widget"><small>СЕГОДНЯ В КОНОХЕ</small><b>${state.phone.posts?.length||0} публикаций в ленте</b><p>Новые записи появляются по мере того, как знакомые занимаются своими делами.</p></section>`;
+  } else if(app==='konohagram' || app==='shinobix') {
+    const platformPosts=posts.filter(post=>(post.platform||'konohagram')===app);
+    content=`<form id="social-post-form" class="phone-compose" data-platform="${app}"><textarea name="post" rows="2" maxlength="${app==='shinobix'?280:400}" placeholder="${app==='shinobix'?'Что думаешь? Напиши короткую запись…':'Поделись моментом из сегодняшнего дня…'}" required></textarea><button class="btn btn-primary" type="submit">Опубликовать</button></form><div class="phone-feed">${platformPosts.length?platformPosts.map(post=>{const author=CHARACTERS.find(character=>character.id===post.authorId);const avatarSrc=author?.art?.[0]?.src;const media=app==='konohagram'?`<div class="social-photo" style="background-image:url('${escapeHTML(post.image||'assets/backgrounds/konoha-main.webp')}')"></div>`:'';return `<article class="phone-post ${app==='shinobix'?'short-post':''}"><div class="phone-post-head">${avatarSrc?`<img src="${avatarSrc}" alt="">`:'<span class="phone-player-avatar">Я</span>'}<div><b>${escapeHTML(author?.name||state.player.name)}</b><small>День ${post.day} · ${stamp(post.minute||0)}</small></div><span class="phone-post-source">${author?'подписка':'ты'}</span></div>${media}<p>${escapeHTML(post.text)}</p><button data-action="phone-like" data-id="${post.id}" class="phone-like ${post.liked?'liked':''}">♥ ${post.likes||0}</button></article>`}).join(''):'<div class="empty-state">Лента пока пустая. Напиши первую публикацию — знакомые смогут на неё отреагировать.</div>'}</div>`;
+  } else if(app==='line') {
+    content=`${contacts.length?`<form id="phone-message-form" class="phone-compose"><label class="vn-select-label">Контакт</label><select name="characterId">${contacts.map(character=>`<option value="${character.id}">${escapeHTML(character.name)}</option>`).join('')}</select><textarea name="message" rows="3" maxlength="500" placeholder="Сообщение вручную…" required></textarea><button class="btn btn-primary" type="submit">Отправить</button></form>`:'<div class="empty-state">Контактов пока нет. Сначала встреться с персонажем лично, чтобы обменяться контактами.</div>'}<div class="phone-messages">${messages.slice(-35).reverse().map(message=>{const author=CHARACTERS.find(character=>character.id===message.characterId);return `<article class="phone-message ${message.from==='player'?'outgoing':'incoming'}"><small>${escapeHTML(author?.name||'Собеседник')} · ${stamp(message.minute||0)}</small><p>${escapeHTML(message.text)}</p></article>`}).join('')}</div>`;
+  } else if(app==='scrolltube') {
+    const videos=[
+      {id:'v1',title:'Тренировка контроля чакры: базовые упражнения',author:'Академия Конохи',place:'training-ground.webp',duration:'08:42',views:128,desc:'Спокойный разбор базовых упражнений на контроль чакры.'},
+      {id:'v2',title:'Утро на главной улице Конохи',author:'Городской канал',place:'konoha-main.webp',duration:'03:16',views:84,desc:'Небольшая прогулка по центру деревни.'},
+      {id:'v3',title:'Как приготовить рамен дома',author:'Ичираку',place:'ichiraku.webp',duration:'12:05',views:241,desc:'Рецепт бульона и сборка простой порции рамена.'},
+      {id:'v4',title:'Вечерняя прогулка у реки',author:'Личный дневник',place:'river-sunset.webp',duration:'05:31',views:67,desc:'Вечерние виды и шум воды.'}
+    ];
+    const active=videos.find(video=>video.id===state.phone.activeVideo);
+    content=active?`<div class="video-player"><button class="phone-back video-back" data-action="video-back">‹ К списку видео</button><div class="video-player-screen" style="background-image:url('assets/backgrounds/${active.place}')"><span>▶</span><small>${active.duration}</small></div><h3>${active.title}</h3><p>${active.desc}</p><small>${active.author} · ${active.views+(state.phone.videoViews?.includes(active.id)?1:0)} просмотров</small></div>`:`<div class="video-feed">${videos.map(video=>`<article class="video-card"><button class="video-thumb" data-action="video-play" data-id="${video.id}" style="background-image:url('assets/backgrounds/${video.place}')"><span>▶</span><small>${video.duration}</small></button><div><b>${video.title}</b><small>${video.author} · ${video.views+(state.phone.videoViews?.includes(video.id)?1:0)} просмотров</small></div></article>`).join('')}</div><p class="chat-hint">Локальный видеоканал с сюжетными роликами о жизни Конохи.</p>`;
+  }
+  return `${heading('Смартфон','Четыре местных приложения: фото-лента, личные сообщения, короткие посты и видеоканал.')}
+    <section class="phone-shell"><div class="phone-notch"></div><div class="phone-statusbar"><b>木ノ葉 NET</b><span>${stamp(state.world.minute)} · ${state.world.weather==='rain'?'🌧️':state.world.weather==='snow'?'❄️':'☀️'} · ${state.player.stats.coins} рё</span></div>
+      <div class="phone-app-head"><button class="phone-back" data-action="phone-app" data-id="home" aria-label="На главный экран телефона">${app==='home'?'葉':'‹'}</button><div><b>${activeName}</b><small>${app==='home'?'Главный экран приложений':'Локальная сеть Конохи'}</small></div><span class="phone-online">● сеть</span></div>
+      <div class="phone-app-content">${content}</div>
+      <div class="phone-bottom"><button data-action="phone-app" data-id="home">⌂ Домой</button><button data-action="phone-app" data-id="konohagram">◎ Фото</button><button data-action="phone-app" data-id="line">✉ Чат</button><button data-action="phone-app" data-id="shinobix">𝕏 Посты</button></div>
     </section>`;
 }
 
@@ -152,22 +221,61 @@ function renderPets(state) {
 
 function renderScroll(state) {
   const entries = state.scroll.filter(item=>!item.hidden || item.visited);
-  return `${heading('Свиток дел','Задания, события и обещания необязательны. Их можно выполнить, отложить или честно отменить.')}
-    <section class="panel-card"><div class="card-head"><h3>Текущие записи</h3><small>${entries.filter(item=>!item.done).length} активных</small></div><div class="scroll-list">${entries.map(item=>`<article class="scroll-item ${item.done?'completed':''}"><div class="scroll-icon"><img src="assets/ui/${item.kind==='promise'?'cropped/promise.png':item.kind==='mystery'?'cropped/location.png':'scroll.svg'}" alt=""></div><div><strong>${escapeHTML(item.title)}</strong><p>${escapeHTML(item.desc)}</p>${item.progress!=null?`<div class="quest-progress"><i style="width:${Math.min(100,(item.progress/(item.target||1))*100)}%"></i></div>`:''}<small class="scroll-state">${item.done?(item.cancelled?'Пересмотрено':'Завершено'):'Можно выполнить, отложить или отменить'}</small></div><div class="quest-actions">${!item.done?`<button class="mini-btn" data-action="quest-complete" data-id="${item.id}">Готово</button><button class="mini-btn muted-btn" data-action="quest-ignore" data-id="${item.id}">Отложить</button>${item.kind==='promise'?`<button class="mini-btn muted-btn" data-action="quest-cancel" data-id="${item.id}">Отменить</button>`:''}`:'<span class="done-mark">✓</span>'}</div></article>`).join('')}</div></section>
-    <section class="panel-card promise-card"><div class="card-head"><h3>Добавить своё обещание</h3><small>СВОЙ ТЕКСТ</small></div><form id="promise-form" class="promise-form"><input name="promise" maxlength="140" placeholder="Например: помочь Аяме приготовить ужин" required><button class="btn btn-primary" type="submit">Записать</button></form><p class="chat-hint">Обещание — это заметка для твоей истории, а не обязательство. Можно отменить его в любое время.</p></section>`;
+  const history=entries.filter(item=>item.done||item.cancelled);
+  const active=entries.filter(item=>!item.done&&!item.cancelled);
+  const shown=state.ui.questTab==='history'?history:active;
+  return `${heading('Задания','Обещания, просьбы героинь и личные цели. Награды отображаются только тогда, когда о них прямо сказано.')}
+    <section class="quest-banner"><div><small>🌸 СВИТОК КОНОХИ</small><h3>Твои дела и обещания</h3><p>Задание может появиться после разговора, договорённости или твоей собственной цели.</p></div></section>
+    <div class="quest-tabs"><button data-action="quest-tab" data-id="active" class="${state.ui.questTab!=='history'?'active':''}">Активные <b>${active.length}</b></button><button data-action="quest-tab" data-id="history" class="${state.ui.questTab==='history'?'active':''}">История <b>${history.length}</b></button></div>
+    <section class="panel-card"><div class="scroll-list">${shown.length?shown.map(item=>`<article class="scroll-item ${item.done?'completed':''}"><div class="scroll-icon">${item.kind==='promise'?'🌸':item.kind==='mystery'?'❔':'📜'}</div><div><strong>${escapeHTML(item.title)}</strong><p>${escapeHTML(item.desc)}</p>${item.progress!=null?`<div class="quest-progress"><i style="width:${Math.min(100,(item.progress/(item.target||1))*100)}%"></i></div>`:''}<small class="scroll-state">${item.done?(item.cancelled?'Отменено':'Выполнено'):(item.deadline?`Срок: ${escapeHTML(item.deadline)}`:'Без указанного срока')}</small></div><div class="quest-actions">${!item.done?`<button class="mini-btn" data-action="quest-complete" data-id="${item.id}">Отметить</button><button class="mini-btn muted-btn" data-action="quest-ignore" data-id="${item.id}">Отложить</button>${item.kind==='promise'?`<button class="mini-btn muted-btn" data-action="quest-cancel" data-id="${item.id}">Отменить</button>`:''}`:'<span class="done-mark">✓</span>'}</div></article>`).join(''):'<div class="empty-state">В этом разделе пока нет записей.</div>'}</div></section>
+    <section class="panel-card promise-card"><div class="card-head"><h3>Поставить личную цель</h3><small>ЗАПИСЬ ИГРОКА</small></div><form id="promise-form" class="promise-form"><input name="promise" maxlength="140" placeholder="Например: встретиться с Темари до вечера" required><button class="btn btn-primary" type="submit">Добавить</button></form><p class="chat-hint">Личная цель не даёт награды сама по себе — это твоя заметка и ориентир.</p></section>`;
+}
+function renderBag(state) {
+  const looks = [['casual','Повседневная одежда','Удобный вариант для прогулок.'],['shinobi','Форма шиноби','Практичный стиль для тренировок.'],['festival','Праздничное кимоно','Наряд для городского праздника.'],['travel','Дорожный плащ','Подходит для прохладной погоды и поездок.'],['raincoat','Дождевой плащ','Удобно в дождь и ветер.']];
+  const kinds=[['all','Всё'],['food','Еда'],['gift','Подарки'],['clothing','Одежда'],['pet','Питомцам'],['material','Материалы'],['other','Прочее']];
+  const filter=state.ui.bagTab||'all';
+  const filtered=state.inventory.filter(item=>filter==='all'||item.kind===filter||(filter==='other'&&!['food','gift','clothing','material','pet'].includes(item.kind)));
+  const selected=filtered.find(item=>item.id===state.ui.selectedItemId)||filtered[0]||null;
+  const iconFor=item=>({tea:'tea',flower:'flower',paper:'scroll',herb:'herb',bento:'bento','pet-snack':'gift'}[item.id]||'pouch');
+  return `${heading('Инвентарь','Выбери предмет, чтобы посмотреть описание и доступные действия. Вещи можно хранить в домашнем схроне.')}
+    <section class="bag-heading"><div><small>🌸 ЛИЧНЫЕ ВЕЩИ</small><h3>Инвентарь</h3><p>${state.inventory.reduce((sum,item)=>sum+item.qty,0)} предметов в сумке</p></div></section>
+    <div class="bag-tabs">${kinds.map(([id,label])=>`<button data-action="bag-filter" data-id="${id}" class="${filter===id?'active':''}">${label}</button>`).join('')}</div>
+    <section class="panel-card"><div class="inventory-grid">${filtered.length?filtered.map(item=>`<article class="item-card ${selected?.id===item.id?'selected':''}"><button class="item-select" data-action="select-item" data-id="${item.id}"><img class="item-art" src="assets/ui/${iconFor(item)}.svg" alt=""><span><strong>${escapeHTML(item.name)}</strong><small>${item.kind==='gift'?'Подарок':item.kind==='food'?'Еда':item.kind==='clothing'?'Одежда':item.kind==='pet'?'Для питомцев':'Материал'}</small></span><b class="quantity">×${item.qty}</b></button><div class="item-tools">${item.kind==='gift'?`<button class="mini-btn" data-action="choose-gift" data-id="${item.id}">🎁 Подарить</button>`:''}${item.kind==='food'?`<button class="mini-btn" data-action="use-food" data-id="${item.id}">Использовать</button>`:''}${item.kind==='pet'?`<button class="mini-btn" data-action="pet-item" data-id="${item.id}">Использовать</button>`:''}</div></article>`).join(''):'<div class="empty-state">В этой категории пока пусто.</div>'}</div>
+      ${selected?`<section class="item-detail-panel"><div class="item-detail-art"><img src="assets/ui/${iconFor(selected)}.svg" alt=""></div><div class="item-detail-copy"><small>ВЫБРАННЫЙ ПРЕДМЕТ</small><h3>${escapeHTML(selected.name)}</h3><p>${escapeHTML(selected.desc||'Описание пока неизвестно.')}</p><div class="item-detail-meta"><span>Категория: ${escapeHTML(selected.kind)}</span><b>Количество: ${selected.qty}</b></div><div class="item-detail-actions">${selected.kind==='gift'?`<button class="btn btn-primary" data-action="choose-gift" data-id="${selected.id}">Подарить</button>`:''}${selected.kind==='food'?`<button class="btn btn-primary" data-action="use-food" data-id="${selected.id}">Использовать</button>`:''}${selected.kind==='pet'?`<button class="btn btn-primary" data-action="pet-item" data-id="${selected.id}">Использовать для питомца</button>`:''}</div></div></section>`:''}
+    </section>
+    <section class="panel-card outfit-card"><div class="card-head"><h3>Гардероб</h3><small>${state.world.location==='home'?'ДОМАШНИЙ ШКАФ':state.world.location==='market'?'МАГАЗИН ОДЕЖДЫ':'ПЕРЕОДЕВАНИЕ ДОМА ИЛИ В МАГАЗИНЕ'}</small></div><div class="outfit-grid">${looks.map(([id,name,desc])=>{const owned=(state.player.ownedLooks||['casual','shinobi']).includes(id);const price={festival:48,travel:36,raincoat:30}[id]||0;const canChange=['home','market'].includes(state.world.location);return `<article class="outfit-option ${state.player.look===id?'selected':''}"><span>👘</span><b>${name}</b><small>${desc}</small>${owned?`<button class="mini-btn" data-action="outfit" data-id="${id}" ${!canChange?'disabled':''}>${state.player.look===id?'Надето':canChange?'Переодеться':'Доступно дома'}</button>`:`<button class="mini-btn" data-action="buy-outfit" data-id="${id}" ${state.world.location!=='market'?'disabled':''}>Купить · ${price} рё</button>`}</article>`}).join('')}</div></section>
+    ${state.world.location==='home'?`<section class="home-storage-grid"><article><b>🧊 Холодильник</b><p>Запасы еды дома: ${state.inventory.filter(x=>x.kind==='food').reduce((a,x)=>a+x.qty,0)}</p><button class="mini-btn" data-action="home-storage" data-id="fridge">Открыть</button></article><article><b>👘 Шкаф</b><p>Купленные наряды: ${(state.player.ownedLooks||[]).length}</p><button class="mini-btn" data-action="home-storage" data-id="wardrobe">Открыть</button></article></section>`:''}`;
+}
+function renderJobs(state) {
+  const active=getJob(state.player.jobId);
+  return `${heading('Работа и подработки','Выбирай занятие, приходи в нужное место и бери смену. У каждой работы своя оплата и длительность.')}
+    <section class="ref-day-banner" style="--scene:url('assets/backgrounds/market-street.webp')"><div><small>ПОВСЕДНЕВНАЯ ЖИЗНЬ</small><h3>${active?escapeHTML(active.name):'Найди своё дело в Конохе'}</h3><p>${active?`Твоя работа: ${escapeHTML(active.skill)}. Смен сегодня: ${state.player.lastWorkDay===state.world.day?state.player.workShifts||0:0}/2.`:'Небольшая подработка поможет заработать рё и узнать жителей.'}</p></div></section>
+    <div class="job-grid">${JOBS.map(job=>{const here=state.world.location===job.place;const selected=state.player.jobId===job.id;return `<article class="panel-card job-card ${selected?'selected':''}"><div class="job-card-head"><span class="job-icon">${job.id==='ramen'?'🍜':job.id==='market'?'🧺':job.id==='flowers'?'🌸':job.id==='library'?'📚':job.id==='clinic'?'🏥':job.id==='courier'?'📜':'🎓'}</span><div><b>${escapeHTML(job.name)}</b><small>${escapeHTML(getLocation(job.place).name)} · ${job.duration} минут</small></div></div><p>${escapeHTML(job.desc)}</p><div class="job-card-footer"><strong>+${job.wage} рё / смена</strong>${here?`<button class="btn btn-primary" data-action="apply-job" data-id="${job.id}">${selected?'Выбрать смену':'Устроиться'}</button>`:`<button class="btn btn-soft" data-action="visit-job" data-id="${job.place}">Отправиться</button>`}</div>${selected&&here?`<button class="btn btn-primary job-shift" data-action="work-shift" data-id="${job.id}" ${(state.player.lastWorkDay===state.world.day&&(state.player.workShifts||0)>=2)?'disabled':''}>Начать смену</button>`:''}</article>`}).join('')}</div>`;
 }
 
-function renderBag(state) {
-  const looks = [
-    ['casual','Повседневная одежда','Удобный вариант для прогулок.'],
-    ['shinobi','Форма шиноби','Практичный стиль для тренировок.'],
-    ['festival','Праздничное кимоно','Наряд для городского праздника.'],
-    ['travel','Дорожный плащ','Подходит для прохладной погоды и поездок.'],
-    ['raincoat','Дождевой плащ','Удобно в дождь и ветер.']
-  ];
-  return `${heading('Инвентарь','Подарки, полезные мелочи и одежда для разных занятий.')}
-    <section class="panel-card"><div class="card-head"><h3>Сумка</h3><small>${state.inventory.reduce((sum,item)=>sum+item.qty,0)} предметов</small></div><div class="inventory-grid">${state.inventory.length?state.inventory.map(item=>{const icon={tea:'tea',flower:'flower',paper:'scroll',herb:'herb',bento:'bento'}[item.id]||'pouch';return `<article class="item-card"><img class="item-art" src="assets/ui/${icon}.svg" alt="" loading="lazy"><div><strong>${escapeHTML(item.name)}</strong><p>${escapeHTML(item.desc)}</p><small class="item-kind">${item.kind==='gift'?'Можно подарить':item.kind==='food'?'Еда':'Материал'}</small></div><div class="item-tools"><span class="quantity">×${item.qty}</span>${item.kind==='gift'?`<button class="mini-btn" data-action="choose-gift" data-id="${item.id}"><img class="button-icon" src="assets/ui/cropped/gift.png" alt=""> Подарить</button>`:''}${item.kind==='food'?`<button class="mini-btn" data-action="use-food" data-id="${item.id}">Съесть</button>`:''}</div></article>`}).join(''):'<div class="empty-state">Сумка пока пуста.</div>'}</div></section>
-    <section class="panel-card outfit-card"><div class="card-head"><h3>Гардероб</h3><small>ОДЕЖДА ВЛИЯЕТ НА РЕАКЦИИ</small></div><div class="outfit-grid">${looks.map(([id,name,desc])=>`<button class="outfit-option ${state.player.look===id?'selected':''}" data-action="outfit" data-id="${id}"><span><img class="tile-icon" src="assets/ui/cropped/${id==='shinobi'?'training':id==='festival'?'flower':id==='travel'?'location':id==='raincoat'?'mood':'outfit'}.png" alt=""></span><b>${name}</b><small>${desc}</small></button>`).join('')}</div><p class="chat-hint">Одежда влияет на небольшие реплики и комфорт в разную погоду. Никаких штрафов за внешний вид нет.</p></section>`;
+function renderLocations(state) {
+  const current=getLocation(state.world.location);
+  return `${heading('Локации','Каждое место имеет собственный фон, занятия и жителей. Некоторые места могут требовать приглашения.')}
+    <section class="locations-heading"><span>🌸</span><div><small>МИР КОНОХИ</small><h3>Локации</h3><p>Текущее место: ${escapeHTML(current.name)}</p></div></section>
+    <div class="ref-location-grid">${LOCATIONS.map(location=>`<button class="ref-location-tile ${location.id===current.id?'current':''} ${!getLocationAccess(state,location.id).allowed?'locked':''}" data-action="travel" data-id="${location.id}" ${!getLocationAccess(state,location.id).allowed?'disabled':''}><span class="ref-tile-image" style="background-image:url('${location.bg}')"></span><span class="ref-tile-body"><b>${location.icon} ${escapeHTML(location.name)}</b><small>${escapeHTML(location.area)}</small><em>${escapeHTML(location.desc)}</em><i class="travel-stamp">${location.id===current.id?'Ты здесь':getLocationAccess(state,location.id).allowed?'Открыть место ↗':`🔒 ${getLocationAccess(state,location.id).reason}`}</i></span></button>`).join('')}</div>`;
+}
+
+function renderGallery(state) {
+  const gallery=state.gallerySeen||{};
+  const people=gallery.characters||{};
+  const met=new Set([...(state.metCharacters||[]),...Object.keys(people)]);
+  const roster=CHARACTERS.filter(character=>state.unlocked.includes(character.id));
+  const backgrounds=[...(gallery.backgrounds||[])];
+  const allArts=roster.map(character=>{ const seen=people[character.id]||[]; const first=character.art?.[0]?.src; return {character,src:first,seen:Boolean(first&&seen.includes(first)),label:character.art?.[0]?.label||'Портрет'}; });
+  return `${heading('Галерея','Портреты всех доступных героинь и изображения, которые уже встречались в твоей истории.')}
+    <section class="gallery-section"><div class="gallery-section-title"><span>🌸</span><div><small>ПЕРСОНАЖИ</small><h3>Галерея героинь · ${roster.length}</h3></div></div>
+      <div class="gallery-grid">${allArts.map(entry=>`<button class="gallery-tile ${entry.seen?'':'gallery-unseen'}" data-action="view-art" data-src="${escapeHTML(entry.src||'')}"><img src="${escapeHTML(entry.src||'')}" alt="" loading="lazy"><span><b>${escapeHTML(entry.character.name)}</b><small>${escapeHTML(entry.label)} · ${entry.seen?'Открыто в RP':'Просмотр галереи'}</small></span></button>`).join('')}</div></section>
+    <section class="gallery-section"><div class="gallery-section-title"><span>🏞️</span><div><small>ИСТОРИЯ ПУТЕШЕСТВИЙ</small><h3>Увиденные сцены · ${backgrounds.length}</h3></div></div><div class="gallery-backgrounds">${backgrounds.map(src=>`<button data-action="view-art" data-src="${escapeHTML(src)}"><img src="${escapeHTML(src)}" alt="Увиденная локация" loading="lazy"></button>`).join('')||'<div class="empty-state">Посещай новые места, чтобы сохранить их фоны в галерее.</div>'}</div></section>
+    <section class="gallery-section"><div class="gallery-section-title"><span>✦</span><div><small>ОТКРЫТЫЕ ИЗОБРАЖЕНИЯ</small><h3>Встреченные арты · ${Object.values(people).reduce((sum,items)=>sum+(items||[]).length,0)}</h3></div></div><div class="gallery-grid">${Object.entries(people).flatMap(([id,paths])=>(paths||[]).map(src=>({character:getCharacter(id),src}))).filter(entry=>entry.character).map(entry=>`<button class="gallery-tile" data-action="view-art" data-src="${escapeHTML(entry.src)}"><img src="${escapeHTML(entry.src)}" alt="" loading="lazy"><span><b>${escapeHTML(entry.character.name)}</b><small>Открыть арт</small></span></button>`).join('')||'<div class="empty-state">Пока не открыто дополнительных изображений. Исследуй локации и встречай героинь.</div>'}</div></section>`;
+}
+function renderHelp() {
+  return `${heading('Помощь','Кратко о том, как устроена игра и как писать команды.')}
+    <section class="help-grid"><article class="panel-card"><h3>Свободные действия</h3><p>Пиши обычным текстом: «иду в цветочную лавку», «осматриваю комнату», «покупаю чай», «жду Аяме у входа». Игровой мастер проверит место, время и доступность действия.</p></article><article class="panel-card"><h3>Диалоги</h3><p>Для личной беседы персонаж должен находиться рядом. Напиши свою реплику вручную. Первое знакомство сдержанное; имя запоминается после представления.</p></article><article class="panel-card"><h3>Герои и галерея</h3><p>В разделе «Герои» показываются только те, с кем уже было личное взаимодействие. Изображения попадают в галерею после появления в RP.</p></article><article class="panel-card"><h3>Задания и обещания</h3><p>Задания могут появиться после разговора или твоего собственного плана. Награда указывается только если персонаж её назвал. Обещания можно отменять.</p></article><article class="panel-card"><h3>Карта и перемещения</h3><p>Переходы занимают игровое время. Резкий уход с договорённой встречи может быть замечен и повлиять на доверие.</p></article><article class="panel-card"><h3>Сохранение</h3><p>Прогресс сохраняется в этом браузере. На другом устройстве используй экспорт и импорт сохранения в настройках.</p></article></section>`;
 }
 
 export function renderView(state) {
@@ -183,7 +291,11 @@ export function renderView(state) {
     case 'day': return renderDay(state);
     case 'phone': return renderPhone(state);
     case 'pets': return renderPets(state);
+    case 'work': return renderJobs(state);
     case 'settings': return renderSettingsPage(state);
+    case 'locations': return renderLocations(state);
+    case 'gallery': return renderGallery(state);
+    case 'help': return renderHelp(state);
     case 'world':
     default: return renderWorld(state);
   }
@@ -198,7 +310,8 @@ export function renderStatus(state) {
   document.getElementById('weather-pill').innerHTML = `${weather.id==='sunny'?'<img class="status-icon" src="assets/ui/cropped/sun.png" alt="">':`<span class="weather-emoji">${weather.icon}</span>`}${weather.label} · ${seasonLabel(state)} · День ${state.world.day}`;
   const topCoins = document.getElementById('top-coins');
   if (topCoins) topCoins.textContent = String(stats.coins);
-  document.getElementById('mobile-status').innerHTML = `<span class="status-pill"><span class="clock-symbol">◷</span>${clockLabel(state.world.minute)}</span><span class="status-pill">${status}</span><span class="status-pill"><img class="status-icon" src="assets/ui/cropped/coin.png" alt="">${stats.coins} рё</span>`;
+  const topHp=document.getElementById('top-hp'); if(topHp) topHp.textContent=`♥ ${stats.hp??100} HP`;
+  document.getElementById('mobile-status').innerHTML = `<span class="status-pill"><span class="clock-symbol">◷</span>${clockLabel(state.world.minute)}</span><span class="status-pill">${status}</span><span class="status-pill">♥ ${stats.hp??100} HP</span><span class="status-pill"><img class="status-icon" src="assets/ui/cropped/coin.png" alt="">${stats.coins} рё</span>`;
   document.getElementById('player-name-label').textContent = state.player.name;
   document.getElementById('player-origin-label').textContent = `${state.player.originName}${state.player.clan && state.player.clan!=='none' ? ` · ${state.player.clan}` : ''}`;
   document.getElementById('player-avatar').textContent = state.player.name.slice(0,1).toUpperCase();

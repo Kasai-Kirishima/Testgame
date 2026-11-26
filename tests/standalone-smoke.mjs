@@ -79,10 +79,10 @@ assert.equal(getElement('game-screen').classList.contains('hidden'),false,'creat
 assert.equal(context.window.NEG_TEST.state().player.village,'konoha','creator should store village selection');
 assert.equal(context.window.NEG_TEST.state().player.signatureTool,'scroll','creator should store tool selection');
 assert.equal(context.window.NEG_TEST.state().player.age,22,'creator should store age selection');
-assert.ok(getElement('view-root').innerHTML.includes('Хроники Конохи'),'game screen must render the world page');
+assert.ok(getElement('view-root').innerHTML.includes('rp-full-scene'),'game screen must render the full-screen RP scene');
 assert.ok(getElement('view-root').innerHTML.includes('world-action-form'),'world screen must show free-text actions');
 assert.ok(getElement('view-root').innerHTML.includes('world-dialogue-form'),'world screen must show free-text dialogue');
-assert.ok(getElement('view-root').innerHTML.includes('data-action="patrol"'),'world screen must expose patrol action');
+assert.ok(getElement('view-root').innerHTML.includes('rp-scene-bottom'),'world screen must show the scene dialogue overlay');
 const worldActionForm = new FakeElement('world-action-form'); Object.assign(worldActionForm,{id:'world-action-form',data:{action:'Я иду в больницу.'}});
 submit({target:worldActionForm,preventDefault(){}});
 assert.equal(context.window.NEG_TEST.state().world.location,'hospital','free-text movement must navigate to a named location');
@@ -95,6 +95,24 @@ const naturalActionForm = new FakeElement('world-action-form'); context.window.N
 submit({target:naturalActionForm,preventDefault(){}});
 assert.equal(context.window.NEG_TEST.state().ui.targetId,'hinata','free-text RP must resolve an inflected character name');
 assert.ok(context.window.NEG_TEST.state().dialogues.hinata.some(message=>message.from==='player' && message.text.includes('спрашиваю')),'action text can include dialogue and resolve it to a character');
+// Context-sensitive GM actions: observing, waiting, losing and damaging something create distinct outcomes.
+context.window.NEG_TEST.state().world.location='main-street';
+context.window.NEG_TEST.action('Оглядываюсь и прислушиваюсь.');
+assert.ok(context.window.NEG_TEST.state().ui.lastActionResult.includes('Улица живёт своим ритмом'),'observation should describe the current scene, not a random generic result');
+context.window.NEG_TEST.state().npcLocations.hinata='main-street';
+context.window.NEG_TEST.action('Жду Хинату.');
+assert.ok(/остаёшься на месте|подождал немного/i.test(context.window.NEG_TEST.state().ui.lastActionResult),'waiting for a character should resolve as a wait action');
+context.window.NEG_TEST.action('Я потерял свиток.');
+const lostIncident=context.window.NEG_TEST.state().world.incidents?.find(item=>item.kind==='lost'&&!item.resolved);
+assert.ok(lostIncident,'losing an item should create a persistent incident');
+assert.ok(context.window.NEG_TEST.state().scroll.some(item=>item.incidentId===lostIncident.id),'lost-item incident should be tracked in the scroll');
+context.window.NEG_TEST.action('Обыскиваю место и ищу свиток.');
+assert.equal(lostIncident.resolved,true,'searching the last-seen location should resolve the lost-item incident');
+context.window.NEG_TEST.action('Я случайно разбил чужую вазу.');
+const repairIncident=context.window.NEG_TEST.state().world.incidents?.find(item=>item.kind==='repair'&&!item.resolved);
+assert.ok(repairIncident,'accidental damage should create a repair incident');
+context.window.NEG_TEST.action('Нахожу владельца и предлагаю возместить ущерб.');
+assert.equal(repairIncident.resolved,true,'taking responsibility should resolve the repair incident');
 assert.ok(JSON.parse(local.get('naruto-enot-garem-save-v2')).player.name === 'Проверка','new game must save progress');
 const navHandler = listeners.click?.[1];
 assert.equal(typeof navHandler,'function','page navigation handler must initialize');
@@ -103,15 +121,35 @@ const fakeApp = {dataset:{view:'world'},matches:()=>false,closest:selector=>sele
 navHandler({target:{closest:selector=>selector==='button[data-view]'?null:fakeApp}});
 assert.equal(context.window.NEG_TEST.state().ui.view,'world','clicks inside the app must not be misread as navigation');
 
+// Home storage transfers food between bag and fridge rather than showing a placeholder.
+context.window.NEG_TEST.state().world.location='home';
+const fridgeButton={dataset:{action:'home-storage',id:'fridge'},textContent:'Открыть холодильник',closest(){return this;}};
+click({target:{closest:selector=>selector==='[data-action]'?fridgeButton:null,classList:{contains:()=>false}}});
+assert.ok(getElement('modal-root').innerHTML.includes('Холодильник'),'fridge should open a real storage modal');
+const foodBefore=context.window.NEG_TEST.state().inventory.find(item=>item.id==='bento')?.qty||0;
+const putFood={dataset:{action:'storage-put',id:'bento'},textContent:'Положить',closest(){return this;}};
+click({target:{closest:selector=>selector==='[data-action]'?putFood:null,classList:{contains:()=>false}}});
+assert.equal(context.window.NEG_TEST.state().storage.fridge.find(item=>item.id==='bento')?.qty,1,'putting food should save it in the fridge');
+assert.equal(context.window.NEG_TEST.state().inventory.find(item=>item.id==='bento')?.qty||0,foodBefore-1,'putting food should remove it from the bag');
+
 const mapNav = {dataset:{view:'map'},closest(){return this;}};
 navHandler({target:{closest:selector=>selector==='button[data-view]'?mapNav:null}});
 assert.equal(context.window.NEG_TEST.state().ui.view,'map','map must be a separate page');
 const peopleNav = {dataset:{view:'people'},closest(){return this;}};
 navHandler({target:{closest:selector=>selector==='button[data-view]'?peopleNav:null}});
 assert.equal(context.window.NEG_TEST.state().ui.view,'people','character list must be a separate page');
+context.window.NEG_TEST.state().world.location='main-street'; context.window.NEG_TEST.state().npcLocations.sakura='memorial';
 const openProfileButton = {dataset:{action:'open-person',id:'sakura'},textContent:'Сакура',closest(){return this;}};
 click({target:{closest:selector=>selector==='[data-action]'?openProfileButton:null,classList:{contains:()=>false}}});
 assert.equal(context.window.NEG_TEST.state().ui.view,'profile','character dossier must be a separate page');
+const profileAwayHtml=getElement('view-root').innerHTML;
+assert.ok(!profileAwayHtml.includes('id="chat-form"'),'profile should not expose a personal chat form when character is away');
+assert.ok(profileAwayHtml.includes('Личная беседа доступна после встречи'),'profile should explain that the character is away');
+const previousSakuraMessages=context.window.NEG_TEST.state().dialogues.sakura?.length||0;
+const blockedChatForm=new FakeElement('chat-form'); Object.assign(blockedChatForm,{id:'chat-form',data:{characterId:'sakura',message:'Привет, Сакура.'}});
+submit({target:blockedChatForm,preventDefault(){}});
+assert.equal(context.window.NEG_TEST.state().dialogues.sakura?.length||0,previousSakuraMessages,'personal chat must be blocked while the character is away');
+assert.ok(context.window.NEG_TEST.state().ui.lastActionResult.includes('сейчас находится'),'blocked chat should explain why the character cannot answer');
 const backToPeopleButton = {dataset:{action:'back-people'},textContent:'К списку',closest(){return this;}};
 click({target:{closest:selector=>selector==='[data-action]'?backToPeopleButton:null,classList:{contains:()=>false}}});
 assert.equal(context.window.NEG_TEST.state().ui.view,'people','profile back button must return to character list');
@@ -135,6 +173,7 @@ assert.equal(context.window.NEG_TEST.state().encounter,null,'encounter can be cl
 const socialPostForm = new FakeElement('social-post-form'); Object.assign(socialPostForm,{id:'social-post-form',data:{post:'Сегодня гулял по Конохе и нашёл новую чайную.'}});
 submit({target:socialPostForm,preventDefault(){}});
 assert.ok(context.window.NEG_TEST.state().phone.posts.some(post=>post.text.includes('новую чайную')),'phone post must be published from manual text');
+context.window.NEG_TEST.state().bonds.ayame={friendship:1,trust:1,respect:0,irritation:0,meetings:1,stage:'Знакомство'};
 const phoneMessageForm = new FakeElement('phone-message-form'); Object.assign(phoneMessageForm,{id:'phone-message-form',data:{characterId:'ayame',message:'Привет! Как сегодня дела в Ичираку?'}});
 submit({target:phoneMessageForm,preventDefault(){}});
 assert.ok(context.window.NEG_TEST.state().phone.messages.some(message=>message.from==='npc' && message.characterId==='ayame'),'phone message must get a local-GM reply');
@@ -171,4 +210,27 @@ for (const sprite of uiSprites) {
 }
 assert.ok(fs.existsSync(new URL('../ui-atlas-preview.jpg', import.meta.url)),'UI sprite atlas preview must exist');
 
-console.log('OK: start flow, free actions/dialogue, save, 28 portraits, 6 detailed triptychs, 18 backgrounds, 6 enemies, and 17 UI sprites.');
+
+// Work and wardrobe buttons must have real effects, not merely render.
+context.window.NEG_TEST.action('Ищу работу.');
+assert.equal(context.window.NEG_TEST.state().ui.view,'work','Free text should open the work board');
+context.window.NEG_TEST.action('Иду в Ичираку.');
+const applyJob = {dataset:{action:'apply-job',id:'ramen'},textContent:'Устроиться',closest(){return this;}};
+click({target:{closest:()=>applyJob,classList:{contains:()=>false}}});
+assert.equal(context.window.NEG_TEST.state().player.jobId,'ramen','Apply button must save the selected job');
+const beforeWage=context.window.NEG_TEST.state().player.stats.coins;
+const startShift = {dataset:{action:'work-shift',id:'ramen'},textContent:'Начать смену',closest(){return this;}};
+click({target:{closest:()=>startShift,classList:{contains:()=>false}}});
+assert.equal(context.window.NEG_TEST.state().player.stats.coins,beforeWage+28,'A shift must pay its wage');
+assert.equal(context.window.NEG_TEST.state().player.workShifts,1,'A completed shift must increment shift count');
+context.window.NEG_TEST.action('Иду на рынок.');
+const buyOutfit = {dataset:{action:'buy-outfit',id:'festival'},textContent:'Купить',closest(){return this;}};
+click({target:{closest:()=>buyOutfit,classList:{contains:()=>false}}});
+assert.ok(context.window.NEG_TEST.state().player.ownedLooks.includes('festival'),'Buying at market must add clothing to wardrobe');
+context.window.NEG_TEST.action('Иду домой.');
+const putOnOutfit = {dataset:{action:'outfit',id:'festival'},textContent:'Переодеться',closest(){return this;}};
+click({target:{closest:()=>putOnOutfit,classList:{contains:()=>false}}});
+assert.equal(context.window.NEG_TEST.state().player.look,'festival','Owned clothing can be equipped at home');
+assert.ok(fs.readFileSync(new URL('../assets/css/style.css',import.meta.url),'utf8').includes('aspect-ratio:9 / 18.5'),'Phone must retain a vertical 9:18.5 aspect ratio');
+
+console.log('OK: start, text actions/dialogue, 28 portraits, triptychs, 18 backgrounds, combat, smartphone, pets, jobs, wardrobe and UI sprites.');

@@ -42,3 +42,13 @@ export const CHARACTERS = cast.map(([id,name,role,personality,notes,likes,icon,c
 }));
 export const getCharacter = id => CHARACTERS.find(character => character.id === id);
 export const initials = name => (name || '?').trim().slice(0,1).toUpperCase();
+
+export function getUnlockedCharacterArts(state,character) {
+  if(!character) return [];
+  const bond=state?.bonds?.[character.id]||{};
+  const meetings=Number(bond.meetings)||0;
+  const friendship=Number(bond.friendship)||0;
+  const trust=Number(bond.trust)||0;
+  return (character.art||[]).filter((_art,index)=>index===0 || (index===1 && (meetings>=2 || friendship>=20)) || (index===2 && (meetings>=4 || (friendship>=40 && trust>=25))));
+}
+

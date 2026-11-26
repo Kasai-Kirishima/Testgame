@@ -1,10 +1,11 @@
-import {CHARACTERS,getCharacter} from './data/characters.js';
+import {CHARACTERS,getCharacter,getUnlockedCharacterArts} from './data/characters.js';
 import {ENEMIES,getEnemy} from './data/enemies.js';
 import {ORIGINS,LOCATIONS,getLocation} from './data/world.js';
 import {createInitialState,loadState,saveState,clearSave,addFeed,updateBond,removeItem,addItem} from './core/store.js';
 import {talkToCharacter} from './core/gm.js';
 import {travelTo,doActivity,skipTime,sleepUntilMorning,assignDailyTask,tickAction,updateNpcPositions,getNpcLocation} from './core/life.js';
 import {getPet} from './data/pets.js';
+import {getJob} from './data/jobs.js';
 import {renderView,renderStatus,populateOrigins,updateOriginNote,renderSettings,escapeHTML} from './ui/render.js';
 
 const PIXABAY_TRACK = 'https://pixabay.com/music/ambient-japanese-style-ambient-475587/';
@@ -69,7 +70,7 @@ function randomizeCreator() {
 }
 
 function persist() {
-  if (state && state.settings.autosave) saveState(state);
+  if (state && !state.previewOnly && state.settings.autosave) saveState(state);
 }
 
 function render() {
@@ -80,6 +81,7 @@ function render() {
   document.getElementById('app').dataset.textSize = state.settings.textSize;
   document.getElementById('app').dataset.contrast = state.settings.contrast;
   document.getElementById('app').dataset.motion = state.settings.animations ? 'on' : 'off';
+  document.getElementById('app').dataset.showNames = state.settings.showNames === false ? 'off' : 'on';
   if (state.ui.view === 'people') {
     const chat = document.getElementById('chat-log');
     if (chat) chat.scrollTop = chat.scrollHeight;
@@ -110,6 +112,8 @@ function startGame(player) {
 }
 
 function switchView(view) {
+  state.ui.drawerOpen = false;
+  document.getElementById('game-screen')?.classList.remove('drawer-open');
   state.ui.view = view;
   if (view !== 'profile') state.ui.targetId = '';
   render();
@@ -183,6 +187,19 @@ function assignPlan(form) {
   render();
 }
 
+function openHomeStorage(kind='fridge') {
+  if(state.world.location!=='home'){toast('Домашний схрон доступен только у тебя дома.');return;}
+  state.storage ||= {fridge:[]}; state.storage.fridge ||= [];
+  if(kind==='wardrobe') {
+    const looks=[['casual','Повседневная одежда'],['shinobi','Форма шиноби'],['festival','Праздничный наряд'],['travel','Дорожный плащ'],['raincoat','Дождевой плащ']];
+    elements.modal.innerHTML=`<div class="modal-backdrop"><section class="modal-card storage-modal"><div class="modal-head"><div><div class="eyebrow">ДОМАШНИЙ СХРОН</div><h3>Шкаф с одеждой</h3></div><button class="close-button" data-action="close-modal">×</button></div><div class="storage-list">${looks.filter(([id])=>(state.player.ownedLooks||[]).includes(id)).map(([id,name])=>`<div class="storage-row"><span>👘</span><b>${name}</b><button class="mini-btn" data-action="outfit" data-id="${id}">${state.player.look===id?'Надето':'Переодеться'}</button></div>`).join('')||'<p class="empty-state">В шкафу пока пусто.</p>'}</div><p class="chat-hint">Одежду можно купить на рынке и хранить в шкафу. Переодевание доступно дома или в магазине.</p></section></div>`;
+    return;
+  }
+  const food=state.inventory.filter(item=>item.kind==='food'&&item.qty>0);
+  const stored=state.storage.fridge;
+  elements.modal.innerHTML=`<div class="modal-backdrop"><section class="modal-card storage-modal"><div class="modal-head"><div><div class="eyebrow">ДОМАШНИЙ СХРОН</div><h3>Холодильник</h3></div><button class="close-button" data-action="close-modal">×</button></div><div class="storage-columns"><div><b>В сумке</b>${food.map(item=>`<div class="storage-row"><span>🍱</span><b>${escapeHTML(item.name)} ×${item.qty}</b><button class="mini-btn" data-action="storage-put" data-id="${item.id}">Положить</button></div>`).join('')||'<small>Еды в сумке нет.</small>'}</div><div><b>В холодильнике</b>${stored.map(item=>`<div class="storage-row"><span>🧊</span><b>${escapeHTML(item.name)} ×${item.qty}</b><button class="mini-btn" data-action="storage-take" data-id="${item.id}">Забрать</button></div>`).join('')||'<small>Холодильник пуст.</small>'}</div></div></section></div>`;
+}
+
 function openGiftPicker(itemId) {
   const item = state.inventory.find(entry=>entry.id===itemId);
   if (!item) return;
@@ -197,8 +214,14 @@ function giveItemToPerson(characterId,itemId) {
   state.ui.view = 'people';
   state.ui.targetId = characterId;
   state.ui.pendingGiftId = itemId;
+  state.metCharacters ||= []; if(!state.metCharacters.includes(characterId)) state.metCharacters.push(characterId);
+  state.meetingHistory ||= {}; state.meetingHistory[characterId] ||= {firstDay:state.world.day,firstLocation:state.world.location,firstMinute:state.world.minute};
   const text = `Дарю тебе ${item.name}. Надеюсь, пригодится.`;
   appendDialogue(characterId,'player',text);
+  state.giftHistory ||= {}; state.giftHistory[characterId] ||= [];
+  state.giftHistory[characterId].unshift({name:item.name,day:state.world.day,price:item.price||0});
+  state.metCharacters ||= []; if(!state.metCharacters.includes(characterId)) state.metCharacters.push(characterId);
+  state.meetingHistory ||= {}; state.meetingHistory[characterId] ||= {firstDay:state.world.day,firstLocation:state.world.location,firstMinute:state.world.minute};
   const result = talkToCharacter(state,character,text);
   appendDialogue(characterId,'npc',result.reply);
   elements.modal.innerHTML = '';
@@ -267,6 +290,7 @@ function executeFreeAction(rawText) {
   if (!raw || !state) return;
   const clean = raw.toLowerCase().replace(/ё/g,'е');
   state.ui.lastActionText = raw;
+  if (/(ищу работу|хочу устроиться|подработк|посмотреть вакансии|найти работу)/i.test(clean)) { state.ui.view='work'; state.ui.lastActionResult='Ты открываешь список доступных подработок. Выбери занятие, отправляйся по адресу и поговори с работодателем.'; addFeed(state,state.ui.lastActionResult); render(); return; }
   let resultParts = [];
   const movement = /(?:^|\s)(иду|идем|идём|пойду|пойти|схожу|сходить|пошел|пошёл|пошла|направляюсь|отправляюсь|отправился|отправилась|двигаюсь|возвращаюсь|захожу|зайду|зайти|перехожу|перемещаюсь|прогуляюсь|бегу|подхожу|выхожу|вышел|вышла|ищу|навещаю|встречаю|посещаю|посетить)(?:\s|$)/i.test(clean);
   const mentionedCharacter = findMentionedCharacter(clean);
@@ -282,13 +306,75 @@ function executeFreeAction(rawText) {
         const local = CHARACTERS.find(item=>state.unlocked.includes(item.id) && getNpcLocation(state,item.id)===stopId);
         if (local) state.ui.sceneCharacterId=local.id;
         resultParts.push(`Ты направляешься в «${destination.name}». ${destination.desc}`);
-      } else if (stopId===route[0]) resultParts.push(`Ты уже находишься в месте «${destination.name}».`);
+      } else if (stopId===route[0]) resultParts.push(state.ui.travelFailure || `Ты не смог попасть в «${destination.name}».`);
     }
   }
 
   const character = mentionedCharacter;
+  const waitForCharacter = character && /(жду|ожидаю|подожду|дожидаюсь|сижу и жду)/i.test(clean);
+  if (waitForCharacter) {
+    tickAction(state,20);
+    const stillHere = getNpcLocation(state,character.id) === state.world.location;
+    const line = stillHere
+      ? `Ты остаёшься на месте. ${character.name} замечает тебя; можно поздороваться или спокойно объяснить, зачем ты хотел встретиться.`
+      : `Ты подождал немного, но ${character.name} пока не появилась. Не стоит считать встречу назначенной — можно заняться своими делами и попробовать позже.`;
+    state.ui.sceneCharacterId = stillHere ? character.id : state.ui.sceneCharacterId;
+    setActionResult(raw,line); render(); return;
+  }
+  const observingCharacter = character && /(наблюдаю за|смотрю на|замечаю|издалека наблюдаю|оглядываюсь в сторону)/i.test(clean);
+  if (observingCharacter) {
+    const present = getNpcLocation(state,character.id) === state.world.location;
+    tickAction(state,6);
+    let line;
+    if (!present) line = `Ты оглядываешься в поисках ${character.name}, но сейчас её не видно. Ты не знаешь, где она находится, пока не встретишь её или не спросишь напрямую.`;
+    else {
+      const mood = Number(state.bonds?.[character.id]?.irritation || 0);
+      const style = character.style;
+      line = mood >= 28
+        ? `${character.name} замечает пристальный взгляд и хмурится. Похоже, сейчас лучше не нарушать её пространство.`
+        : style === 'quiet' || style === 'gentle'
+          ? `${character.name} замечает тебя краем глаза и слегка кивает, после чего возвращается к своим делам.`
+          : style === 'sharp' || style === 'direct'
+            ? `${character.name} замечает наблюдение и спокойно спрашивает: «Что-то хотел?»`
+            : style === 'playful' || style === 'bold'
+              ? `${character.name} ловит твой взгляд и с лёгкой усмешкой приподнимает бровь: «Ну? Есть причина так внимательно смотреть?»`
+              : `${character.name} замечает тебя и ненадолго отвлекается от своих дел, ожидая, скажешь ли ты что-нибудь.`;
+      state.ui.sceneCharacterId = character.id;
+    }
+    setActionResult(raw,line); render(); return;
+  }
+  const observing = !character && /(оглядываюсь|осматриваюсь|смотрю вокруг|осматриваю обстановку|прислушиваюсь|внимательно осматриваю|наблюдаю за прохожими)/i.test(clean);
+  if (observing) {
+    tickAction(state,8);
+    const sceneNotes = {
+      'main-street':'Улица живёт своим ритмом: торговцы выставляют товары, прохожие обсуждают новости, а у доски объявлений кто-то задержался прочитать свежую запись.',
+      market:'На рынке шумно. Один торговец спорит о цене, другой раскладывает свежий товар; неподалёку висит объявление о подработке.',
+      forest:'Лес кажется спокойным, но после дождя на земле хорошо видны следы животных и недавних путников. Ты не можешь пока сказать, кому они принадлежат.',
+      training:'На площадке несколько шиноби отрабатывают базовые упражнения. Инструктор поправляет стойку ученика, а у мишеней никого нет.',
+      hospital:'В коридоре слышны шаги медиков и тихие голоса. Персонал занят, поэтому лучше не мешать проходу.',
+      library:'В читальном зале тихо. За дальним столом оставили раскрытый справочник, а библиотекарь разбирает стопку свитков.',
+      memorial:'В саду почти нет посетителей. Ветер шевелит листья, а у каменной плиты лежат недавно принесённые цветы.',
+      rooftop:'С высоты хорошо видны крыши и улицы. По движению людей можно понять, какие районы сейчас оживлённее.',
+      garden:'В саду кто-то недавно полил клумбы. На скамье остался забытый платок; стоит отнести его смотрителю, а не забирать себе.',
+      home:'Дома тихо. Можно осмотреть вещи, приготовить еду или привести комнату в порядок.'
+    };
+    const line = sceneNotes[state.world.location] || `Ты внимательно осматриваешь место. ${getLocation(state.world.location).desc} Ничего необычного пока не происходит.`;
+    setActionResult(raw,line); render(); return;
+  }
+  if (!character && /(стучу в дверь|постучал в дверь|звоню в дверь|нажимаю на звонок)/i.test(clean)) {
+    tickAction(state,5);
+    const line = ['home','residential'].includes(state.world.location)
+      ? 'Ты стучишь в дверь ближайшего дома. За ней слышится движение, но отвечают не сразу. Лучше назвать себя и объяснить, кого ищешь.'
+      : 'Ты оглядываешься в поисках двери, но здесь нет жилого входа. Возможно, стоит направиться в жилой переулок.';
+    setActionResult(raw,line); render(); return;
+  }
   const speaksToCharacter = character && /(?:говорю|сказал|спрашиваю|спросил|поговорить|поговорю|обращаюсь|здороваюсь|приветствую|поздоровал|привет|здравствуй|зову|отвечаю|передаю|предлагаю помощь|помогаю|приглашаю|дарю|рассказываю|спрашиваю у)/i.test(clean);
   if (speaksToCharacter) {
+    const currentNpcPlace=getNpcLocation(state,character.id);
+    if (currentNpcPlace !== state.world.location) {
+      const remoteLine=`${character.name} сейчас не здесь${currentNpcPlace?` — она находится в «${getLocation(currentNpcPlace).name}»`: ' и занята своими делами'}. Чтобы поговорить лично, отправляйся туда или напиши ей через смартфон, если вы уже обменялись контактами.`;
+      setActionResult(raw,remoteLine); render(); return;
+    }
     state.ui.sceneCharacterId = character.id;
     state.ui.targetId = character.id;
     state.ui.view = 'profile';
@@ -321,6 +407,33 @@ function executeFreeAction(rawText) {
     return;
   }
 
+  // Unscripted incidents become persistent optional story threads instead of generic flavour text.
+  const lostMatch = raw.match(/(?:потерял|потеряла|обронил|обронила)\s+(?:свой\s+|свою\s+|свои\s+)?(свиток|ключи|сумку|кошел[её]к|документы|записку|перчатки)/i);
+  if (lostMatch) {
+    state.world.incidents ||= [];
+    const itemName = lostMatch[1];
+    const existing = state.world.incidents.find(item=>item.kind==='lost' && item.item.toLowerCase()===itemName.toLowerCase() && !item.resolved);
+    if (!existing) {
+      const incident={id:`lost-${Date.now()}`,kind:'lost',item:itemName,location:state.world.location,day:state.world.day,resolved:false};
+      state.world.incidents.push(incident);
+      state.scroll.unshift({id:incident.id,title:`Найти: ${itemName}`,desc:`Ты заметил пропажу в месте «${getLocation(state.world.location).name}». Вспомни, где видел вещь в последний раз, и осмотри подходящие места.`,kind:'incident',done:false,optional:true,incidentId:incident.id});
+    }
+    tickAction(state,8);
+    resultParts.push(`Ты проверяешь вещи и понимаешь, что пропал предмет: ${itemName}. Последнее место, где ты точно помнишь его при себе, — «${getLocation(state.world.location).name}». Запись добавлена в свиток; можно вернуться по следам или спросить тех, кто был рядом.`);
+    setActionResult(raw,resultParts.join(' ')); render(); return;
+  }
+  const brokenMatch = raw.match(/(?:случайно\s+)?(?:разбил|разбила|сломал|сломала|уронил|уронила)\s+(?:чужую\s+|чужой\s+|чужое\s+)?([а-яё-]{3,28})/i);
+  if (brokenMatch) {
+    state.world.incidents ||= [];
+    const objectName=brokenMatch[1];
+    const incident={id:`repair-${Date.now()}`,kind:'repair',item:objectName,location:state.world.location,day:state.world.day,resolved:false};
+    state.world.incidents.push(incident);
+    state.scroll.unshift({id:incident.id,title:`Разобраться с поломкой: ${objectName}`,desc:`Ты повредил вещь в месте «${getLocation(state.world.location).name}». Не скрывай случившееся: найди владельца и предложи исправить ущерб.`,kind:'incident',done:false,optional:true,incidentId:incident.id});
+    tickAction(state,8);
+    resultParts.push(`Ты замечаешь последствия неловкого движения: повреждена вещь (${objectName}). Убедись, что никто не пострадал, и честно сообщи владельцу. В свитке появилась необязательная запись, чтобы не забыть исправить ситуацию.`);
+    setActionResult(raw,resultParts.join(' ')); render(); return;
+  }
+
   const activityRules = [
     ['train',/(тренир|тренировка|отрабатываю прием|отрабатываю технику|контроль чакры)/i],
     ['search',/(осматрива|обыскива|ищу вещи|исследую|проверяю окрестности|собираю находки)/i],
@@ -336,6 +449,27 @@ function executeFreeAction(rawText) {
     ['garden',/(собираю урожай|сажаю рассаду|подстригаю кусты)/i]
   ];
   const activityTypes=activityRules.filter(([,pattern])=>pattern.test(clean)).map(([type])=>type);
+  const openIncident=(state.world.incidents||[]).find(item=>!item.resolved);
+  let incidentActionResolved=false;
+  if (openIncident && activityTypes.includes('search')) {
+    if (openIncident.kind==='lost' && state.world.location===openIncident.location) {
+      openIncident.resolved=true;
+      const incidentQuest=state.scroll.find(item=>item.incidentId===openIncident.id);
+      if (incidentQuest) { incidentQuest.done=true; incidentQuest.completedDay=state.world.day; }
+      addFeed(state,`Ты нашёл пропавшую вещь: ${openIncident.item}. Запись в свитке закрыта.`);
+      resultParts.push(`После внимательного осмотра ты находишь ${openIncident.item}. Хорошо, что удалось вернуться в нужное место.`);
+    } else if (openIncident.kind==='lost') {
+      resultParts.push(`Здесь нет следов ${openIncident.item}. Последний раз вещь видели в «${getLocation(openIncident.location).name}».`);
+    }
+  }
+  if (openIncident && openIncident.kind==='repair' && /(нахожу владельца|признаюсь владельцу|извиняюсь за поломку|предлагаю возместить|оплатить ущерб)/i.test(clean)) {
+    openIncident.resolved=true;
+    const incidentQuest=state.scroll.find(item=>item.incidentId===openIncident.id);
+    if (incidentQuest) { incidentQuest.done=true; incidentQuest.completedDay=state.world.day; }
+    resultParts.push('Ты честно объясняешь, что произошло, и предлагаешь исправить ущерб. Владелец не скрывает недовольства, но ценит, что ты не стал уходить от ответственности.');
+    addFeed(state,'Ты признал случайную поломку и договорился исправить ущерб.');
+    incidentActionResolved=true;
+  }
   const pet = (state.pets || []).find(item => clean.includes(String(item.name||'').toLowerCase()) || /(питомц|животн|кот|собак|кролик|ястреб|черепах)/i.test(clean));
   if (pet && /(кормлю|накормил|накормлю|даю корм|кормить)/i.test(clean)) {
     pet.hunger = Math.max(0,(pet.hunger ?? 45)-35); pet.affection = Math.min(100,(pet.affection||0)+3); tickAction(state,8);
@@ -369,13 +503,15 @@ function executeFreeAction(rawText) {
     else resultParts.push(doActivity(state,activityType));
   }
   const petActionDone = Boolean(pet && /(кормлю|накормил|накормлю|даю корм|кормить|играю|поиграю|играть|бросаю мяч|гуляю|прогулк|вывожу|вожу гулять)/i.test(clean));
-  if (!purchaseMatch && !activityTypes.length && !destinationId && !petActionDone) {
+  if (!purchaseMatch && !activityTypes.length && !destinationId && !petActionDone && !incidentActionResolved) {
     tickAction(state,12);
     resultParts.push(`Ты выполняешь задуманное: «${raw}». ${getLocation(state.world.location).desc}`);
   }
 
   const weatherLabels = {sunny:'светит солнце',rain:'идёт дождь',snow:'падает снег',wind:'дует ветер',cloudy:'небо затянуто облаками',fog:'улицы скрыты туманом'};
-  if (state.world.weather && weatherLabels[state.world.weather]) resultParts.push(`Вокруг ${weatherLabels[state.world.weather]}.`);
+  const weatherRelevant = /(погод|дожд|снег|ветер|ветрено|холодно|жарко|на улице|прогул|осматрива|прислушива)/i.test(clean);
+  const indoors = ['home','hospital','library','hokage','ichiraku','tea-house'].includes(state.world.location);
+  if (weatherRelevant && !indoors && state.world.weather && weatherLabels[state.world.weather]) resultParts.push(`На улице ${weatherLabels[state.world.weather]}.`);
   const output = resultParts.join(' ') || `Ты продолжаешь свой день в ${getLocation(state.world.location).name}.`;
   setActionResult(raw,output);
   render();
@@ -394,6 +530,15 @@ function sendWorldDialogue(characterId,rawText) {
   state.ui.sceneCharacterId = character.id;
   state.ui.targetId = character.id;
   state.ui.view = 'profile';
+  state.metCharacters ||= [];
+  if (!state.metCharacters.includes(character.id)) state.metCharacters.push(character.id);
+  state.meetingHistory ||= {};
+  state.meetingHistory[character.id] ||= {firstDay:state.world.day,firstLocation:state.world.location,firstMinute:state.world.minute};
+  state.gallerySeen ||= {characters:{},backgrounds:[]};
+  state.gallerySeen.characters ||= {};
+  state.gallerySeen.characters[character.id] ||= [];
+  if (character.art?.[0]?.src && !state.gallerySeen.characters[character.id].includes(character.art[0].src)) state.gallerySeen.characters[character.id].push(character.art[0].src);
+  state.ui.profileArtIndex = 0;
   appendDialogue(character.id,'player',text);
   const response = talkToCharacter(state,character,text);
   appendDialogue(character.id,'npc',response.reply);
@@ -403,14 +548,15 @@ function sendWorldDialogue(characterId,rawText) {
   render();
 }
 
-function publishPhonePost(rawText) {
-  const text=String(rawText||'').trim().slice(0,220);
+function publishPhonePost(rawText,platform='konohagram') {
+  const text=String(rawText||'').trim().slice(0,400);
   if (!text) return;
   if (!state.phone) state.phone={tab:'feed',posts:[],messages:[],lastPostAction:0};
-  state.phone.posts.unshift({id:`player-post-${Date.now()}`,authorId:null,text,day:state.world.day,minute:state.world.minute,likes:0,liked:false});
+  state.phone.posts.unshift({id:`player-post-${Date.now()}`,authorId:null,text,platform,day:state.world.day,minute:state.world.minute,likes:0,liked:false,image:state.world.location==='main-street'?'assets/backgrounds/konoha-main.webp':getLocation(state.world.location).bg});
   state.phone.posts=state.phone.posts.slice(0,40);
+  state.phone.app=platform;
   state.phone.tab='feed';
-  addFeed(state,'Ты опубликовал новую запись в Konohagram.');
+  addFeed(state,`Ты опубликовал новую запись в ${platform==='shinobix'?'ShinobiX':'Konohagram'}.`);
   render(); toast('Публикация размещена.');
 }
 
@@ -418,6 +564,7 @@ function sendPhoneMessage(characterId,rawText) {
   const character=getCharacter(characterId);
   const text=String(rawText||'').trim().slice(0,500);
   if (!character || !state.unlocked.includes(character.id) || !text) return;
+  if (!(state.bonds?.[character.id]?.meetings > 0)) { toast('Сначала познакомься с персонажем лично и обменяйся контактами.'); return; }
   appendDialogue(character.id,'player',text);
   const response=talkToCharacter(state,character,text);
   appendDialogue(character.id,'npc',response.reply);
@@ -425,8 +572,9 @@ function sendPhoneMessage(characterId,rawText) {
   state.phone.messages.push({characterId,from:'player',text,day:state.world.day,minute:state.world.minute});
   state.phone.messages.push({characterId,from:'npc',text:response.reply,day:state.world.day,minute:state.world.minute});
   state.phone.messages=state.phone.messages.slice(-80);
+  state.phone.app='line';
   state.phone.tab='messages';
-  addFeed(state,`Новое сообщение: ${character.name} ответила в смартфоне.`);
+  addFeed(state,`Новое сообщение: ${character.name} ответила в KonohaLine.`);
   state.ui.view='phone'; render(); toast(`Сообщение отправлено ${character.name}.`);
 }
 
@@ -528,6 +676,16 @@ function combatMove(move) {
 
 function openSettings() { renderSettings(state); }
 
+function openTitleSettings() {
+  elements.modal.innerHTML = `<div class="modal-backdrop"><section class="modal-card"><div class="modal-head"><div><div class="eyebrow">NARUTO ENOT GAREM</div><h3>Настройки</h3></div><button class="close-button" data-action="close-modal">×</button></div><p>Создай или загрузи историю, чтобы сохранить игровые настройки. Пока доступны русский язык и локальная игра без ключей.</p><div class="settings-actions"><a class="btn btn-soft" href="https://pixabay.com/music/ambient-japanese-style-ambient-475587/" target="_blank" rel="noopener">Музыка из библиотеки ↗</a><button class="btn btn-primary" data-action="close-modal">Понятно</button></div></section></div>`;
+}
+
+function openArtViewer(src) {
+  const safe = String(src||'').replace(/[<>"']/g,'');
+  if (!safe) return;
+  elements.modal.innerHTML = `<div class="art-viewer-backdrop" data-action="close-modal"><button class="art-viewer-close" data-action="close-modal" aria-label="Закрыть">×</button><img src="${safe}" alt="Иллюстрация" loading="eager"></div>`;
+}
+
 function importSaveFile(file) {
   if (!file) return;
   const reader = new FileReader();
@@ -561,21 +719,39 @@ document.addEventListener('click',event=>{
     case 'random-character': randomizeCreator(); break;
     case 'continue': { const loaded = loadState(); if (loaded) { state=loaded; showScreen('game'); } else toast('Сохранение не найдено.'); break; }
     case 'home': showScreen('title'); break;
+    case 'title-settings': if (!state) { state=createInitialState({name:'Посетитель',origin:'resident'}); state.previewOnly=true; state.ui.view='settings'; } showScreen('game'); switchView('settings'); break;
+    case 'open-gallery': { if (!state) { state=createInitialState({name:'Посетитель галереи',origin:'resident'}); state.previewOnly=true; state.ui.view='gallery'; } showScreen('game'); switchView('gallery'); break; }
+    case 'exit-game': { const notice='Окно игры можно закрыть средствами браузера. Сохранение останется на этом устройстве.'; toast(notice); try { window.close(); } catch {} break; }
+    case 'toggle-drawer': { const game=document.getElementById('game-screen'); game?.classList.toggle('drawer-open'); if(state) state.ui.drawerOpen=game?.classList.contains('drawer-open')||false; break; }
     case 'open-settings': switchView('settings'); break;
-    case 'phone-tab': state.phone.tab=type==='messages'?'messages':'feed'; render(); break;
+    case 'view-art': openArtViewer(button.dataset.src||''); break;
+    case 'profile-art-prev': case 'profile-art-next': case 'profile-art-set': { const character=getCharacter(id); const arts=getUnlockedCharacterArts(state,character); if(!arts.length)break; const current=Number(state.ui.profileArtIndex)||0; const next=action==='profile-art-set'?Math.max(0,Math.min(arts.length-1,Number(button.dataset.index)||0)):(current+(action==='profile-art-next'?1:-1)+arts.length)%arts.length; state.ui.profileArtIndex=next; state.gallerySeen ||= {characters:{},backgrounds:[]}; state.gallerySeen.characters ||= {}; state.gallerySeen.characters[id] ||= []; const src=arts[next].src; if(!state.gallerySeen.characters[id].includes(src))state.gallerySeen.characters[id].push(src); render(); break; }
+    case 'quest-tab': state.ui.questTab=id==='history'?'history':'active'; render(); break;
+    case 'bag-filter': state.ui.bagTab=['all','food','gift','clothing','pet','material','other'].includes(id)?id:'all'; state.ui.selectedItemId=''; render(); break;
+    case 'select-item': state.ui.selectedItemId=id; render(); break;
+    case 'toggle-map-legend': state.ui.mapLegend=!state.ui.mapLegend; render(); break;
+    case 'language-prev': case 'language-next': state.settings.languageIndex=0; toast('Пока доступен только русский язык.'); break;
+    case 'home-storage': openHomeStorage(id); break;
+    case 'storage-put': { const item=state.inventory.find(entry=>entry.id===id&&entry.kind==='food'&&entry.qty>0); if(!item){toast('Подходящий продукт не найден.');break;} state.storage ||= {fridge:[]}; state.storage.fridge ||= []; if(removeItem(state,id,1)){const stored=state.storage.fridge.find(entry=>entry.id===id);if(stored)stored.qty++;else state.storage.fridge.push({...item,qty:1});openHomeStorage('fridge');persist();} break; }
+    case 'storage-take': { state.storage ||= {fridge:[]}; const item=state.storage.fridge.find(entry=>entry.id===id&&entry.qty>0); if(!item)break; addItem(state,{...item,qty:1}); item.qty--; if(item.qty<=0)state.storage.fridge=state.storage.fridge.filter(entry=>entry.qty>0); openHomeStorage('fridge');persist();break; }
+    case 'phone-app': state.phone.app=['home','konohagram','line','shinobix','scrolltube'].includes(id)?id:'home'; render(); break;
+    case 'phone-tab': state.phone.tab=type==='messages'?'messages':'feed'; state.phone.app=type==='messages'?'line':'konohagram'; render(); break;
+    case 'video-play': { state.phone.videoViews ||= []; if(!state.phone.videoViews.includes(id)) state.phone.videoViews.push(id); state.phone.activeVideo=id; addFeed(state,'Ты открыл видео на ScrollTube.'); render(); break; }
+    case 'video-back': state.phone.activeVideo=''; render(); break;
     case 'phone-like': { const post=state.phone.posts.find(item=>item.id===id); if(post){post.liked=!post.liked;post.likes=Math.max(0,(post.likes||0)+(post.liked?1:-1));render();} break; }
     case 'buy-pet': { const pet=getPet(id); if(!pet) break; if((state.pets||[]).length>=5){toast('Можно завести не больше пяти питомцев.');break;} if(state.player.stats.coins<pet.price){toast('Не хватает рё.');break;} state.player.stats.coins-=pet.price; const names={ 'konoha-cat':['Мару','Юки','Сора'],'ninja-dog':['Ака','Кума','Рэй'],'white-rabbit':['Момо','Широ','Хана'],'courier-hawk':['Хая','Тори','Казэ'],'pond-turtle':['Каме','Тама','Нори']}; const choices=names[id]||['Тама']; const name=choices[Math.floor(Math.random()*choices.length)]; state.pets.push({...pet,uid:`pet-${Date.now()}`,name,affection:5,hunger:45,mood:55,energy:80}); addFeed(state,`В доме появился новый питомец: ${name} (${pet.kind}).`); render();toast(`${name} теперь твой питомец!`); break; }
     case 'pet-care': { const pet=state.pets.find(item=>item.uid===id); if(pet){ if(type==='feed'){pet.hunger=Math.max(0,(pet.hunger??45)-35);pet.affection=Math.min(100,(pet.affection||0)+3);tickAction(state,8);} else if(type==='walk'){pet.energy=Math.max(0,(pet.energy??80)-12);pet.affection=Math.min(100,(pet.affection||0)+6);tickAction(state,18);} else {pet.mood=Math.min(100,(pet.mood??55)+18);pet.affection=Math.min(100,(pet.affection||0)+8);tickAction(state,12);} addFeed(state,`Ты позаботился о питомце ${pet.name}.`); render();toast(`${pet.name} рад вниманию.`);} break; }
     case 'close-modal': elements.modal.innerHTML=''; break;
     case 'skip-time': skipTime(state,Number(hours)||1); render(); break;
     case 'sleep': sleepUntilMorning(state); render(); toast('Наступило утро.'); break;
-    case 'travel': if (travelTo(state,id)) { const local = CHARACTERS.find(character=>state.unlocked.includes(character.id) && getNpcLocation(state,character.id)===id); state.ui.sceneCharacterId=local?.id || ''; render(); } else toast('Ты уже находишься здесь.'); break;
+    case 'travel': if (travelTo(state,id)) { const local = CHARACTERS.find(character=>state.unlocked.includes(character.id) && getNpcLocation(state,character.id)===id); state.ui.sceneCharacterId=local?.id || ''; render(); toast(`Переход занял ${state.ui.lastTravelMinutes} мин.`); } else toast(state.ui.travelFailure||'Не удалось перейти в это место.'); break;
     case 'activity': doActivity(state,type); render(); break;
     case 'patrol': startPatrol(); break;
     case 'scene-patrol': startPatrol(id); break;
     case 'combat-move': combatMove(type); break;
     case 'close-encounter': state.encounter=null; elements.modal.innerHTML=''; render(); break;
-    case 'open-person': state.ui.view='profile'; state.ui.targetId=id; state.ui.sceneCharacterId=id; render(); break;
+    case 'open-person': state.ui.view='profile'; state.ui.targetId=id; state.ui.sceneCharacterId=id; state.ui.profileArtIndex=0; render(); break;
+    case 'invite-companion': { const character=getCharacter(id); const bond=state.bonds?.[id]||{}; if(!character)break; if((bond.friendship||0)<35||(bond.trust||0)<25){toast('Сначала укрепи дружбу и доверие.');break;} state.companions ||= []; if(!state.companions.includes(id)) state.companions.push(id); addFeed(state,`${character.name} согласилась войти в твой ближний круг и помогать с общими делами.`); render(); toast(`${character.name} теперь твоя спутница.`); break; }
     case 'select-scene-character': state.ui.sceneCharacterId=id; render(); break;
     case 'back-people': state.ui.view='people'; state.ui.targetId=''; render(); break;
     case 'person-action': speakAsAction(id,type); break;
@@ -594,7 +770,24 @@ document.addEventListener('click',event=>{
       if (removeItem(state,id,1)) { state.player.stats.stamina=Math.min(100,state.player.stats.stamina+16); tickAction(state,10); addFeed(state,'Ты съел домашний бэнто и восстановил силы.'); toast('Перекус помог восстановиться.'); render(); }
       break;
     }
-    case 'outfit': state.player.look=id; addFeed(state,`Ты переоделся: ${button.textContent.trim()}.`); render(); toast('Одежда изменена.'); break;
+    case 'outfit': {
+      const owned=state.player.ownedLooks||['casual','shinobi'];
+      if(!['home','market'].includes(state.world.location)){toast('Переодеться можно дома или в магазине одежды.');break;}
+      if(!owned.includes(id)){toast('Сначала купи этот наряд на рынке.');break;}
+      state.player.look=id; addFeed(state,`Ты переоделся: ${button.textContent.trim()}.`); render(); toast('Одежда изменена.'); break;
+    }
+    case 'buy-outfit': {
+      const prices={festival:48,travel:36,raincoat:30}; const price=prices[id];
+      if(state.world.location!=='market'){toast('Новые наряды продаются на рынке.');break;}
+      if(!price){toast('Этот комплект нельзя купить.');break;}
+      state.player.ownedLooks ||= ['casual','shinobi'];
+      if(state.player.ownedLooks.includes(id)){toast('Этот наряд уже куплен.');break;}
+      if(state.player.stats.coins<price){toast('Не хватает рё.');break;}
+      state.player.stats.coins-=price; state.player.ownedLooks.push(id); addFeed(state,`На рынке куплен новый наряд: ${id}.`); render(); toast('Наряд добавлен в гардероб.'); break;
+    }
+    case 'visit-job': if(travelTo(state,id)){state.ui.view='work';render();} break;
+    case 'apply-job': {const job=getJob(id);if(!job)break;if(state.world.location!==job.place){toast('Нужно прийти на место работы.');break;}state.player.jobId=id;render();toast(`Ты договорился о работе: ${job.name}.`);break;}
+    case 'work-shift': {const job=getJob(id);if(!job||state.player.jobId!==id||state.world.location!==job.place){toast('Сначала выбери работу и приди на место.');break;}if(state.player.lastWorkDay!==state.world.day){state.player.lastWorkDay=state.world.day;state.player.workShifts=0;}if(state.player.workShifts>=2){toast('На сегодня смен достаточно.');break;}state.player.workShifts++;state.player.stats.coins+=job.wage;state.player.stats.stamina=Math.max(5,state.player.stats.stamina-14);tickAction(state,job.duration);addFeed(state,`Смена завершена: ${job.name}. Получено ${job.wage} рё.`);render();toast(`Смена окончена. +${job.wage} рё.`);break;}
     case 'save-now': saveState(state); toast('Сохранение записано в браузер.'); break;
     case 'export-save': exportSave(); break;
     case 'import-save': document.getElementById('import-file')?.click(); break;
@@ -634,12 +827,19 @@ document.addEventListener('submit',event=>{
     const character = getCharacter(form.get('characterId'));
     const text = String(form.get('message') || '').trim();
     if (!character || !text) return;
+    const npcPlace=getNpcLocation(state,character.id);
+    if (npcPlace!==state.world.location) { toast(`${character.name} сейчас не здесь. Личная беседа возможна только при встрече.`); state.ui.lastActionResult=`${character.name} сейчас находится в «${npcPlace?getLocation(npcPlace).name:'другой части деревни'}».`; render(); return; }
+    state.metCharacters ||= []; if(!state.metCharacters.includes(character.id)) state.metCharacters.push(character.id);
+    state.meetingHistory ||= {}; state.meetingHistory[character.id] ||= {firstDay:state.world.day,firstLocation:state.world.location,firstMinute:state.world.minute};
+    state.gallerySeen ||= {characters:{},backgrounds:[]}; state.gallerySeen.characters ||= {}; state.gallerySeen.characters[character.id] ||= [];
+    const firstArt=character.art?.[0]?.src; if(firstArt&&!state.gallerySeen.characters[character.id].includes(firstArt)) state.gallerySeen.characters[character.id].push(firstArt);
     appendDialogue(character.id,'player',text);
     const result = talkToCharacter(state,character,text);
     appendDialogue(character.id,'npc',result.reply);
+    addFeed(state,`${state.player.name} поговорил с ${character.name}.`);
     render();
   }
-  if (event.target.id === 'social-post-form') { event.preventDefault(); publishPhonePost(new FormData(event.target).get('post')); }
+  if (event.target.id === 'social-post-form') { event.preventDefault(); publishPhonePost(new FormData(event.target).get('post'),event.target.dataset.platform||'konohagram'); }
   if (event.target.id === 'phone-message-form') { event.preventDefault(); const data=new FormData(event.target); sendPhoneMessage(data.get('characterId'),data.get('message')); }
   if (event.target.classList?.contains?.('pet-name-form')) { event.preventDefault(); const pet=state.pets.find(item=>item.uid===event.target.dataset.petId); const name=String(new FormData(event.target).get('name')||'').trim().slice(0,20); if(pet&&name){pet.name=name;addFeed(state,`Ты выбрал новое имя для питомца: ${name}.`);render();toast('Имя питомца изменено.');} }
   if (event.target.id === 'assignment-form') { event.preventDefault(); assignPlan(event.target); }
@@ -650,8 +850,12 @@ document.addEventListener('change',event=>{
   if (event.target.id === 'player-origin') updateOriginNote();
   if (event.target.dataset.setting && state) {
     const key = event.target.dataset.setting;
-    state.settings[key] = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
-    if (state.ui.view === 'settings') render(); else renderSettings(state);
+    state.settings[key] = event.target.type === 'checkbox' ? event.target.checked : (event.target.type === 'range' ? Number(event.target.value) : event.target.value);
+    if (state.ui.view === 'settings' && event.target.type !== 'range') render();
+    else if (event.target.type === 'range') { const output=event.target.parentElement?.querySelector('output'); if(output) output.textContent=`${event.target.value}%`; persist(); }
+    if (key==='animations') document.getElementById('app').dataset.motion=state.settings.animations?'on':'off';
+    if (key==='textSize') document.getElementById('app').dataset.textSize=state.settings.textSize;
+    if (key==='contrast') document.getElementById('app').dataset.contrast=state.settings.contrast;
     persist();
   }
   if (event.target.id === 'import-file') importSaveFile(event.target.files?.[0]);

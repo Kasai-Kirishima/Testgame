@@ -28,7 +28,13 @@ export const LOCATIONS = [
   {id:'garden',name:'Общественный сад',icon:'🌿',area:'Юг',desc:'Тихий сад с дорожками, скамейками и сезонными цветами.',bg:'assets/backgrounds/bathhouse-garden.webp',activities:['Полить растения','Прогуляться','Посидеть в тишине']},
   {id:'home',name:'Твой дом',icon:'🏡',area:'Жилой квартал',desc:'Небольшой дом, где можно готовить, отдыхать и планировать день.',bg:'assets/backgrounds/tatami-home.webp',activities:['Приготовить еду','Убраться','Отдохнуть']},
   {id:'academy',name:'Академия',icon:'🎓',area:'Восток',desc:'Учебный двор, классы и тренировочные занятия для шиноби.',bg:'assets/backgrounds/academy-courtyard.webp',activities:['Посетить занятие','Повторить основы','Помочь ученикам']},
-  {id:'campsite',name:'Лесной привал',icon:'🏕️',area:'За воротами',desc:'Тихая стоянка у реки для короткого отдыха во время вылазок.',bg:'assets/backgrounds/campsite.webp',activities:['Разбить лагерь','Приготовить ужин','Отдохнуть у костра']}
+  {id:'campsite',name:'Лесной привал',icon:'🏕️',area:'За воротами',desc:'Тихая стоянка у реки для короткого отдыха во время вылазок.',bg:'assets/backgrounds/campsite.webp',activities:['Разбить лагерь','Приготовить ужин','Отдохнуть у костра']},
+  {id:'bathhouse',name:'Термальный сад',icon:'♨️',area:'Юг',desc:'Тихая общественная зона отдыха с каменными дорожками и горячими источниками.',bg:'assets/backgrounds/bathhouse-garden.webp',activities:['Отдохнуть','Послушать воду','Поговорить']},
+  {id:'dojo',name:'Зал додзё',icon:'🥋',area:'Восток',desc:'Крытый зал для спокойных упражнений, растяжки и командной подготовки.',bg:'assets/backgrounds/training-ground.webp',activities:['Отработать стойку','Тренировать контроль','Наблюдать за занятием']},
+  {id:'archive',name:'Архив свитков',icon:'📜',area:'Запад',desc:'Специальное хранилище старых карт, отчётов и исторических записей.',bg:'assets/backgrounds/library.webp',activities:['Изучить карту','Найти старый отчёт','Разобрать свитки']},
+  {id:'residential',name:'Жилой переулок',icon:'🏘️',area:'Жилой квартал',desc:'Небольшая улица с домами, садами и тихими двориками.',bg:'assets/backgrounds/tatami-home.webp',activities:['Прогуляться','Поздороваться с соседями','Осмотреть двор']},
+  {id:'rooftop',name:'Крыши Конохи',icon:'🌆',area:'Центр',desc:'Высокие крыши с видом на улицы и монумент Хокаге.',bg:'assets/backgrounds/village-gate.webp',activities:['Посмотреть на город','Подышать воздухом','Понаблюдать за улицами']},
+  {id:'greenhouse',name:'Оранжерея',icon:'🌺',area:'Юг',desc:'Небольшая теплица с сезонными растениями и редкими семенами.',bg:'assets/backgrounds/flower-shop.webp',activities:['Полить растения','Изучить семена','Помочь садовнику']}
 ];
 
 export const SEASONS = ['Весна','Лето','Осень','Зима'];

@@ -15,6 +15,10 @@ export function createInitialState(player = {}) {
       originName: origin.name,
       style: player.style || 'balanced',
       look: player.look || 'casual',
+      ownedLooks: Array.isArray(player.ownedLooks) ? [...new Set(player.ownedLooks)] : ['casual','shinobi'],
+      jobId: player.jobId || '',
+      workShifts: Number(player.workShifts)||0,
+      lastWorkDay: Number(player.lastWorkDay)||0,
       mark: player.mark || 'none',
       gender: player.gender || 'male',
       age: Math.max(18,Math.min(40,Number(player.age)||20)),
@@ -26,12 +30,20 @@ export function createInitialState(player = {}) {
       goal: player.goal || 'protect',
       village: player.village || 'konoha',
       signatureTool: player.signatureTool || 'kunai',
-      stats: {...origin.stats, stamina: origin.stats.stamina, chakra: origin.stats.chakra, focus: origin.stats.focus}
+      stats: {...origin.stats, hp:100, stamina: origin.stats.stamina, chakra: origin.stats.chakra, focus: origin.stats.focus}
     },
     world: {location:'main-street',day:1,minute:8*60,season:0,weather:'sunny',actions:0},
     bonds: {},
+    metCharacters: [],
+    gallerySeen: {},
+    giftHistory: {},
+    meetingHistory: {},
+    knownNames: {},
+    dialogueMeta: {},
+    companions: [],
     memories: {},
     dialogues: {},
+    storage: {fridge:[]},
     inventory: [
       {id:'tea',name:'Зелёный чай',desc:'Ароматный чай для спокойного перерыва.',qty:2,kind:'gift'},
       {id:'flower',name:'Полевые цветы',desc:'Небольшой букет, собранный у дороги.',qty:1,kind:'gift'},
@@ -52,9 +64,9 @@ export function createInitialState(player = {}) {
     visitedLocations: ['main-street'],
     npcShuffle: Math.floor(Math.random()*100000),
     pets: [],
-    phone: {tab:'feed',posts:[],messages:[],lastPostAction:0},
-    settings: {autosave:true,animations:true,textSize:'normal',contrast:'normal',musicLink:true,confirmReset:true},
-    ui: {screen:'world',view:'world',targetId:'',sceneCharacterId:'hinata',lastActionText:'',lastActionResult:'Ты прибыл в Коноху. Напиши, куда хочешь пойти, что сделать или с кем поговорить.',showHelp:true}
+    phone: {app:'home',tab:'feed',posts:[],messages:[],videoViews:[],activeVideo:'',lastPostAction:0},
+    settings: {autosave:true,animations:true,textSize:'normal',contrast:'normal',musicLink:true,confirmReset:true,showNames:true,musicVolume:55,effectVolume:70,languageIndex:0,romanceFadeToBlack:true,hideSensitiveText:true},
+    ui: {screen:'world',view:'world',targetId:'',sceneCharacterId:'hinata',lastActionText:'',lastActionResult:'Ты прибыл в Коноху. Напиши, куда хочешь пойти, что сделать или с кем поговорить.',showHelp:true,drawerOpen:false,questTab:'active',bagTab:'all',selectedItemId:'',profileArtIndex:0}
   };
 }
 
@@ -64,10 +76,17 @@ export function normalizeState(input) {
   return {
     ...base,
     ...input,
-    player: {...base.player,...input.player,stats:{...base.player.stats,...input.player?.stats}},
+    knownNames: input.knownNames && typeof input.knownNames === 'object' ? input.knownNames : {},
+    metCharacters: Array.isArray(input.metCharacters) ? input.metCharacters : Object.keys(input.bonds||{}).filter(id=>(input.bonds?.[id]?.meetings||0)>0),
+    gallerySeen: input.gallerySeen && typeof input.gallerySeen === 'object' ? input.gallerySeen : {},
+    giftHistory: input.giftHistory && typeof input.giftHistory === 'object' ? input.giftHistory : {},
+    meetingHistory: input.meetingHistory && typeof input.meetingHistory === 'object' ? input.meetingHistory : {},
+    dialogueMeta: input.dialogueMeta && typeof input.dialogueMeta === 'object' ? input.dialogueMeta : {},
+    companions: Array.isArray(input.companions) ? input.companions : [],
+    player: {...base.player,...input.player,ownedLooks:Array.isArray(input.player?.ownedLooks)?[...new Set(input.player.ownedLooks)]:base.player.ownedLooks,workShifts:Number(input.player?.workShifts)||0,lastWorkDay:Number(input.player?.lastWorkDay)||0,stats:{...base.player.stats,...input.player?.stats,hp:Number(input.player?.stats?.hp??base.player.stats.hp)}},
     world: {...base.world,...input.world},
     settings: {...base.settings,...input.settings},
-    ui: {...base.ui,...input.ui},
+    ui: {...base.ui,...input.ui,drawerOpen:false,questTab:['active','history'].includes(input.ui?.questTab)?input.ui.questTab:'active',bagTab:['all','food','gift','clothing','material','other'].includes(input.ui?.bagTab)?input.ui.bagTab:'all',profileArtIndex:Math.max(0,Number(input.ui?.profileArtIndex)||0)},
     bonds: input.bonds && typeof input.bonds === 'object' ? input.bonds : {},
     memories: input.memories && typeof input.memories === 'object' ? input.memories : {},
     dialogues: input.dialogues && typeof input.dialogues === 'object' ? input.dialogues : {},
@@ -81,7 +100,7 @@ export function normalizeState(input) {
     visitedLocations: Array.isArray(input.visitedLocations) ? input.visitedLocations : [],
     npcShuffle: Number.isFinite(Number(input.npcShuffle)) ? Number(input.npcShuffle) : Math.floor(Math.random()*100000),
     pets: Array.isArray(input.pets) ? input.pets : [],
-    phone: {...base.phone,...(input.phone || {}),posts:Array.isArray(input.phone?.posts)?input.phone.posts:[],messages:Array.isArray(input.phone?.messages)?input.phone.messages:[]}
+    phone: {...base.phone,...(input.phone || {}),app:input.phone?.app||'home',posts:Array.isArray(input.phone?.posts)?input.phone.posts:[],messages:Array.isArray(input.phone?.messages)?input.phone.messages:[],videoViews:Array.isArray(input.phone?.videoViews)?input.phone.videoViews:[],activeVideo:typeof input.phone?.activeVideo==='string'?input.phone.activeVideo:''}
   };
 }
 
@@ -103,17 +122,17 @@ export function saveState(state) {
 export function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch {} }
 
 export function getBond(state,id) {
-  return state.bonds[id] || {friendship:0,trust:0,respect:0,meetings:0,stage:'Знакомство'};
+  return state.bonds[id] || {friendship:0,trust:0,respect:0,irritation:0,meetings:0,stage:'Знакомство'};
 }
 
-export function updateBond(state,id,delta={}) {
+export function updateBond(state,id,delta={},options={}) {
   const current = getBond(state,id);
   const next = {...current};
-  for (const key of ['friendship','trust','respect']) {
+  for (const key of ['friendship','trust','respect','irritation']) {
     if (typeof delta[key] === 'number') next[key] = Math.max(0,Math.min(100,current[key] + delta[key]));
   }
-  next.meetings = current.meetings + 1;
-  next.stage = next.friendship >= 80 ? 'Надёжный товарищ' : next.friendship >= 50 ? 'Близкий друг' : next.friendship >= 20 ? 'Хороший знакомый' : 'Знакомство';
+  next.meetings = current.meetings + (options.countMeeting===false?0:1);
+  next.stage = next.irritation >= 55 ? 'Серьёзная неприязнь' : next.irritation >= 28 ? 'Настороженность' : next.friendship >= 80 && next.trust >= 55 ? 'Надёжный товарищ' : next.friendship >= 50 ? 'Близкий знакомый' : next.friendship >= 20 ? 'Хороший знакомый' : 'Знакомство';
   state.bonds[id] = next;
   return next;
 }

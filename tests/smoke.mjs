@@ -3,9 +3,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {createInitialState,getBond} from '../src/core/store.js';
-import {CHARACTERS,getCharacter} from '../src/data/characters.js';
+import {CHARACTERS,getCharacter,getUnlockedCharacterArts} from '../src/data/characters.js';
 import {ORIGINS,LOCATIONS} from '../src/data/world.js';
-import {travelTo,doActivity,assignDailyTask,sleepUntilMorning,skipTime,updateNpcPositions,advanceTime} from '../src/core/life.js';
+import {travelTo,doActivity,assignDailyTask,sleepUntilMorning,skipTime,updateNpcPositions,advanceTime,getTravelMinutes,getLocationAccess} from '../src/core/life.js';
 import {talkToCharacter,analyzeText} from '../src/core/gm.js';
 import {renderView} from '../src/ui/render.js';
 
@@ -13,7 +13,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const state = createInitialState({name:'Тестовый игрок',origin:'shinobi'});
 assert.equal(CHARACTERS.length,28,'В списке должно быть 28 персонажей');
 assert.equal(ORIGINS.length,10,'Должно быть 10 вариантов происхождения');
-assert.equal(LOCATIONS.length,17,'Карта должна содержать 17 мест');
+assert.equal(LOCATIONS.length,23,'Карта должна содержать 23 места');
 assert.equal(state.unlocked.length,27,'Все персонажи, кроме секретного Хаку, доступны в начале');
 assert.equal(getCharacter('haku').secret,true,'Хаку должен быть секретным персонажем');
 updateNpcPositions(state,true);
@@ -27,7 +27,24 @@ for (const character of CHARACTERS) {
   for (const art of character.art) assert.ok(fs.existsSync(path.join(root,art.src)),`${character.name}: файл арта ${art.src} должен существовать`);
 }
 
+
+// Character art should unlock gradually rather than revealing every image immediately.
+const unlockState=createInitialState({name:'Галерея'});
+const sakuraForArts=getCharacter('sakura');
+assert.equal(getUnlockedCharacterArts(unlockState,sakuraForArts).length,1,'Only the first portrait should be available at first meeting');
+unlockState.bonds.sakura={friendship:0,trust:0,respect:0,irritation:0,meetings:2,stage:'Знакомство'};
+assert.equal(getUnlockedCharacterArts(unlockState,sakuraForArts).length,2,'Second art should unlock after two meetings');
+unlockState.bonds.sakura={friendship:40,trust:25,respect:0,irritation:0,meetings:4,stage:'Близкий знакомый'};
+assert.equal(getUnlockedCharacterArts(unlockState,sakuraForArts).length,3,'Third art should unlock after a sustained relationship');
+const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+for (const label of ['Новая игра','Загрузить','Настройки','Галерея','Выход']) assert.ok(html.includes(label),`Title menu should include ${label}`);
+for (const page of ['world','map','people','gallery','locations','day','work','scroll','bag','phone','pets','settings','help']) assert.ok(html.includes(`data-view="${page}"`),`Navigation should expose ${page} as a separate page`);
+
 const initialMinute = state.world.minute;
+assert.ok(getTravelMinutes('home','main-street')>=5 && getTravelMinutes('home','main-street')<=32,'Travel time should be distance-based and bounded');
+const restrictedState=createInitialState({name:'Гость',origin:'otherworld'});
+assert.equal(getLocationAccess(restrictedState,'archive').allowed,false,'Archive should require reputation or a library job');
+assert.equal(getLocationAccess(restrictedState,'hokage').allowed,false,'Hokage residence should require basic reputation');
 travelTo(state,'ichiraku');
 assert.equal(state.world.location,'ichiraku');
 assert.ok(state.world.minute > initialMinute,'Переход должен продвинуть время');
@@ -57,6 +74,8 @@ talkToCharacter(state,ayame,'Дарю тебе чай.');
 const teaAfter = state.inventory.find(item=>item.id==='tea').qty;
 assert.equal(teaAfter,teaBefore-1,'Подарок должен уменьшать количество предметов');
 
+state.companions=['ayame'];
+state.companions=['ayame'];
 const plan = assignDailyTask(state,'ayame','cook');
 assert.equal(plan.ok,true,'Можно назначить бытовое занятие персонажу');
 const planUpdate = assignDailyTask(state,'ayame','study');
@@ -67,43 +86,76 @@ sleepUntilMorning(state);
 assert.ok(state.world.day > dayBefore,'Сон должен переводить на следующий день');
 assert.equal(state.assignments.find(item=>item.actorId==='ayame').done,true,'План должен выполниться при наступлении нового дня');
 
-skipTime(state,2);
+const priorNpcPeriod=state.npcPeriod;
+skipTime(state,5);
 assert.ok(state.world.minute >= 0 && state.world.minute < 1440,'Время должно оставаться в пределах суток');
+assert.notEqual(state.npcPeriod,priorNpcPeriod,'NPC movement should update after a time-period skip');
 
 const petState=createInitialState({name:'Зоовладелец'}); petState.pets=[{uid:'p1',name:'Мару',hunger:30,mood:60,energy:55}]; advanceTime(petState,1440);
 assert.equal(petState.pets[0].hunger,48,'Pet hunger should rise gently after a full day');
 assert.equal(petState.pets[0].mood,55,'Pet mood should reflect unattended daily care');
 
+
+// Work and clothing rules: only buy at the market and change clothes at home/market.
+const wardrobeState=createInitialState({name:'Гардероб'});
+assert.deepEqual(wardrobeState.player.ownedLooks,['casual','shinobi']);
+assert.ok(LOCATIONS.find(item=>item.id==='greenhouse'),'Additional location should be present');
+// Schedules stay private to the player-facing render.
+wardrobeState.ui.view='day';
+assert.doesNotMatch(renderView(wardrobeState),/Персонаж.*в 08:|Персональный распорядок:/,'NPC private schedules should not be exposed');
+
 state.ui.view='world';
-assert.match(renderView(state),/Хроники Конохи/,'Главная страница должна рендериться');
+assert.match(renderView(state),/rp-full-scene/,'Главная RP-страница должна рендериться как полноэкранная сцена');
 assert.match(renderView(state),/world-action-form/,'Главная страница должна содержать поле действий');
 assert.match(renderView(state),/world-dialogue-form/,'Главная страница должна содержать свободный диалог');
-assert.match(renderView(state),/data-action="patrol"/,'На главной странице доступен патруль');
+assert.match(renderView(state),/rp-scene-bottom/,'Главная сцена должна показывать текст происходящего внизу');
+assert.match(renderView(state),/rp-text-action/,'Главная страница должна содержать поле свободного действия');
 for (const location of LOCATIONS) assert.ok(fs.existsSync(path.join(root,location.bg)),`${location.name}: локальный фон должен существовать`);
 state.ui.view='people';
 state.ui.targetId='';
-assert.match(renderView(state),/Жители и союзники/,'Отдельная страница списка персонажей должна рендериться');
+assert.match(renderView(state),/знакомых героев|Знакомые персонажи|познакомился лично/,'Страница героев должна быть отфильтрована по личным встречам');
 state.ui.view='profile';
 state.ui.targetId='ayame';
-assert.match(renderView(state),/chat-form/,'Отдельная страница профиля должна включать свободный чат');
-assert.match(renderView(state),/character-art-grid/,'Профиль персонажа должен показывать доступные арты');
+state.npcLocations.ayame=state.world.location;
+assert.match(renderView(state),/chat-form/,'Профиль должен показывать чат только при физическом присутствии персонажа');
+state.npcLocations.ayame='hospital';
+assert.doesNotMatch(renderView(state),/id="chat-form"/,'Профиль не должен позволять личный чат с персонажем в другой локации');
+assert.match(renderView(state),/Личная беседа доступна после встречи/,'Вместо недоступного чата должна быть подсказка о встрече');
+assert.match(renderView(state),/dossier-art-stage/,'Профиль персонажа должен показывать галерею изображений');
 state.ui.view='scroll';
-assert.match(renderView(state),/Свиток дел/,'Экран заданий должен рендериться');
+assert.match(renderView(state),/Задания/,'Экран заданий должен рендериться');
+assert.match(renderView(state),/quest-tabs/,'Задания должны иметь вкладки активных записей и истории');
 state.ui.view='bag';
 assert.match(renderView(state),/Инвентарь/,'Экран инвентаря должен рендериться');
+assert.match(renderView(state),/bag-tabs/,'Инвентарь должен иметь категории');
 state.ui.view='day';
 assert.match(renderView(state),/Распорядок дня/,'Экран планов должен рендериться');
+state.ui.view='gallery';
+assert.match(renderView(state),/Галерея/,'Галерея должна рендериться');
+state.ui.view='help';
+assert.match(renderView(state),/Помощь/,'Экран помощи должен рендериться');
+state.ui.view='locations';
+assert.match(renderView(state),/Локации/,'Экран локаций должен рендериться');
 state.ui.view='phone';
 assert.match(renderView(state),/Konohagram/,'Smartphone feed page should render');
+state.phone.app='scrolltube'; state.phone.activeVideo='v1';
+assert.match(renderView(state),/video-player/,'ScrollTube should render a selected local video screen');
+state.phone.activeVideo=''; state.phone.app='home';
 state.ui.view='pets';
 assert.match(renderView(state),/Магазин животных/,'Pet store page should render');
 state.ui.view='settings';
 assert.match(renderView(state),/Настройки/,'Экран настроек должен рендериться');
 state.ui.view='map';
-assert.match(renderView(state),/ref-location-grid/,'Карта должна рендериться отдельной страницей');
+assert.match(renderView(state),/map-overview/,'Карта должна показывать схему деревни сверху');
+assert.match(renderView(state),/map-pin/,'Карта должна содержать интерактивные точки локаций');
+assert.match(renderView(state),/КАРТА КОНОХИ/,'Карта должна иметь собственную шапку с сакурой');
+state.ui.view='gallery';
+const galleryHtml=renderView(state);
+assert.match(galleryHtml,/Галерея героинь/,'Галерея должна содержать весь доступный ростер');
+assert.match(galleryHtml,/Открыто в RP|Просмотр галереи/,'Галерея должна различать открытые и просмотренные изображения');
 
 // Assigned daily activities should influence the NPC's actual location.
-const routineState=createInitialState({name:'Планировщик'}); routineState.unlocked=['ayame']; updateNpcPositions(routineState,true);
+const routineState=createInitialState({name:'Планировщик'}); routineState.unlocked=['ayame']; routineState.companions=['ayame']; updateNpcPositions(routineState,true);
 const routinePlan=assignDailyTask(routineState,'ayame','train');
 assert.equal(routinePlan.ok,true);
 assert.equal(routineState.npcLocations.ayame,'training','A training assignment should move the NPC to the training ground');

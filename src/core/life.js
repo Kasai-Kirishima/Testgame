@@ -16,6 +16,29 @@ export function timePeriod(minute) {
   return 'Ночь';
 }
 
+
+const MAP_COORDS = {
+  'main-street':[49,48],'ichiraku':[30,37],'flower-shop':[66,37],market:[80,48],training:[76,73],hospital:[44,82],hokage:[51,17],
+  'tea-house':[28,56],river:[15,83],forest:[7,51],memorial:[14,18],gate:[50,5],library:[20,39],garden:[34,70],home:[56,64],
+  academy:[81,20],campsite:[6,83],bathhouse:[21,63],dojo:[89,76],archive:[19,29],residential:[64,55],rooftop:[69,22],greenhouse:[40,70]
+};
+
+export function getLocationAccess(state,id) {
+  const place=getLocation(id);
+  const renown=Number(state?.player?.stats?.renown)||0;
+  if(id==='archive' && renown<12 && state?.player?.jobId!=='library') return {allowed:false,reason:'Для доступа в архив нужен 12-й уровень репутации или работа в библиотеке.'};
+  if(id==='hokage' && renown<6) return {allowed:false,reason:'В резиденцию Хокаге пускают по делу или с поручительством. Сначала заслужи доверие жителей.'};
+  if(place.locked) return {allowed:false,reason:place.lockReason||'Эта зона сейчас закрыта.'};
+  return {allowed:true,reason:''};
+}
+
+export function getTravelMinutes(fromId,toId) {
+  const from=MAP_COORDS[fromId]||[50,50];
+  const to=MAP_COORDS[toId]||[50,50];
+  const distance=Math.hypot(from[0]-to[0],from[1]-to[1]);
+  return Math.max(5,Math.min(32,Math.round(distance*.22)+5));
+}
+
 export function getWeather(state) { return WEATHER.find(item => item.id === state.world.weather) || WEATHER[0]; }
 export function seasonLabel(state) { return SEASONS[state.world.season] || 'Весна'; }
 
@@ -52,6 +75,7 @@ export function advanceTime(state,minutes) {
   }
   state.world.minute = total;
   if (state.world.day !== oldDay) {
+    state.npcShuffle = Math.floor(Math.random()*1000000);
     settleAssignments(state,state.world.day);
     for (const pet of (state.pets || [])) { pet.hunger = Math.min(100,(pet.hunger ?? 45)+18); pet.mood = Math.max(0,(pet.mood ?? 55)-5); pet.energy = Math.min(100,(pet.energy ?? 80)+12); }
     if ((state.world.day - 1) % 7 === 0 && state.world.day > 1) {
@@ -103,6 +127,7 @@ export function tickAction(state,minutes=20) {
 export function skipTime(state,hours=1) {
   const safeHours = Math.max(1,Math.min(12,Number(hours)||1));
   advanceTime(state,safeHours * 60);
+  updateNpcPositions(state,false);
   addFeed(state,`Ты провёл время за своими делами. Сейчас ${timePeriod(state.world.minute)} · ${clockLabel(state.world.minute)}.`);
   return state;
 }
@@ -110,6 +135,7 @@ export function skipTime(state,hours=1) {
 export function sleepUntilMorning(state) {
   const minutes = (24 * 60 - state.world.minute) + 7 * 60;
   advanceTime(state,minutes);
+  updateNpcPositions(state,false);
   state.player.stats.stamina = Math.min(100,state.player.stats.stamina + 32);
   state.player.stats.focus = Math.min(100,state.player.stats.focus + 16);
   addFeed(state,`Ты хорошо отдохнул. Начался новый день — ${clockLabel(state.world.minute)}.`);
@@ -118,10 +144,24 @@ export function sleepUntilMorning(state) {
 
 export function travelTo(state,id) {
   const place = getLocation(id);
-  if (state.world.location === id) return false;
+  if (state.world.location === id) { state.ui.travelFailure='Ты уже находишься здесь.'; return false; }
+  const access=getLocationAccess(state,id);
+  if(!access.allowed) { state.ui.travelFailure=access.reason; return false; }
+  const previousPlace=state.world.location;
+  const travelMinutes=getTravelMinutes(previousPlace,id);
+  const meetup=state.world.lastMeetup;
+  if (meetup && meetup.day===state.world.day && meetup.location===previousPlace && (state.world.minute-(meetup.minute||state.world.minute))<=60) {
+    const person=CHARACTERS.find(item=>item.id===meetup.characterId);
+    if(person) {
+      updateBond(state,person.id,{trust:-3,friendship:-1,irritation:2});
+      addFeed(state,`Ты резко ушёл из «${getLocation(previousPlace).name}», не завершив встречу с ${person.name}. Она могла воспринять это как невнимательность.`);
+    }
+    state.world.lastMeetup=null;
+  }
   state.world.location = id;
-  tickAction(state,18);
-  addFeed(state,`Ты пришёл в место «${place.name}». ${place.desc}`);
+  tickAction(state,travelMinutes);
+  state.ui.lastTravelMinutes=travelMinutes; state.ui.travelFailure='';
+  addFeed(state,`Ты добрался до места «${place.name}» за ${travelMinutes} минут. ${place.desc}`);
   if (!Array.isArray(state.visitedLocations)) state.visitedLocations = [];
   if (!state.visitedLocations.includes(id)) {
     state.visitedLocations.push(id);
@@ -191,6 +231,7 @@ export function assignDailyTask(state,actor,task) {
   const taskNames = {cook:'Приготовить еду',tidy:'Уборка дома',shop:'Сходить за покупками',study:'Заниматься в библиотеке',train:'Тренировка контроля чакры',garden:'Уход за садом',clinic:'Помочь в больнице',rest:'Отдых'};
   if (!taskNames[task]) return {ok:false,message:'Неизвестное занятие.'};
   const key = actor === 'player' ? 'player' : actor;
+  if (key !== 'player' && !state.companions?.includes(key)) return {ok:false,message:'Поручать бытовые дела можно только спутницам, которые согласились войти в твой ближний круг.'};
   const already = state.assignments.find(item => item.day === state.world.day && item.actorId === key && !item.done);
   if (already) {
     already.task = task;
@@ -261,7 +302,7 @@ function locationChoicesFor(character,period,state) {
   if (period === 'night') {
     for (const id of ['home','tea-house','garden','ichiraku']) add(id);
   }
-  for (const id of ['main-street','market','garden','tea-house','library','home','training','river','ichiraku','flower-shop','hospital','gate','academy','hokage','forest','memorial','campsite']) add(id);
+  for (const id of ['main-street','market','garden','tea-house','library','home','training','river','ichiraku','flower-shop','hospital','gate','academy','hokage','forest','memorial','campsite','bathhouse','dojo','archive','residential','rooftop','greenhouse']) add(id);
   return choices;
 }
 
@@ -270,6 +311,7 @@ export function updateNpcPositions(state,force=false) {
   if (!state) return {};
   const period = npcPeriod(state.world.minute);
   const stamp = `${state.world.day}:${period}`;
+  if (!force && state.npcPeriod && state.npcPeriod !== stamp) state.npcShuffle = Math.floor(Math.random()*1000000);
   if (!force && state.npcPeriod === stamp && state.npcLocations && Object.keys(state.npcLocations).length) return state.npcLocations;
   const available = CHARACTERS.filter(character => state.unlocked?.includes(character.id));
   // Characters with a player-assigned plan get priority so their task can influence their actual location.
@@ -312,15 +354,19 @@ function maybePhonePost(state) {
   const present = CHARACTERS.filter(character => state.npcLocations?.[character.id]);
   if (!present.length) return;
   const character = present[(state.world.day + state.world.actions + state.world.minute) % present.length];
-  const topics = character.likes || ['дела'];
-  const topic = topics[(state.world.actions + character.id.length) % topics.length];
-  const lines = [
-    `Небольшая пауза между делами. Сегодня думаю о теме: ${topic}.`,
-    `Кто-нибудь знает хорошее место для ${topic}? Хочу сменить обстановку.`,
-    `Сегодняшний день оказался насыщенным. Хорошо, что нашлось время для ${topic}.`,
-    `Записка себе на будущее: не забывать про ${topic} и отдых.`
-  ];
-  state.phone.posts.unshift({id:`post-${state.world.day}-${state.world.actions}-${character.id}`,authorId:character.id,text:lines[(state.world.actions + state.world.day) % lines.length],day:state.world.day,minute:state.world.minute,likes:0,liked:false});
+  const topics = character.likes || ['повседневные дела'];
+  const topic = topics[Math.floor(Math.random()*topics.length)];
+  const moodLines = {
+    quiet:[`Наконец-то нашлось немного тишины. Иногда это лучше любого отдыха.`,`Сегодня хочется пройтись без спешки и никуда не опаздывать.`,`Оставлю здесь маленькую заметку о спокойном дне.`],
+    warm:[`Кто-нибудь уже успел сегодня порадовать близкого человека? Маленькие вещи правда важны.`,`Увидела кое-что красивое по дороге. Захотелось поделиться.`,`Надеюсь, у всех сегодня найдётся время на хороший обед.`],
+    playful:[`У меня есть план на вечер. Пока не скажу какой — пусть будет сюрприз.`,`Кажется, сегодня я кого-то обыграю на тренировке.`,`Коноха сегодня шумная. И это даже весело.`],
+    sharp:[`Напоминание: не обещайте того, что не собираетесь выполнять.`,`Работы много, но порядок в делах многое решает.`,`Небольшой совет: сначала подумайте, потом действуйте.`],
+    gentle:[`Пожалуйста, не забывайте отдыхать между делами.`,`Сегодня помогла одному человеку. Надеюсь, у него всё наладится.`,`Берегите себя и не пропускайте обед.`]
+  };
+  const lines = moodLines[character.style] || [`Сегодняшний день оказался насыщенным.`,`Небольшая пауза между делами — и снова за работу.`,`Кто-нибудь хочет обсудить ${topic}?`];
+  const platform=Math.random()<.62?'konohagram':'shinobix';
+  const postText=lines[Math.floor(Math.random()*lines.length)];
+  state.phone.posts.unshift({id:`post-${state.world.day}-${state.world.actions}-${character.id}`,authorId:character.id,text:postText,platform,day:state.world.day,minute:state.world.minute,likes:Math.floor(Math.random()*17),liked:false,image:state.world.location==='main-street'?'assets/backgrounds/konoha-main.webp':getLocation(state.npcLocations[character.id]||'main-street').bg});
   state.phone.posts = state.phone.posts.slice(0,40);
   state.phone.lastPostAction = state.world.actions;
 }
