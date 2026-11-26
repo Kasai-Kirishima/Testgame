@@ -2,7 +2,7 @@ import {CHARACTERS,getCharacter,getUnlockedCharacterArts} from './data/character
 import {ENEMIES,getEnemy} from './data/enemies.js';
 import {ORIGINS,LOCATIONS,getLocation} from './data/world.js';
 import {createInitialState,loadState,saveState,clearSave,addFeed,updateBond,removeItem,addItem} from './core/store.js';
-import {talkToCharacter} from './core/gm.js';
+import {talkToCharacter,npcOpeningLine,performConversationAction} from './core/gm.js';
 import {travelTo,doActivity,skipTime,sleepUntilMorning,assignDailyTask,tickAction,updateNpcPositions,getNpcLocation} from './core/life.js';
 import {getPet} from './data/pets.js';
 import {getJob} from './data/jobs.js';
@@ -10,6 +10,9 @@ import {renderView,renderStatus,populateOrigins,updateOriginNote,renderSettings,
 
 const PIXABAY_TRACK = 'https://pixabay.com/music/ambient-japanese-style-ambient-475587/';
 let state = loadState();
+let dialogueTypingTimer = null;
+let lastTypedDialogue = '';
+let uiAudioContext = null;
 if (state) updateNpcPositions(state,true);
 const elements = {
   title: document.getElementById('title-screen'),
@@ -77,6 +80,7 @@ function render() {
   if (!state) return;
   renderStatus(state);
   elements.view.innerHTML = renderView(state);
+  animateCurrentDialogue();
   document.getElementById('app').dataset.view = state.ui.view;
   document.getElementById('app').dataset.textSize = state.settings.textSize;
   document.getElementById('app').dataset.contrast = state.settings.contrast;
@@ -89,7 +93,42 @@ function render() {
   persist();
 }
 
+function animateCurrentDialogue() {
+  const node=document.querySelector?.('[data-typewriter]') || null;
+  if (!node) { lastTypedDialogue=''; if(dialogueTypingTimer){clearInterval(dialogueTypingTimer);dialogueTypingTimer=null;} return; }
+  const full=node.textContent||'';
+  if (!full || full===lastTypedDialogue) return;
+  lastTypedDialogue=full;
+  if (dialogueTypingTimer) clearInterval(dialogueTypingTimer);
+  const noMotion=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || document.getElementById('app')?.dataset.motion==='off';
+  if (noMotion) return;
+  node.textContent=''; let index=0;
+  dialogueTypingTimer=setInterval(()=>{
+    index=Math.min(full.length,index+2);
+    node.textContent=full.slice(0,index);
+    if(index>=full.length){clearInterval(dialogueTypingTimer);dialogueTypingTimer=null;}
+  },12);
+}
+
+function playUiSound(kind='tap') {
+  try {
+    const effectVolume=state?.settings?.effectVolume ?? 45;
+    if(effectVolume<=0) return;
+    const AudioCtx=window.AudioContext||window.webkitAudioContext;
+    if(!AudioCtx) return;
+    uiAudioContext ||= new AudioCtx();
+    if(uiAudioContext.state==='suspended') uiAudioContext.resume();
+    const osc=uiAudioContext.createOscillator(); const gain=uiAudioContext.createGain();
+    const now=uiAudioContext.currentTime;
+    const notes=kind==='success'?[660,880]:kind==='nav'?[420,560]:[510,430];
+    osc.type='sine'; osc.frequency.setValueAtTime(notes[0],now); osc.frequency.linearRampToValueAtTime(notes[1],now+.075);
+    gain.gain.setValueAtTime(Math.min(.035,effectVolume/100*.045),now); gain.gain.exponentialRampToValueAtTime(.0001,now+.105);
+    osc.connect(gain); gain.connect(uiAudioContext.destination); osc.start(now); osc.stop(now+.11);
+  } catch { /* Audio is optional; input and navigation must remain usable. */ }
+}
+
 function showScreen(name) {
+  if (name === 'game' && !state) name = 'title';
   elements.title.classList.toggle('hidden',name !== 'title');
   elements.creation.classList.toggle('hidden',name !== 'creation');
   elements.game.classList.toggle('hidden',name !== 'game');
@@ -112,10 +151,11 @@ function startGame(player) {
 }
 
 function switchView(view) {
+  if (!state) { showScreen('title'); toast('Сначала начни новую игру или загрузи сохранение.'); return; }
   state.ui.drawerOpen = false;
   document.getElementById('game-screen')?.classList.remove('drawer-open');
   state.ui.view = view;
-  if (view !== 'profile') state.ui.targetId = '';
+  if (!['profile','conversation'].includes(view)) state.ui.targetId = '';
   render();
 }
 
@@ -292,6 +332,28 @@ function executeFreeAction(rawText) {
   state.ui.lastActionText = raw;
   if (/(ищу работу|хочу устроиться|подработк|посмотреть вакансии|найти работу)/i.test(clean)) { state.ui.view='work'; state.ui.lastActionResult='Ты открываешь список доступных подработок. Выбери занятие, отправляйся по адресу и поговори с работодателем.'; addFeed(state,state.ui.lastActionResult); render(); return; }
   let resultParts = [];
+  const foodOrderIntent = /(я\s+голоден|я\s+голодна|проголодал|заказал\s+еду|заказала\s+еду|заказываю\s+еду|хочу\s+заказать\s+(?:рамен|еду)|заказал\s+рамен|заказала\s+рамен|перекусить)/i.test(clean);
+  if (foodOrderIntent) {
+    if (state.world.location==='ichiraku') {
+      const cost=18;
+      if (state.player.stats.coins>=cost) {
+        state.player.stats.coins-=cost;
+        state.player.stats.stamina=Math.min(100,state.player.stats.stamina+18);
+        tickAction(state,16);
+        const ayameHere=getNpcLocation(state,'ayame')==='ichiraku';
+        const serve=ayameHere?'Аяме принимает заказ и через несколько минут ставит перед тобой горячую миску.':'Через несколько минут перед тобой появляется горячая миска рамена.';
+        const line=`Ты устраиваешься у стойки Ичираку и заказываешь рамен. ${serve} Бульон согревает, и голод наконец отпускает. Потрачено ${cost} рё.`;
+        setActionResult(raw,line); render(); return;
+      }
+      const line='Ты уже выбрал, что заказать, но в кошельке не хватает рё. Можно взять что-то попроще или вернуться позже.';
+      setActionResult(raw,line); render(); return;
+    }
+    const here=getLocation(state.world.location);
+    const line=/заказал|заказала|заказываю/.test(clean)
+      ? `Ты вспоминаешь о заказе, но здесь еду не подают. Сейчас ты в «${here.name}». За раменом можно зайти в Ичираку через карту.`
+      : `Похоже, пора поесть. Сейчас ты в «${here.name}». В Ичираку можно заказать рамен, а дома проверить холодильник.`;
+    tickAction(state,3); setActionResult(raw,line); render(); return;
+  }
   const movement = /(?:^|\s)(иду|идем|идём|пойду|пойти|схожу|сходить|пошел|пошёл|пошла|направляюсь|отправляюсь|отправился|отправилась|двигаюсь|возвращаюсь|захожу|зайду|зайти|перехожу|перемещаюсь|прогуляюсь|бегу|подхожу|выхожу|вышел|вышла|ищу|навещаю|встречаю|посещаю|посетить)(?:\s|$)/i.test(clean);
   const mentionedCharacter = findMentionedCharacter(clean);
   const mentionedNpcPlace = mentionedCharacter ? getNpcLocation(state,mentionedCharacter.id) : '';
@@ -377,7 +439,7 @@ function executeFreeAction(rawText) {
     }
     state.ui.sceneCharacterId = character.id;
     state.ui.targetId = character.id;
-    state.ui.view = 'profile';
+    state.ui.view = 'world';
     appendDialogue(character.id,'player',raw);
     const response = talkToCharacter(state,character,raw);
     appendDialogue(character.id,'npc',response.reply);
@@ -397,7 +459,7 @@ function executeFreeAction(rawText) {
     }
     state.ui.sceneCharacterId = character.id;
     state.ui.targetId = character.id;
-    state.ui.view = 'profile';
+    state.ui.view = 'world';
     const approach = `Ты подходишь к ${character.name}. Она замечает тебя и готова поговорить.`;
     appendDialogue(character.id,'player',raw);
     appendDialogue(character.id,'npc',approach);
@@ -505,7 +567,13 @@ function executeFreeAction(rawText) {
   const petActionDone = Boolean(pet && /(кормлю|накормил|накормлю|даю корм|кормить|играю|поиграю|играть|бросаю мяч|гуляю|прогулк|вывожу|вожу гулять)/i.test(clean));
   if (!purchaseMatch && !activityTypes.length && !destinationId && !petActionDone && !incidentActionResolved) {
     tickAction(state,12);
-    resultParts.push(`Ты выполняешь задуманное: «${raw}». ${getLocation(state.world.location).desc}`);
+    const place=getLocation(state.world.location);
+    const contextual = /(сижу|сажусь|присел|присела|устраиваюсь)/i.test(clean) ? `Ты устраиваешься поудобнее в «${place.name}». Вокруг продолжается обычная жизнь деревни.`
+      : /(жду|ожидаю|подожду)/i.test(clean) ? `Ты остаёшься в «${place.name}» и ждёшь. Проходит несколько минут; пока ничего не меняется.`
+      : /(слушаю|прислушиваюсь)/i.test(clean) ? `Ты на минуту замолкаешь и прислушиваешься. ${place.desc}`
+      : /(пишу|записываю|делаю заметки)/i.test(clean) ? `Ты находишь спокойное место и записываешь мысли, чтобы не забыть важные детали.`
+      : `Ты занимаешься этим в «${place.name}». ${place.desc}`;
+    resultParts.push(contextual);
   }
 
   const weatherLabels = {sunny:'светит солнце',rain:'идёт дождь',snow:'падает снег',wind:'дует ветер',cloudy:'небо затянуто облаками',fog:'улицы скрыты туманом'};
@@ -529,7 +597,7 @@ function sendWorldDialogue(characterId,rawText) {
   }
   state.ui.sceneCharacterId = character.id;
   state.ui.targetId = character.id;
-  state.ui.view = 'profile';
+  if (!['world','conversation'].includes(state.ui.view)) state.ui.view = 'world';
   state.metCharacters ||= [];
   if (!state.metCharacters.includes(character.id)) state.metCharacters.push(character.id);
   state.meetingHistory ||= {};
@@ -545,6 +613,23 @@ function sendWorldDialogue(characterId,rawText) {
   state.ui.lastActionText = text;
   state.ui.lastActionResult = `${character.name}: ${response.reply}`;
   addFeed(state,`${state.player.name} поговорил с ${character.name}.`);
+  render();
+}
+
+function sendConversationAction(characterId,action) {
+  const character=getCharacter(characterId);
+  if (!character || !state.unlocked.includes(character.id)) return;
+  if (getNpcLocation(state,character.id)!==state.world.location) {
+    toast(`${character.name} сейчас не рядом.`);
+    return;
+  }
+  const result=performConversationAction(state,character,action);
+  if (!result?.playerText || !result?.reply) return;
+  appendDialogue(character.id,'player',result.playerText);
+  appendDialogue(character.id,'npc',result.reply);
+  state.ui.targetId=character.id;
+  state.ui.view='conversation';
+  addFeed(state,`${state.player.name} использовал дружеский жест в разговоре с ${character.name}.`);
   render();
 }
 
@@ -676,8 +761,29 @@ function combatMove(move) {
 
 function openSettings() { renderSettings(state); }
 
+const TITLE_PREF_KEY = 'neg-title-preferences-v1';
+function getTitlePreferences() {
+  try { return {...{musicVolume:35,sfxVolume:55,animations:true},...JSON.parse(localStorage.getItem(TITLE_PREF_KEY)||'{}')}; }
+  catch { return {musicVolume:35,sfxVolume:55,animations:true}; }
+}
 function openTitleSettings() {
-  elements.modal.innerHTML = `<div class="modal-backdrop"><section class="modal-card"><div class="modal-head"><div><div class="eyebrow">NARUTO ENOT GAREM</div><h3>Настройки</h3></div><button class="close-button" data-action="close-modal">×</button></div><p>Создай или загрузи историю, чтобы сохранить игровые настройки. Пока доступны русский язык и локальная игра без ключей.</p><div class="settings-actions"><a class="btn btn-soft" href="https://pixabay.com/music/ambient-japanese-style-ambient-475587/" target="_blank" rel="noopener">Музыка из библиотеки ↗</a><button class="btn btn-primary" data-action="close-modal">Понятно</button></div></section></div>`;
+  const prefs=getTitlePreferences();
+  elements.modal.innerHTML = `<div class="modal-backdrop"><section class="modal-card settings-modal"><div class="modal-head"><div><div class="eyebrow">NARUTO ENOT GAREM</div><h3>Настройки</h3><small>Настройки меню не создают игровое сохранение.</small></div><button class="close-button" data-action="close-modal">×</button></div>
+    <label class="setting-row"><span>Громкость музыки <output>${prefs.musicVolume}%</output></span><input type="range" min="0" max="100" value="${prefs.musicVolume}" data-title-setting="musicVolume"></label>
+    <label class="setting-row"><span>Громкость эффектов <output>${prefs.sfxVolume}%</output></span><input type="range" min="0" max="100" value="${prefs.sfxVolume}" data-title-setting="sfxVolume"></label>
+    <label class="setting-row"><span>Анимации интерфейса</span><input class="switch" type="checkbox" data-title-setting="animations" ${prefs.animations?'checked':''}></label>
+    <div class="music-note"><b>Фоновая композиция</b><br>Japanese-style ambient · Pixabay, cornist. Трек открывается в библиотеке автора; MP3 не включён в проект.<br><a class="external-link" href="https://pixabay.com/music/ambient-japanese-style-ambient-475587/" target="_blank" rel="noopener">Открыть композицию на Pixabay ↗</a></div>
+    <div class="settings-actions"><button class="btn btn-primary" data-action="close-modal">Готово</button></div></section></div>`;
+}
+function openTitleGallery() {
+  const seen=state?.gallerySeen?.characters||{};
+  const cards=CHARACTERS.map(character=>{
+    const src=character.art?.[0]?.src||'';
+    const wasSeen=(seen[character.id]||[]).includes(src);
+    return `<button class="title-gallery-tile" data-action="view-art" data-src="${escapeHTML(src)}"><img src="${escapeHTML(src)}" alt="" loading="lazy"><span>${escapeHTML(character.name)}</span><small>${wasSeen?'Встречено в RP':'Портрет персонажа'}</small></button>`;
+  }).join('');
+  const seenScenes=state?.gallerySeen?.backgrounds||[];
+  elements.modal.innerHTML=`<div class="modal-backdrop"><section class="modal-card title-gallery-modal"><div class="modal-head"><div><div class="eyebrow">АРХИВ КОНОХИ</div><h3>Галерея</h3><small>Портреты персонажей и сцены, встреченные в текущей истории.</small></div><button class="close-button" data-action="close-modal">×</button></div><div class="title-gallery-grid">${cards}</div><div class="title-gallery-scenes"><b>Сцены из твоей истории · ${seenScenes.length}</b><div>${seenScenes.length?seenScenes.map(src=>`<button data-action="view-art" data-src="${escapeHTML(src)}"><img src="${escapeHTML(src)}" alt="" loading="lazy"></button>`).join(''):'<p class="chat-hint">После начала истории посещённые локации появятся здесь.</p>'}</div></div></section></div>`;
 }
 
 function openArtViewer(src) {
@@ -713,24 +819,25 @@ document.addEventListener('click',event=>{
   if (event.target.classList.contains('modal-backdrop')) { elements.modal.innerHTML = ''; return; }
   if (!button) return;
   const {action,id,type,hours,item} = button.dataset;
+  if (action!=='view-art' && action!=='close-modal') playUiSound(action==='new-game'||action==='continue'?'success':'tap');
   switch (action) {
     case 'new-game': populateOrigins(); showScreen('creation'); break;
     case 'random-name': { const field=document.getElementById('player-name'); if(field) field.value=randomPlayerName(); break; }
     case 'random-character': randomizeCreator(); break;
     case 'continue': { const loaded = loadState(); if (loaded) { state=loaded; showScreen('game'); } else toast('Сохранение не найдено.'); break; }
     case 'home': showScreen('title'); break;
-    case 'title-settings': if (!state) { state=createInitialState({name:'Посетитель',origin:'resident'}); state.previewOnly=true; state.ui.view='settings'; } showScreen('game'); switchView('settings'); break;
-    case 'open-gallery': { if (!state) { state=createInitialState({name:'Посетитель галереи',origin:'resident'}); state.previewOnly=true; state.ui.view='gallery'; } showScreen('game'); switchView('gallery'); break; }
+    case 'title-settings': openTitleSettings(); break;
+    case 'open-gallery': openTitleGallery(); break;
     case 'exit-game': { const notice='Окно игры можно закрыть средствами браузера. Сохранение останется на этом устройстве.'; toast(notice); try { window.close(); } catch {} break; }
     case 'toggle-drawer': { const game=document.getElementById('game-screen'); game?.classList.toggle('drawer-open'); if(state) state.ui.drawerOpen=game?.classList.contains('drawer-open')||false; break; }
-    case 'open-settings': switchView('settings'); break;
+    case 'open-settings': if(state) switchView('settings'); else openTitleSettings(); break;
     case 'view-art': openArtViewer(button.dataset.src||''); break;
     case 'profile-art-prev': case 'profile-art-next': case 'profile-art-set': { const character=getCharacter(id); const arts=getUnlockedCharacterArts(state,character); if(!arts.length)break; const current=Number(state.ui.profileArtIndex)||0; const next=action==='profile-art-set'?Math.max(0,Math.min(arts.length-1,Number(button.dataset.index)||0)):(current+(action==='profile-art-next'?1:-1)+arts.length)%arts.length; state.ui.profileArtIndex=next; state.gallerySeen ||= {characters:{},backgrounds:[]}; state.gallerySeen.characters ||= {}; state.gallerySeen.characters[id] ||= []; const src=arts[next].src; if(!state.gallerySeen.characters[id].includes(src))state.gallerySeen.characters[id].push(src); render(); break; }
     case 'quest-tab': state.ui.questTab=id==='history'?'history':'active'; render(); break;
     case 'bag-filter': state.ui.bagTab=['all','food','gift','clothing','pet','material','other'].includes(id)?id:'all'; state.ui.selectedItemId=''; render(); break;
     case 'select-item': state.ui.selectedItemId=id; render(); break;
     case 'toggle-map-legend': state.ui.mapLegend=!state.ui.mapLegend; render(); break;
-    case 'language-prev': case 'language-next': state.settings.languageIndex=0; toast('Пока доступен только русский язык.'); break;
+    case 'language-prev': case 'language-next': if(state) state.settings.languageIndex=0; toast('Пока доступен только русский язык.'); break;
     case 'home-storage': openHomeStorage(id); break;
     case 'storage-put': { const item=state.inventory.find(entry=>entry.id===id&&entry.kind==='food'&&entry.qty>0); if(!item){toast('Подходящий продукт не найден.');break;} state.storage ||= {fridge:[]}; state.storage.fridge ||= []; if(removeItem(state,id,1)){const stored=state.storage.fridge.find(entry=>entry.id===id);if(stored)stored.qty++;else state.storage.fridge.push({...item,qty:1});openHomeStorage('fridge');persist();} break; }
     case 'storage-take': { state.storage ||= {fridge:[]}; const item=state.storage.fridge.find(entry=>entry.id===id&&entry.qty>0); if(!item)break; addItem(state,{...item,qty:1}); item.qty--; if(item.qty<=0)state.storage.fridge=state.storage.fridge.filter(entry=>entry.qty>0); openHomeStorage('fridge');persist();break; }
@@ -744,13 +851,25 @@ document.addEventListener('click',event=>{
     case 'close-modal': elements.modal.innerHTML=''; break;
     case 'skip-time': skipTime(state,Number(hours)||1); render(); break;
     case 'sleep': sleepUntilMorning(state); render(); toast('Наступило утро.'); break;
-    case 'travel': if (travelTo(state,id)) { const local = CHARACTERS.find(character=>state.unlocked.includes(character.id) && getNpcLocation(state,character.id)===id); state.ui.sceneCharacterId=local?.id || ''; render(); toast(`Переход занял ${state.ui.lastTravelMinutes} мин.`); } else toast(state.ui.travelFailure||'Не удалось перейти в это место.'); break;
+    case 'travel': if (travelTo(state,id)) { const local = CHARACTERS.find(character=>state.unlocked.includes(character.id) && getNpcLocation(state,character.id)===id); state.ui.sceneCharacterId=local?.id || ''; state.ui.view='world'; state.ui.targetId=''; state.ui.drawerOpen=false; document.getElementById('game-screen')?.classList.remove('drawer-open'); render(); toast(`Ты прибыл(а) в ${getLocation(id).name}. Переход занял ${state.ui.lastTravelMinutes} мин.`); } else toast(state.ui.travelFailure||'Не удалось перейти в это место.'); break;
     case 'activity': doActivity(state,type); render(); break;
     case 'patrol': startPatrol(); break;
     case 'scene-patrol': startPatrol(id); break;
     case 'combat-move': combatMove(type); break;
     case 'close-encounter': state.encounter=null; elements.modal.innerHTML=''; render(); break;
     case 'open-person': state.ui.view='profile'; state.ui.targetId=id; state.ui.sceneCharacterId=id; state.ui.profileArtIndex=0; render(); break;
+    case 'open-conversation': {
+      const character=getCharacter(id); if(!character)break;
+      const where=getNpcLocation(state,character.id);
+      if(where!==state.world.location){toast(`${character.name} сейчас не здесь.`);break;}
+      state.ui.view='conversation'; state.ui.targetId=id;
+      const opening=npcOpeningLine(state,character);
+      if(opening) appendDialogue(character.id,'npc',opening);
+      render(); break;
+    }
+    case 'conversation-gesture': sendConversationAction(state?.ui?.targetId,type); break;
+    case 'back-profile': state.ui.view='profile'; state.ui.targetId=id; render(); break;
+    case 'open-map-to-character': { const character=getCharacter(id); if(character){state.ui.view='map';state.ui.targetId=id;render();toast('Найди метку на карте. Точное личное расписание не раскрывается.');} break; }
     case 'invite-companion': { const character=getCharacter(id); const bond=state.bonds?.[id]||{}; if(!character)break; if((bond.friendship||0)<35||(bond.trust||0)<25){toast('Сначала укрепи дружбу и доверие.');break;} state.companions ||= []; if(!state.companions.includes(id)) state.companions.push(id); addFeed(state,`${character.name} согласилась войти в твой ближний круг и помогать с общими делами.`); render(); toast(`${character.name} теперь твоя спутница.`); break; }
     case 'select-scene-character': state.ui.sceneCharacterId=id; render(); break;
     case 'back-people': state.ui.view='people'; state.ui.targetId=''; render(); break;
@@ -801,7 +920,7 @@ document.addEventListener('click',event=>{
 document.addEventListener('click',event=>{
   // #app itself also carries data-view for CSS; only actual navigation buttons may switch pages.
   const nav = event.target.closest('button[data-view]');
-  if (nav && state) switchView(nav.dataset.view);
+  if (nav && state) { playUiSound('nav'); switchView(nav.dataset.view); }
 });
 
 document.addEventListener('submit',event=>{
@@ -821,23 +940,11 @@ document.addEventListener('submit',event=>{
     sendWorldDialogue(form.get('characterId'),form.get('message'));
     return;
   }
-  if (event.target.id === 'chat-form') {
+  if (event.target.id === 'conversation-form') {
     event.preventDefault();
     const form = new FormData(event.target);
-    const character = getCharacter(form.get('characterId'));
-    const text = String(form.get('message') || '').trim();
-    if (!character || !text) return;
-    const npcPlace=getNpcLocation(state,character.id);
-    if (npcPlace!==state.world.location) { toast(`${character.name} сейчас не здесь. Личная беседа возможна только при встрече.`); state.ui.lastActionResult=`${character.name} сейчас находится в «${npcPlace?getLocation(npcPlace).name:'другой части деревни'}».`; render(); return; }
-    state.metCharacters ||= []; if(!state.metCharacters.includes(character.id)) state.metCharacters.push(character.id);
-    state.meetingHistory ||= {}; state.meetingHistory[character.id] ||= {firstDay:state.world.day,firstLocation:state.world.location,firstMinute:state.world.minute};
-    state.gallerySeen ||= {characters:{},backgrounds:[]}; state.gallerySeen.characters ||= {}; state.gallerySeen.characters[character.id] ||= [];
-    const firstArt=character.art?.[0]?.src; if(firstArt&&!state.gallerySeen.characters[character.id].includes(firstArt)) state.gallerySeen.characters[character.id].push(firstArt);
-    appendDialogue(character.id,'player',text);
-    const result = talkToCharacter(state,character,text);
-    appendDialogue(character.id,'npc',result.reply);
-    addFeed(state,`${state.player.name} поговорил с ${character.name}.`);
-    render();
+    sendWorldDialogue(state?.ui?.targetId,form.get('message'));
+    return;
   }
   if (event.target.id === 'social-post-form') { event.preventDefault(); publishPhonePost(new FormData(event.target).get('post'),event.target.dataset.platform||'konohagram'); }
   if (event.target.id === 'phone-message-form') { event.preventDefault(); const data=new FormData(event.target); sendPhoneMessage(data.get('characterId'),data.get('message')); }
@@ -846,8 +953,20 @@ document.addEventListener('submit',event=>{
   if (event.target.id === 'promise-form') { event.preventDefault(); addCustomPromise(new FormData(event.target).get('promise')); }
 });
 
+document.addEventListener('input',event=>{
+  if (event.target.dataset.titleSetting && ['musicVolume','sfxVolume'].includes(event.target.dataset.titleSetting)) {
+    const output=event.target.parentElement?.querySelector('output'); if(output) output.textContent=`${event.target.value}%`;
+    const prefs=getTitlePreferences(); prefs[event.target.dataset.titleSetting]=Number(event.target.value); localStorage.setItem(TITLE_PREF_KEY,JSON.stringify(prefs));
+  }
+});
+
 document.addEventListener('change',event=>{
   if (event.target.id === 'player-origin') updateOriginNote();
+  if (event.target.dataset.titleSetting) {
+    const prefs=getTitlePreferences(); const key=event.target.dataset.titleSetting;
+    prefs[key]=event.target.type==='checkbox'?event.target.checked:Number(event.target.value);
+    localStorage.setItem(TITLE_PREF_KEY,JSON.stringify(prefs)); return;
+  }
   if (event.target.dataset.setting && state) {
     const key = event.target.dataset.setting;
     state.settings[key] = event.target.type === 'checkbox' ? event.target.checked : (event.target.type === 'range' ? Number(event.target.value) : event.target.value);

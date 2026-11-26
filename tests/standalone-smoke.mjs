@@ -62,6 +62,15 @@ vm.runInNewContext(fs.readFileSync(new URL('../standalone.js', import.meta.url),
 
 const click = listeners.click?.[0];
 assert.equal(typeof click,'function','click handler must initialize');
+// Title settings and gallery must never create a phantom player/save.
+assert.equal(context.window.NEG_TEST.state(),null,'fresh install must not have a game state');
+const titleSettingsButton={dataset:{action:'title-settings'},textContent:'Настройки',closest(){return this;}};
+click({target:{closest:selector=>selector==='[data-action]'?titleSettingsButton:null,classList:{contains:()=>false}}});
+assert.equal(context.window.NEG_TEST.state(),null,'opening title settings must not create a player');
+assert.ok(getElement('modal-root').innerHTML.includes('Настройки'),'title settings should open as a modal');
+assert.equal(getElement('game-screen').classList.contains('hidden'),true,'title settings must not enter the game');
+const closeTitleModal={dataset:{action:'close-modal'},textContent:'Закрыть',closest(){return this;}};
+click({target:{closest:selector=>selector==='[data-action]'?closeTitleModal:null,classList:{contains:()=>false}}});
 const newGameButton = {dataset:{action:'new-game'},textContent:'Новая история',closest(){return this;}};
 click({target:{closest:()=>newGameButton,classList:{contains:()=>false}}});
 assert.equal(getElement('creation-screen').classList.contains('hidden'),false,'new-game button must reveal character creation');
@@ -87,9 +96,17 @@ const worldActionForm = new FakeElement('world-action-form'); Object.assign(worl
 submit({target:worldActionForm,preventDefault(){}});
 assert.equal(context.window.NEG_TEST.state().world.location,'hospital','free-text movement must navigate to a named location');
 assert.ok(context.window.NEG_TEST.state().ui.lastActionResult.includes('направляешься'),'free-text action must return a narrated result');
+context.window.NEG_TEST.state().world.location='ichiraku';
+context.window.NEG_TEST.state().player.stats.stamina=60;
+const coinsBeforeOrder=context.window.NEG_TEST.state().player.stats.coins; const staminaBeforeOrder=context.window.NEG_TEST.state().player.stats.stamina;
+context.window.NEG_TEST.action('Я голоден, заказал еду.');
+assert.ok(context.window.NEG_TEST.state().ui.lastActionResult.includes('горячая миска рамена'),'food-order action should produce a contextual restaurant scene');
+assert.equal(context.window.NEG_TEST.state().player.stats.coins,coinsBeforeOrder-18,'ordering ramen should deduct its price');
+assert.ok(context.window.NEG_TEST.state().player.stats.stamina>staminaBeforeOrder,'eating should restore stamina');
+context.window.NEG_TEST.state().world.location='hospital';
 const worldDialogueForm = new FakeElement('world-dialogue-form'); context.window.NEG_TEST.state().npcLocations.sakura='hospital'; Object.assign(worldDialogueForm,{id:'world-dialogue-form',data:{characterId:'sakura',message:'Привет, Сакура! Как прошёл твой день?'}});
 submit({target:worldDialogueForm,preventDefault(){}});
-assert.equal(context.window.NEG_TEST.state().ui.view,'profile','free-text dialogue must open the selected character profile page');
+assert.equal(context.window.NEG_TEST.state().ui.view,'world','free-text dialogue must stay on the RP home page');
 assert.ok(context.window.NEG_TEST.state().dialogues.sakura.some(message=>message.from==='player' && message.text.includes('Как прошёл')),'free-text dialogue must be saved in the character history');
 const naturalActionForm = new FakeElement('world-action-form'); context.window.NEG_TEST.state().npcLocations.hinata='hospital'; Object.assign(naturalActionForm,{id:'world-action-form',data:{action:'Иду к Хинате и спрашиваю, как прошёл её день.'}});
 submit({target:naturalActionForm,preventDefault(){}});
@@ -144,12 +161,8 @@ click({target:{closest:selector=>selector==='[data-action]'?openProfileButton:nu
 assert.equal(context.window.NEG_TEST.state().ui.view,'profile','character dossier must be a separate page');
 const profileAwayHtml=getElement('view-root').innerHTML;
 assert.ok(!profileAwayHtml.includes('id="chat-form"'),'profile should not expose a personal chat form when character is away');
-assert.ok(profileAwayHtml.includes('Личная беседа доступна после встречи'),'profile should explain that the character is away');
-const previousSakuraMessages=context.window.NEG_TEST.state().dialogues.sakura?.length||0;
-const blockedChatForm=new FakeElement('chat-form'); Object.assign(blockedChatForm,{id:'chat-form',data:{characterId:'sakura',message:'Привет, Сакура.'}});
-submit({target:blockedChatForm,preventDefault(){}});
-assert.equal(context.window.NEG_TEST.state().dialogues.sakura?.length||0,previousSakuraMessages,'personal chat must be blocked while the character is away');
-assert.ok(context.window.NEG_TEST.state().ui.lastActionResult.includes('сейчас находится'),'blocked chat should explain why the character cannot answer');
+assert.ok(profileAwayHtml.includes('Последняя известная встреча'),'profile should show last known meeting without chat controls');
+assert.ok(!profileAwayHtml.includes('conversation-form')&&!profileAwayHtml.includes('chat-form'),'profile dossier must not contain any dialogue form');
 const backToPeopleButton = {dataset:{action:'back-people'},textContent:'К списку',closest(){return this;}};
 click({target:{closest:selector=>selector==='[data-action]'?backToPeopleButton:null,classList:{contains:()=>false}}});
 assert.equal(context.window.NEG_TEST.state().ui.view,'people','profile back button must return to character list');

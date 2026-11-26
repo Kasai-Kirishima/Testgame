@@ -5,6 +5,7 @@ import {clockLabel,timePeriod,getWeather,seasonLabel,getNpcLocation,getTravelMin
 import {PETS} from '../data/pets.js';
 import {JOBS,getJob} from '../data/jobs.js';
 import {getEnemy} from '../data/enemies.js';
+import {CONVERSATION_ACTIONS,CONVERSATION_ACTION_GROUPS} from '../data/conversation-actions.js';
 
 export const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g,char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
@@ -57,7 +58,7 @@ function renderWorld(state) {
       ${ambientPet?`<div class="rp-full-pet" title="${escapeHTML(ambientPet.name)}">${ambientPet.icon||'🐾'}</div>`:''}
       ${ambientEnemy?`<button class="rp-full-enemy" data-action="scene-patrol" data-id="${ambientEnemy.id}"><img src="${ambientEnemy.image}" alt=""><span>${escapeHTML(ambientEnemy.name)} · проверить</span></button>`:''}
       <div class="rp-place-title"><small>СЕЙЧАС В КОНОХЕ</small><h2>${escapeHTML(place.name)}</h2><p>${escapeHTML(place.desc)}</p></div>
-      <div class="rp-scene-bottom"><div class="rp-speaker-line"><b>${escapeHTML(speaker)}</b><span>${activeCharacter?`Рядом · ${escapeHTML(activeCharacter.name)}`:'Тихая сцена'}</span></div><p>${escapeHTML(narration)}</p></div>
+      <div class="rp-scene-bottom"><div class="rp-speaker-line"><b>${escapeHTML(speaker)}</b><span>${activeCharacter?`Рядом · ${escapeHTML(activeCharacter.name)}`:'Тихая сцена'}</span></div><p data-typewriter>${escapeHTML(narration)}</p></div>
     </section>
     <section class="rp-control-deck">
       <form id="world-action-form" class="rp-text-action"><label><span>СВОБОДНОЕ ДЕЙСТВИЕ</span><small>Пиши, что делаешь, куда идёшь или что исследуешь</small></label><textarea name="action" rows="2" maxlength="700" placeholder="Например: осматриваю витрину, затем захожу в цветочную лавку…" required>${escapeHTML(state.ui.lastActionText||'')}</textarea><button class="btn btn-primary" type="submit">Выполнить ↗</button></form>
@@ -69,10 +70,11 @@ function renderMap(state) {
   const place = getLocation(state.world.location);
   const coords = {
     'main-street':[49,48],'ichiraku':[30,37],'flower-shop':[66,37],market:[80,48],training:[76,73],hospital:[44,82],hokage:[51,17],
-    'tea-house':[28,56],river:[15,83],forest:[7,51],memorial:[14,18],gate:[50,5],library:[20,39],garden:[34,70],home:[56,64],
+    'tea-house':[28,56],river:[15,83],forest:[7,51],memorial:[14,18],gate:[50,5],library:[20,39],garden:[34,70],home:[56,64],'music-hall':[88,48],
     academy:[81,20],campsite:[6,83],bathhouse:[21,63],dojo:[89,76],archive:[19,29],residential:[64,55],rooftop:[69,22],greenhouse:[40,70]
   };
-  const pins = LOCATIONS.map(location=>{
+  const visibleLocations=LOCATIONS.filter(location=>!location.hidden || state.discoveredLocations?.includes(location.id));
+  const pins = visibleLocations.map(location=>{
     const [x,y]=coords[location.id]||[50,50];
     const access=getLocationAccess(state,location.id); const locked=!access.allowed; const minutes=getTravelMinutes(place.id,location.id);
     return `<button class="map-pin ${location.id===place.id?'current':''} ${locked?'locked':''}" style="left:${x}%;top:${y}%" data-action="travel" data-id="${location.id}" ${locked?'disabled':''} title="${escapeHTML(locked?access.reason:location.name)}"><span>${location.icon}</span><b>${escapeHTML(location.name)}</b><i>${location.id===place.id?'Здесь':locked?'Закрыто':`${minutes} мин`}</i></button>`;
@@ -81,7 +83,7 @@ function renderMap(state) {
     <section class="map-ornate-banner map-ornate-banner-v2"><div><small>🌸 КАРТА КОНОХИ</small><h3>Деревня Скрытого Листа</h3><p>Текущее место: <b>${escapeHTML(place.name)}</b></p></div><button class="btn btn-soft" data-action="toggle-map-legend">${state.ui.mapLegend?'Скрыть легенду':'Открыть легенду'}</button></section>
     ${state.ui.mapLegend?`<section class="panel-card map-legend"><b>Легенда карты</b><span>🏠 Жилые места</span><span>🍜 Еда и магазины</span><span>⚕️ Службы и госпиталь</span><span>🥋 Тренировки</span><span>🌲 Природа</span><span>🔒 Временно закрытая зона</span><p>Переход занимает от 5 до 32 игровых минут в зависимости от расстояния. Если ты договаривался о встрече, внезапный уход будет заметен собеседнику.</p></section>`:''}
     <section class="map-overview" aria-label="Схематичная карта Конохи"><svg class="map-roads" viewBox="0 0 1000 640" preserveAspectRatio="none" aria-hidden="true"><defs><pattern id="map-grid" width="48" height="48" patternUnits="userSpaceOnUse"><path d="M48 0H0V48" fill="none" stroke="rgba(246,208,231,.06)" stroke-width="1"/></pattern></defs><rect width="1000" height="640" fill="url(#map-grid)"/><path d="M-40 250 C170 205 230 300 390 275 S720 190 1040 255 M170 -30 C220 120 350 170 500 230 S650 420 610 680 M-30 485 C180 430 280 520 445 495 S770 410 1030 485" fill="none" stroke="#c89bb9" stroke-width="25" opacity=".16" stroke-linecap="round"/><path d="M-40 250 C170 205 230 300 390 275 S720 190 1040 255 M170 -30 C220 120 350 170 500 230 S650 420 610 680 M-30 485 C180 430 280 520 445 495 S770 410 1030 485" fill="none" stroke="#e3c3d9" stroke-width="2" opacity=".22" stroke-dasharray="7 13"/><path d="M740 -20 C690 100 830 180 790 300 S860 520 1010 660" fill="none" stroke="#6fa8b2" stroke-width="50" opacity=".2"/><path d="M70 80 L230 35 390 85 470 40 690 65 930 120 950 330 875 580 660 605 450 570 240 605 50 500Z" fill="none" stroke="rgba(246,198,225,.22)" stroke-width="3" stroke-dasharray="10 10"/><g fill="rgba(195,139,176,.16)" stroke="rgba(236,188,220,.16)"><rect x="335" y="95" width="135" height="78" rx="12"/><rect x="520" y="95" width="170" height="90" rx="12"/><rect x="340" y="370" width="155" height="90" rx="12"/><rect x="560" y="365" width="125" height="100" rx="12"/></g><g fill="rgba(232,176,211,.35)" font-size="18" font-family="sans-serif"><text x="390" y="140">ЦЕНТР</text><text x="565" y="145">ТОРГОВЫЙ РЯД</text><text x="367" y="420">ЖИЛОЙ КВАРТАЛ</text><text x="575" y="420">ВОСТОК</text></g></svg>${pins}<div class="map-compass">N<br>✦</div><div class="map-scale">СХЕМА ДЕРЕВНИ · НЕ В МАСШТАБЕ</div></section>
-    <div class="map-locations-list">${LOCATIONS.map(location=>`<button class="map-list-row ${location.id===place.id?'current':''}" data-action="travel" data-id="${location.id}" ${!getLocationAccess(state,location.id).allowed?'disabled':''}><span>${location.icon}</span><b>${escapeHTML(location.name)}</b><small>${escapeHTML(location.area)}</small><em>${location.id===place.id?'Ты здесь':getLocationAccess(state,location.id).allowed?`${getTravelMinutes(place.id,location.id)} мин · Перейти`:'Закрыто 🔒'}</em></button>`).join('')}</div>`;
+    <p class="map-tap-hint">Нажми на метку на карте, чтобы перейти. Закрытые места отмечены замком; причина ограничения появится при выборе.</p>`;
 }
 function renderDay(state) {
   const companions = CHARACTERS.filter(character=>state.companions?.includes(character.id));
@@ -146,7 +148,8 @@ function renderPersonDetail(state,character) {
   if(currentArt?.src&&!state.gallerySeen.characters[character.id].includes(currentArt.src)) state.gallerySeen.characters[character.id].push(currentArt.src);
   const knownSince=state.meetingHistory?.[character.id]?.firstDay;
   const gifts=state.giftHistory?.[character.id]||[];
-  const stageClass=value>=70?'high':value>=35?'mid':'new';
+  const stageValue=Math.max(bond.friendship||0,bond.trust||0,bond.respect||0);
+  const stageClass=stageValue>=70?'high':stageValue>=35?'mid':'new';
   const meetingText=knownSince?`Знакомы с ${knownSince} дня`:'Дата знакомства пока неизвестна';
   return `${heading(character.name,`${character.role} · ${character.personality}`)}
     <div class="dossier-layout">
@@ -165,12 +168,26 @@ function renderPersonDetail(state,character) {
           <div class="dossier-art-stage"><button class="art-arrow prev" data-action="profile-art-prev" data-id="${character.id}" aria-label="Предыдущее изображение">‹</button><img src="${escapeHTML(currentArt?.src||'')}" alt="${escapeHTML(character.name)} — ${escapeHTML(currentArt?.label||'Портрет')}" data-action="view-art" data-src="${escapeHTML(currentArt?.src||'')}" loading="eager"><button class="art-arrow next" data-action="profile-art-next" data-id="${character.id}" aria-label="Следующее изображение">›</button><span class="art-caption">${escapeHTML(currentArt?.label||'Портрет')}</span></div>
           <div class="dossier-art-dots">${art.map((item,i)=>`<button class="${i===index?'active':''}" data-action="profile-art-set" data-id="${character.id}" data-index="${i}" aria-label="${escapeHTML(item.label)}"></button>`).join('')}</div>${allArt.length>art.length?`<p class="art-unlock-hint">Следующие образы открываются по мере развития знакомства. Сейчас открыто ${art.length} из ${allArt.length}.</p>`:''}
         </section>
-        <section class="panel-card dossier-story"><div class="card-head"><h3>История ваших встреч</h3><small>${history.length} реплик</small></div><p class="dossier-bio">${escapeHTML(character.notes||character.personality)}</p><div class="dossier-history">${history.length?history.slice(-12).map(item=>`<div class="dossier-history-line ${item.from==='player'?'from-player':'from-npc'}"><b>${item.from==='player'?escapeHTML(state.player.name):escapeHTML(character.name)}</b><p>${escapeHTML(item.text)}</p><small>День ${item.day} · ${String(Math.floor((item.minute||0)/60)).padStart(2,'0')}:${String((item.minute||0)%60).padStart(2,'0')}</small></div>`).join(''):'<p class="chat-hint">Пока здесь нет сохранённых разговоров. История будет пополняться после встреч.</p>'}</div></section>
+        <section class="panel-card dossier-story"><div class="card-head"><h3>История знакомства</h3><small>${bond.meetings||0} встреч</small></div><p class="dossier-bio">${escapeHTML(character.notes||character.personality)}</p><div class="dossier-history">${lastMemories.length?lastMemories.slice(-8).reverse().map(item=>`<div class="dossier-history-line"><b>${escapeHTML(item.title||'Событие')}</b><p>${escapeHTML(item.text||'Вы провели время вместе.')}</p><small>${item.day?`День ${item.day}`:'Запись знакомства'}</small></div>`).join(''):`<p class="chat-hint">Пока нет важных событий. После встреч здесь появятся запомнившиеся моменты, договорённости и поступки.</p>`}</div></section>
         <section class="panel-card dossier-gifts"><div class="card-head"><h3>Подарки и расходы</h3><small>${gifts.length} записей</small></div>${gifts.length?`<ul>${gifts.map(item=>`<li>${escapeHTML(item.name)} · ${item.price?`${item.price} рё`: 'стоимость неизвестна'} · день ${item.day}</li>`).join('')}</ul>`:'<p class="chat-hint">Пока подарков и расходов на неё не записано.</p>'}</section>
-        <section class="panel-card chat-card"><div class="card-head"><h3>Личный разговор</h3><small>${isHere?'ОНА РЯДОМ':'НЕТ НА МЕСТЕ'}</small></div>${isHere?`<form id="chat-form" class="chat-form"><input type="hidden" name="characterId" value="${character.id}"><textarea name="message" class="chat-input" rows="2" maxlength="500" placeholder="Напиши свою реплику вручную…" required></textarea><button class="send-button" type="submit">➤</button></form>`:`<div class="chat-away-note">${escapeHTML(character.name)} сейчас в локации «${escapeHTML(placeName)}». Личная беседа доступна после встречи.</div>`}</section>
+        <section class="panel-card dossier-availability"><div class="card-head"><h3>Последняя известная встреча</h3><small>${isHere?'РЯДОМ':'НЕ РЯДОМ'}</small></div><p>${isHere?`${escapeHTML(character.name)} сейчас находится в той же локации. Вернись к RP-сцене, чтобы продолжить разговор.`:`Последняя известная локация: ${escapeHTML(placeName)}. Точное расписание персонажа остаётся скрытым.`}</p><button class="btn btn-soft" data-view="world">Вернуться к RP-сцене</button></section>
       </div>
     </div>`;
 }
+function renderConversation(state,character) {
+  if (!character) return `${heading('Разговор','Выбери героиню из списка знакомых.')}`;
+  const placeId=getNpcLocation(state,character.id);
+  const isHere=placeId===state.world.location;
+  const history=state.dialogues[character.id]||[];
+  const lines=history.slice(-30).map(item=>`<article class="conversation-line ${item.from==='player'?'from-player':'from-npc'}"><b>${item.from==='player'?escapeHTML(state.player.name):escapeHTML(character.name)}</b><p>${escapeHTML(item.text)}</p><small>День ${item.day} · ${String(Math.floor((item.minute||0)/60)).padStart(2,'0')}:${String((item.minute||0)%60).padStart(2,'0')}</small></article>`).join('');
+  return `${heading(`Разговор с ${escapeHTML(character.name)}`,`Личная беседа · ${isHere?'героиня находится рядом':'героиня сейчас в другом месте'}`)}
+    <section class="conversation-shell panel-card">
+      <div class="conversation-head">${avatar(character,true)}<div><h3>${escapeHTML(character.name)}</h3><small>${isHere?`Сейчас здесь: ${escapeHTML(getLocation(state.world.location).name)}`:`Сейчас: ${escapeHTML(placeId?getLocation(placeId).name:'неизвестно')}`}</small></div><button class="btn btn-ghost" data-action="back-profile" data-id="${character.id}">Досье</button></div>
+      <div class="conversation-log" id="conversation-log">${lines||'<div class="empty-state">Вы ещё не разговаривали. Начни с приветствия или вопроса о делах.</div>'}</div>
+      ${isHere?`<div class="conversation-actions" aria-label="Частые дружеские действия"><span>Частые действия</span><button class="btn btn-soft" data-action="conversation-gesture" data-type="wave">👋 Помахать</button><button class="btn btn-soft" data-action="conversation-gesture" data-type="handshake">🤝 Пожать руку</button><button class="btn btn-soft" data-action="conversation-gesture" data-type="highfive">✋ Дать пять</button><button class="btn btn-soft" data-action="conversation-gesture" data-type="hug">🫂 Попросить обнять</button></div><details class="conversation-action-library"><summary>Каталог действий · ${CONVERSATION_ACTIONS.length}</summary><div class="conversation-action-groups">${CONVERSATION_ACTION_GROUPS.map(group=>`<section class="conversation-action-group"><h4>${escapeHTML(group.label)}</h4><div>${group.actions.map(action=>`<button class="btn btn-soft" data-action="conversation-gesture" data-type="${escapeHTML(action.id)}">${escapeHTML(action.label)}</button>`).join('')}</div></section>`).join('')}</div></details><form id="conversation-form" class="conversation-compose"><textarea name="message" rows="2" maxlength="500" placeholder="Напиши свою реплику вручную…" required></textarea><button class="btn btn-primary" type="submit">Отправить ↗</button></form>`:`<div class="chat-away-note">Сейчас она не рядом, поэтому личный разговор недоступен. Найди её на карте или дождись следующей встречи.</div><button class="btn btn-soft" data-action="open-map-to-character" data-id="${character.id}">Открыть карту</button>`}
+    </section>`;
+}
+
 function renderPhone(state) {
   const app=state.phone?.app || 'home';
   const posts=state.phone?.posts || [];
@@ -257,7 +274,7 @@ function renderLocations(state) {
   const current=getLocation(state.world.location);
   return `${heading('Локации','Каждое место имеет собственный фон, занятия и жителей. Некоторые места могут требовать приглашения.')}
     <section class="locations-heading"><span>🌸</span><div><small>МИР КОНОХИ</small><h3>Локации</h3><p>Текущее место: ${escapeHTML(current.name)}</p></div></section>
-    <div class="ref-location-grid">${LOCATIONS.map(location=>`<button class="ref-location-tile ${location.id===current.id?'current':''} ${!getLocationAccess(state,location.id).allowed?'locked':''}" data-action="travel" data-id="${location.id}" ${!getLocationAccess(state,location.id).allowed?'disabled':''}><span class="ref-tile-image" style="background-image:url('${location.bg}')"></span><span class="ref-tile-body"><b>${location.icon} ${escapeHTML(location.name)}</b><small>${escapeHTML(location.area)}</small><em>${escapeHTML(location.desc)}</em><i class="travel-stamp">${location.id===current.id?'Ты здесь':getLocationAccess(state,location.id).allowed?'Открыть место ↗':`🔒 ${getLocationAccess(state,location.id).reason}`}</i></span></button>`).join('')}</div>`;
+    <div class="ref-location-grid">${LOCATIONS.filter(location=>!location.hidden || state.discoveredLocations?.includes(location.id)).map(location=>`<button class="ref-location-tile ${location.id===current.id?'current':''} ${!getLocationAccess(state,location.id).allowed?'locked':''}" data-action="travel" data-id="${location.id}" ${!getLocationAccess(state,location.id).allowed?'disabled':''}><span class="ref-tile-image" style="background-image:url('${location.bg}')"></span><span class="ref-tile-body"><b>${location.icon} ${escapeHTML(location.name)}</b><small>${escapeHTML(location.area)}</small><em>${escapeHTML(location.desc)}</em><i class="travel-stamp">${location.id===current.id?'Ты здесь':getLocationAccess(state,location.id).allowed?'Открыть место ↗':`🔒 ${getLocationAccess(state,location.id).reason}`}</i></span></button>`).join('')}</div>`;
 }
 
 function renderGallery(state) {
@@ -285,6 +302,10 @@ export function renderView(state) {
     case 'profile': {
       const character = getCharacter(state.ui.targetId);
       return character && state.unlocked.includes(character.id) ? renderPersonDetail(state,character) : renderPeople(state);
+    }
+    case 'conversation': {
+      const character = getCharacter(state.ui.targetId);
+      return character && state.unlocked.includes(character.id) ? renderConversation(state,character) : renderPeople(state);
     }
     case 'scroll': return renderScroll(state);
     case 'bag': return renderBag(state);
@@ -318,7 +339,7 @@ export function renderStatus(state) {
   document.getElementById('player-stats').innerHTML = statLine('Выносливость',stats.stamina)+statLine('Чакра',stats.chakra)+statLine('Внимание',stats.focus)+`<div class="stat-row"><span>Репутация</span><b>${stats.renown}</b></div><div class="stat-row"><span>Рё</span><b>¥${stats.coins}</b></div>`;
   const place = getLocation(state.world.location);
   document.getElementById('current-place').innerHTML = `<span class="pin"><img src="assets/ui/cropped/location.png" alt="">${place.icon}</span><b>${place.name}</b><small>${place.area}</small>`;
-  const activeView = state.ui.view==='profile' ? 'people' : state.ui.view;
+  const activeView = ['profile','conversation'].includes(state.ui.view) ? 'people' : state.ui.view;
   document.querySelectorAll('.nav-item,.side-nav-item').forEach(button=>button.classList.toggle('active',button.dataset.view===activeView));
 }
 

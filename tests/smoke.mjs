@@ -13,7 +13,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const state = createInitialState({name:'Тестовый игрок',origin:'shinobi'});
 assert.equal(CHARACTERS.length,28,'В списке должно быть 28 персонажей');
 assert.equal(ORIGINS.length,10,'Должно быть 10 вариантов происхождения');
-assert.equal(LOCATIONS.length,23,'Карта должна содержать 23 места');
+assert.equal(LOCATIONS.length,24,'Каталог мира должен содержать 24 места, включая скрытый музыкальный зал');
 assert.equal(state.unlocked.length,27,'Все персонажи, кроме секретного Хаку, доступны в начале');
 assert.equal(getCharacter('haku').secret,true,'Хаку должен быть секретным персонажем');
 updateNpcPositions(state,true);
@@ -38,6 +38,10 @@ unlockState.bonds.sakura={friendship:40,trust:25,respect:0,irritation:0,meetings
 assert.equal(getUnlockedCharacterArts(unlockState,sakuraForArts).length,3,'Third art should unlock after a sustained relationship');
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 for (const label of ['Новая игра','Загрузить','Настройки','Галерея','Выход']) assert.ok(html.includes(label),`Title menu should include ${label}`);
+const css=fs.readFileSync(path.join(root,'assets/css/style.css'),'utf8');
+assert.match(css,/konoha-main-title\.png/,'Title menu must use the dedicated Konoha PNG background');
+assert.ok(fs.existsSync(path.join(root,'assets/backgrounds/konoha-main-title.png')),'Dedicated title background image must exist');
+assert.match(html,/title-project-mark/,'Project mark should be positioned separately from the menu');
 for (const page of ['world','map','people','gallery','locations','day','work','scroll','bag','phone','pets','settings','help']) assert.ok(html.includes(`data-view="${page}"`),`Navigation should expose ${page} as a separate page`);
 
 const initialMinute = state.world.minute;
@@ -110,6 +114,16 @@ assert.match(renderView(state),/world-action-form/,'Главная страни�
 assert.match(renderView(state),/world-dialogue-form/,'Главная страница должна содержать свободный диалог');
 assert.match(renderView(state),/rp-scene-bottom/,'Главная сцена должна показывать текст происходящего внизу');
 assert.match(renderView(state),/rp-text-action/,'Главная страница должна содержать поле свободного действия');
+const conversationState=createInitialState({name:'Тестовый игрок',origin:'shinobi'});
+conversationState.ui.view='conversation';
+conversationState.ui.targetId='sakura';
+updateNpcPositions(conversationState,true);
+conversationState.npcLocations.sakura=conversationState.world.location;
+conversationState.dialogues.sakura=[{from:'npc',text:'Привет! Как проходит твой день?',day:1,minute:480}];
+const conversationHtml=renderView(conversationState);
+assert.match(conversationHtml,/conversation-form/,'Личный диалог должен иметь поле свободной реплики');
+assert.match(conversationHtml,/conversation-gesture/,'В диалоге должны быть кнопки действий');
+assert.match(conversationHtml,/Попросить обнять/,'Объятие должно предлагаться как действие с запросом согласия');
 for (const location of LOCATIONS) assert.ok(fs.existsSync(path.join(root,location.bg)),`${location.name}: локальный фон должен существовать`);
 state.ui.view='people';
 state.ui.targetId='';
@@ -117,10 +131,10 @@ assert.match(renderView(state),/знакомых героев|Знакомые �
 state.ui.view='profile';
 state.ui.targetId='ayame';
 state.npcLocations.ayame=state.world.location;
-assert.match(renderView(state),/chat-form/,'Профиль должен показывать чат только при физическом присутствии персонажа');
+assert.doesNotMatch(renderView(state),/id=\"chat-form\"|id=\"conversation-form\"/,'Досье не должно содержать форму чата');
 state.npcLocations.ayame='hospital';
 assert.doesNotMatch(renderView(state),/id="chat-form"/,'Профиль не должен позволять личный чат с персонажем в другой локации');
-assert.match(renderView(state),/Личная беседа доступна после встречи/,'Вместо недоступного чата должна быть подсказка о встрече');
+assert.match(renderView(state),/Последняя известная встреча/,'Досье должно показывать сведения о местонахождении отдельно от общения');
 assert.match(renderView(state),/dossier-art-stage/,'Профиль персонажа должен показывать галерею изображений');
 state.ui.view='scroll';
 assert.match(renderView(state),/Задания/,'Экран заданий должен рендериться');
@@ -148,6 +162,10 @@ assert.match(renderView(state),/Настройки/,'Экран настроек
 state.ui.view='map';
 assert.match(renderView(state),/map-overview/,'Карта должна показывать схему деревни сверху');
 assert.match(renderView(state),/map-pin/,'Карта должна содержать интерактивные точки локаций');
+assert.doesNotMatch(renderView(state),/map-locations-list/,'Map should not render a duplicate location list below pins');
+assert.equal(analyzeText('Как дела?').kind,'howAre','How are you should be distinct from greeting');
+assert.equal(analyzeText('Привет, как ты?').kind,'howAre','Mixed greeting and wellbeing question should be handled by howAre');
+
 assert.match(renderView(state),/КАРТА КОНОХИ/,'Карта должна иметь собственную шапку с сакурой');
 state.ui.view='gallery';
 const galleryHtml=renderView(state);

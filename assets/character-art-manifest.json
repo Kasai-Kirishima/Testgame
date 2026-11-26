@@ -1,142 +1,210 @@
 {
   "anko": {
-    "daily": "assets/characters/anko/daily.webp",
-    "shinobi": "assets/characters/anko/shinobi.webp",
-    "festival": "assets/characters/anko/festival.webp"
+    "portrait": "assets/characters/anko/portrait.webp",
+    "gallery": [
+      "assets/characters/anko/daily.webp",
+      "assets/characters/anko/shinobi.webp",
+      "assets/characters/anko/festival.webp"
+    ],
+    "galleryType": "triptych"
   },
   "ayame": {
-    "daily": "assets/characters/ayame/daily.webp",
-    "shinobi": "assets/characters/ayame/shinobi.webp",
-    "festival": "assets/characters/ayame/festival.webp"
+    "portrait": "assets/characters/ayame/portrait.webp",
+    "gallery": [
+      "assets/characters/ayame/daily.webp",
+      "assets/characters/ayame/shinobi.webp",
+      "assets/characters/ayame/festival.webp"
+    ],
+    "galleryType": "triptych"
   },
   "buntan": {
-    "daily": "assets/characters/buntan/daily.svg",
-    "shinobi": "assets/characters/buntan/shinobi.svg",
-    "festival": "assets/characters/buntan/festival.svg"
+    "portrait": "assets/characters/buntan/portrait.webp",
+    "gallery": [
+      "assets/characters/buntan/portrait.webp"
+    ],
+    "galleryType": "portrait"
   },
   "haku": {
-    "daily": "assets/characters/haku/daily.svg",
-    "shinobi": "assets/characters/haku/shinobi.svg",
-    "festival": "assets/characters/haku/festival.svg"
+    "portrait": "assets/characters/haku/portrait-clean.webp",
+    "gallery": [
+      "assets/characters/haku/portrait-clean.webp"
+    ],
+    "galleryType": "portrait"
   },
   "hanabi": {
-    "daily": "assets/characters/hanabi/daily.webp",
-    "shinobi": "assets/characters/hanabi/shinobi.webp",
-    "festival": "assets/characters/hanabi/festival.webp"
+    "portrait": "assets/characters/hanabi/portrait-clean.webp",
+    "gallery": [
+      "assets/characters/hanabi/daily.webp",
+      "assets/characters/hanabi/shinobi.webp",
+      "assets/characters/hanabi/festival.webp"
+    ],
+    "galleryType": "triptych"
   },
   "hinata": {
-    "daily": "assets/characters/hinata/daily.webp",
-    "shinobi": "assets/characters/hinata/shinobi.webp",
-    "festival": "assets/characters/hinata/festival.webp"
+    "portrait": "assets/characters/hinata/portrait-clean.webp",
+    "gallery": [
+      "assets/characters/hinata/daily.webp",
+      "assets/characters/hinata/shinobi.webp",
+      "assets/characters/hinata/festival.webp"
+    ],
+    "galleryType": "triptych"
   },
   "ino": {
-    "daily": "assets/characters/ino/daily.svg",
-    "shinobi": "assets/characters/ino/shinobi.svg",
-    "festival": "assets/characters/ino/festival.svg"
+    "portrait": "assets/characters/ino/portrait.webp",
+    "gallery": [
+      "assets/characters/ino/portrait.webp"
+    ],
+    "galleryType": "portrait"
   },
   "kaguya": {
-    "daily": "assets/characters/kaguya/daily.svg",
-    "shinobi": "assets/characters/kaguya/shinobi.svg",
-    "festival": "assets/characters/kaguya/festival.svg"
+    "portrait": "assets/characters/kaguya/portrait.webp",
+    "gallery": [
+      "assets/characters/kaguya/portrait.webp"
+    ],
+    "galleryType": "portrait"
   },
   "karin": {
-    "daily": "assets/characters/karin/daily.svg",
-    "shinobi": "assets/characters/karin/shinobi.svg",
-    "festival": "assets/characters/karin/festival.svg"
+    "portrait": "assets/characters/karin/portrait.webp",
+    "gallery": [
+      "assets/characters/karin/portrait.webp"
+    ],
+    "galleryType": "portrait"
   },
   "konan": {
-    "daily": "assets/characters/konan/daily.webp",
-    "shinobi": "assets/characters/konan/shinobi.webp",
-    "festival": "assets/characters/konan/festival.webp"
+    "portrait": "assets/characters/konan/portrait.webp",
+    "gallery": [
+      "assets/characters/konan/daily.webp",
+      "assets/characters/konan/shinobi.webp",
+      "assets/characters/konan/festival.webp"
+    ],
+    "galleryType": "triptych"
   },
   "kurenai": {
-    "daily": "assets/characters/kurenai/daily.svg",
-    "shinobi": "assets/characters/kurenai/shinobi.svg",
-    "festival": "assets/characters/kurenai/festival.svg"
+    "portrait": "assets/characters/kurenai/portrait-clean.webp",
+    "gallery": [
+      "assets/characters/kurenai/portrait-clean.webp"
+    ],
+    "galleryType": "portrait"
   },
   "kurotsuchi": {
-    "daily": "assets/characters/kurotsuchi/daily.svg",
-    "shinobi": "assets/characters/kurotsuchi/shinobi.svg",
-    "festival": "assets/characters/kurotsuchi/festival.svg"
+    "portrait": "assets/characters/kurotsuchi/portrait-clean.webp",
+    "gallery": [
+      "assets/characters/kurotsuchi/portrait-clean.webp"
+    ],
+    "galleryType": "portrait"
   },
   "kushina": {
-    "daily": "assets/characters/kushina/daily.svg",
-    "shinobi": "assets/characters/kushina/shinobi.svg",
-    "festival": "assets/characters/kushina/festival.svg"
+    "portrait": "assets/characters/kushina/portrait-clean.webp",
+    "gallery": [
+      "assets/characters/kushina/portrait-clean.webp"
+    ],
+    "galleryType": "portrait"
   },
   "mabui": {
-    "daily": "assets/characters/mabui/daily.svg",
-    "shinobi": "assets/characters/mabui/shinobi.svg",
-    "festival": "assets/characters/mabui/festival.svg"
+    "portrait": "assets/characters/mabui/portrait-clean.webp",
+    "gallery": [
+      "assets/characters/mabui/portrait-clean.webp"
+    ],
+    "galleryType": "portrait"
   },
   "mei": {
-    "daily": "assets/characters/mei/daily.svg",
-    "shinobi": "assets/characters/mei/shinobi.svg",
-    "festival": "assets/characters/mei/festival.svg"
+    "portrait": "assets/characters/mei/portrait.webp",
+    "gallery": [
+      "assets/characters/mei/portrait.webp"
+    ],
+    "galleryType": "portrait"
   },
   "mikoto": {
-    "daily": "assets/characters/mikoto/daily.svg",
-    "shinobi": "assets/characters/mikoto/shinobi.svg",
-    "festival": "assets/characters/mikoto/festival.svg"
+    "portrait": "assets/characters/mikoto/portrait-clean.webp",
+    "gallery": [
+      "assets/characters/mikoto/portrait-clean.webp"
+    ],
+    "galleryType": "portrait"
   },
   "mirai": {
-    "daily": "assets/characters/mirai/daily.svg",
-    "shinobi": "assets/characters/mirai/shinobi.svg",
-    "festival": "assets/characters/mirai/festival.svg"
+    "portrait": "assets/characters/mirai/portrait-clean.webp",
+    "gallery": [
+      "assets/characters/mirai/portrait-clean.webp"
+    ],
+    "galleryType": "portrait"
   },
   "mito": {
-    "daily": "assets/characters/mito/daily.svg",
-    "shinobi": "assets/characters/mito/shinobi.svg",
-    "festival": "assets/characters/mito/festival.svg"
+    "portrait": "assets/characters/mito/portrait-clean.webp",
+    "gallery": [
+      "assets/characters/mito/portrait-clean.webp"
+    ],
+    "galleryType": "portrait"
   },
   "rin": {
-    "daily": "assets/characters/rin/daily.svg",
-    "shinobi": "assets/characters/rin/shinobi.svg",
-    "festival": "assets/characters/rin/festival.svg"
+    "portrait": "assets/characters/rin/portrait-clean.webp",
+    "gallery": [
+      "assets/characters/rin/portrait-clean.webp"
+    ],
+    "galleryType": "portrait"
   },
   "sakura": {
-    "daily": "assets/characters/sakura/daily.webp",
-    "shinobi": "assets/characters/sakura/shinobi.webp",
-    "festival": "assets/characters/sakura/festival.webp"
+    "portrait": "assets/characters/sakura/portrait-clean.webp",
+    "gallery": [
+      "assets/characters/sakura/daily.webp",
+      "assets/characters/sakura/shinobi.webp",
+      "assets/characters/sakura/festival.webp"
+    ],
+    "galleryType": "triptych"
   },
   "samui": {
-    "daily": "assets/characters/samui/daily.svg",
-    "shinobi": "assets/characters/samui/shinobi.svg",
-    "festival": "assets/characters/samui/festival.svg"
+    "portrait": "assets/characters/samui/portrait-clean.webp",
+    "gallery": [
+      "assets/characters/samui/portrait-clean.webp"
+    ],
+    "galleryType": "portrait"
   },
   "sarada": {
-    "daily": "assets/characters/sarada/daily.svg",
-    "shinobi": "assets/characters/sarada/shinobi.svg",
-    "festival": "assets/characters/sarada/festival.svg"
+    "portrait": "assets/characters/sarada/portrait-clean.webp",
+    "gallery": [
+      "assets/characters/sarada/portrait-clean.webp"
+    ],
+    "galleryType": "portrait"
   },
   "shizune": {
-    "daily": "assets/characters/shizune/daily.svg",
-    "shinobi": "assets/characters/shizune/shinobi.svg",
-    "festival": "assets/characters/shizune/festival.svg"
+    "portrait": "assets/characters/shizune/portrait-clean.webp",
+    "gallery": [
+      "assets/characters/shizune/portrait-clean.webp"
+    ],
+    "galleryType": "portrait"
   },
   "tayuya": {
-    "daily": "assets/characters/tayuya/daily.svg",
-    "shinobi": "assets/characters/tayuya/shinobi.svg",
-    "festival": "assets/characters/tayuya/festival.svg"
+    "portrait": "assets/characters/tayuya/portrait-clean.webp",
+    "gallery": [
+      "assets/characters/tayuya/portrait-clean.webp"
+    ],
+    "galleryType": "portrait"
   },
   "temari": {
-    "daily": "assets/characters/temari/daily.svg",
-    "shinobi": "assets/characters/temari/shinobi.svg",
-    "festival": "assets/characters/temari/festival.svg"
+    "portrait": "assets/characters/temari/portrait-clean.webp",
+    "gallery": [
+      "assets/characters/temari/portrait-clean.webp"
+    ],
+    "galleryType": "portrait"
   },
   "tenten": {
-    "daily": "assets/characters/tenten/daily.svg",
-    "shinobi": "assets/characters/tenten/shinobi.svg",
-    "festival": "assets/characters/tenten/festival.svg"
+    "portrait": "assets/characters/tenten/portrait-clean.webp",
+    "gallery": [
+      "assets/characters/tenten/portrait-clean.webp"
+    ],
+    "galleryType": "portrait"
   },
   "tsunade": {
-    "daily": "assets/characters/tsunade/daily.svg",
-    "shinobi": "assets/characters/tsunade/shinobi.svg",
-    "festival": "assets/characters/tsunade/festival.svg"
+    "portrait": "assets/characters/tsunade/portrait-clean.webp",
+    "gallery": [
+      "assets/characters/tsunade/portrait-clean.webp"
+    ],
+    "galleryType": "portrait"
   },
   "yodo": {
-    "daily": "assets/characters/yodo/daily.svg",
-    "shinobi": "assets/characters/yodo/shinobi.svg",
-    "festival": "assets/characters/yodo/festival.svg"
+    "portrait": "assets/characters/yodo/portrait.webp",
+    "gallery": [
+      "assets/characters/yodo/portrait.webp"
+    ],
+    "galleryType": "portrait"
   }
 }

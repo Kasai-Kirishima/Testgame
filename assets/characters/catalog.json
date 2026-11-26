@@ -73,33 +73,33 @@
     },
     {
       "id": "kurenai",
-      "portrait": "kurenai/portrait.webp",
+      "portrait": "kurenai/portrait-clean.webp",
       "gallery": [
-        "kurenai/portrait.webp"
+        "kurenai/portrait-clean.webp"
       ],
       "galleryType": "portrait"
     },
     {
       "id": "kurotsuchi",
-      "portrait": "kurotsuchi/portrait.webp",
+      "portrait": "kurotsuchi/portrait-clean.webp",
       "gallery": [
-        "kurotsuchi/portrait.webp"
+        "kurotsuchi/portrait-clean.webp"
       ],
       "galleryType": "portrait"
     },
     {
       "id": "kushina",
-      "portrait": "kushina/portrait.webp",
+      "portrait": "kushina/portrait-clean.webp",
       "gallery": [
-        "kushina/portrait.webp"
+        "kushina/portrait-clean.webp"
       ],
       "galleryType": "portrait"
     },
     {
       "id": "mabui",
-      "portrait": "mabui/portrait.webp",
+      "portrait": "mabui/portrait-clean.webp",
       "gallery": [
-        "mabui/portrait.webp"
+        "mabui/portrait-clean.webp"
       ],
       "galleryType": "portrait"
     },
@@ -113,39 +113,39 @@
     },
     {
       "id": "mikoto",
-      "portrait": "mikoto/portrait.webp",
+      "portrait": "mikoto/portrait-clean.webp",
       "gallery": [
-        "mikoto/portrait.webp"
+        "mikoto/portrait-clean.webp"
       ],
       "galleryType": "portrait"
     },
     {
       "id": "mirai",
-      "portrait": "mirai/portrait.webp",
+      "portrait": "mirai/portrait-clean.webp",
       "gallery": [
-        "mirai/portrait.webp"
+        "mirai/portrait-clean.webp"
       ],
       "galleryType": "portrait"
     },
     {
       "id": "mito",
-      "portrait": "mito/portrait.webp",
+      "portrait": "mito/portrait-clean.webp",
       "gallery": [
-        "mito/portrait.webp"
+        "mito/portrait-clean.webp"
       ],
       "galleryType": "portrait"
     },
     {
       "id": "rin",
-      "portrait": "rin/portrait.webp",
+      "portrait": "rin/portrait-clean.webp",
       "gallery": [
-        "rin/portrait.webp"
+        "rin/portrait-clean.webp"
       ],
       "galleryType": "portrait"
     },
     {
       "id": "sakura",
-      "portrait": "sakura/portrait.webp",
+      "portrait": "sakura/portrait-clean.webp",
       "gallery": [
         "sakura/daily.webp",
         "sakura/shinobi.webp",
@@ -155,47 +155,47 @@
     },
     {
       "id": "samui",
-      "portrait": "samui/portrait.webp",
+      "portrait": "samui/portrait-clean.webp",
       "gallery": [
-        "samui/portrait.webp"
+        "samui/portrait-clean.webp"
       ],
       "galleryType": "portrait"
     },
     {
       "id": "sarada",
-      "portrait": "sarada/portrait.webp",
+      "portrait": "sarada/portrait-clean.webp",
       "gallery": [
-        "sarada/portrait.webp"
+        "sarada/portrait-clean.webp"
       ],
       "galleryType": "portrait"
     },
     {
       "id": "tayuya",
-      "portrait": "tayuya/portrait.webp",
+      "portrait": "tayuya/portrait-clean.webp",
       "gallery": [
-        "tayuya/portrait.webp"
+        "tayuya/portrait-clean.webp"
       ],
       "galleryType": "portrait"
     },
     {
       "id": "temari",
-      "portrait": "temari/portrait.webp",
+      "portrait": "temari/portrait-clean.webp",
       "gallery": [
-        "temari/portrait.webp"
+        "temari/portrait-clean.webp"
       ],
       "galleryType": "portrait"
     },
     {
       "id": "tenten",
-      "portrait": "tenten/portrait.webp",
+      "portrait": "tenten/portrait-clean.webp",
       "gallery": [
-        "tenten/portrait.webp"
+        "tenten/portrait-clean.webp"
       ],
       "galleryType": "portrait"
     },
     {
       "id": "hanabi",
-      "portrait": "hanabi/portrait.webp",
+      "portrait": "hanabi/portrait-clean.webp",
       "gallery": [
         "hanabi/daily.webp",
         "hanabi/shinobi.webp",
@@ -205,7 +205,7 @@
     },
     {
       "id": "hinata",
-      "portrait": "hinata/portrait.webp",
+      "portrait": "hinata/portrait-clean.webp",
       "gallery": [
         "hinata/daily.webp",
         "hinata/shinobi.webp",
@@ -215,25 +215,25 @@
     },
     {
       "id": "tsunade",
-      "portrait": "tsunade/portrait.webp",
+      "portrait": "tsunade/portrait-clean.webp",
       "gallery": [
-        "tsunade/portrait.webp"
+        "tsunade/portrait-clean.webp"
       ],
       "galleryType": "portrait"
     },
     {
       "id": "haku",
-      "portrait": "haku/portrait.webp",
+      "portrait": "haku/portrait-clean.webp",
       "gallery": [
-        "haku/portrait.webp"
+        "haku/portrait-clean.webp"
       ],
       "galleryType": "portrait"
     },
     {
       "id": "shizune",
-      "portrait": "shizune/portrait.webp",
+      "portrait": "shizune/portrait-clean.webp",
       "gallery": [
-        "shizune/portrait.webp"
+        "shizune/portrait-clean.webp"
       ],
       "galleryType": "portrait"
     }

@@ -34,6 +34,7 @@ export const LOCATIONS = [
   {id:'archive',name:'Архив свитков',icon:'📜',area:'Запад',desc:'Специальное хранилище старых карт, отчётов и исторических записей.',bg:'assets/backgrounds/library.webp',activities:['Изучить карту','Найти старый отчёт','Разобрать свитки']},
   {id:'residential',name:'Жилой переулок',icon:'🏘️',area:'Жилой квартал',desc:'Небольшая улица с домами, садами и тихими двориками.',bg:'assets/backgrounds/tatami-home.webp',activities:['Прогуляться','Поздороваться с соседями','Осмотреть двор']},
   {id:'rooftop',name:'Крыши Конохи',icon:'🌆',area:'Центр',desc:'Высокие крыши с видом на улицы и монумент Хокаге.',bg:'assets/backgrounds/village-gate.webp',activities:['Посмотреть на город','Подышать воздухом','Понаблюдать за улицами']},
+  {id:'music-hall',name:'Музыкальный зал «Лунный фонарь»',icon:'🎶',area:'За рынком',desc:'Небольшая площадка для открытых концертов, танцевальных занятий и творческих вечеров.',bg:'assets/backgrounds/festival-street.webp',nightBg:'assets/backgrounds/festival-street.webp',hidden:true,activities:['Послушать концерт','Посетить танцевальное занятие','Помочь с декорациями','Записаться на открытый вечер']},
   {id:'greenhouse',name:'Оранжерея',icon:'🌺',area:'Юг',desc:'Небольшая теплица с сезонными растениями и редкими семенами.',bg:'assets/backgrounds/flower-shop.webp',activities:['Полить растения','Изучить семена','Помочь садовнику']}
 ];
 

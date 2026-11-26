@@ -62,6 +62,7 @@ export function createInitialState(player = {}) {
     npcLocations: {},
     npcPeriod: '',
     visitedLocations: ['main-street'],
+    discoveredLocations: [],
     npcShuffle: Math.floor(Math.random()*100000),
     pets: [],
     phone: {app:'home',tab:'feed',posts:[],messages:[],videoViews:[],activeVideo:'',lastPostAction:0},

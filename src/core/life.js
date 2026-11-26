@@ -19,13 +19,14 @@ export function timePeriod(minute) {
 
 const MAP_COORDS = {
   'main-street':[49,48],'ichiraku':[30,37],'flower-shop':[66,37],market:[80,48],training:[76,73],hospital:[44,82],hokage:[51,17],
-  'tea-house':[28,56],river:[15,83],forest:[7,51],memorial:[14,18],gate:[50,5],library:[20,39],garden:[34,70],home:[56,64],
+  'tea-house':[28,56],river:[15,83],forest:[7,51],memorial:[14,18],gate:[50,5],library:[20,39],garden:[34,70],home:[56,64],'music-hall':[88,48],
   academy:[81,20],campsite:[6,83],bathhouse:[21,63],dojo:[89,76],archive:[19,29],residential:[64,55],rooftop:[69,22],greenhouse:[40,70]
 };
 
 export function getLocationAccess(state,id) {
   const place=getLocation(id);
   const renown=Number(state?.player?.stats?.renown)||0;
+  if(id==='music-hall' && !state?.discoveredLocations?.includes('music-hall')) return {allowed:false,reason:'Эту площадку ещё не нашли в ходе RP-разговора.'};
   if(id==='archive' && renown<12 && state?.player?.jobId!=='library') return {allowed:false,reason:'Для доступа в архив нужен 12-й уровень репутации или работа в библиотеке.'};
   if(id==='hokage' && renown<6) return {allowed:false,reason:'В резиденцию Хокаге пускают по делу или с поручительством. Сначала заслужи доверие жителей.'};
   if(place.locked) return {allowed:false,reason:place.lockReason||'Эта зона сейчас закрыта.'};
@@ -280,7 +281,7 @@ function npcPeriod(minute) {
 
 function locationChoicesFor(character,period,state) {
   const choices = [];
-  const add = id => { if (id && LOCATIONS.some(place=>place.id===id) && !choices.includes(id)) choices.push(id); };
+  const add = id => { if (id && LOCATIONS.some(place=>place.id===id) && !(LOCATIONS.find(place=>place.id===id)?.hidden && !state?.discoveredLocations?.includes(id)) && !choices.includes(id)) choices.push(id); };
   const assignment = state?.assignments?.find(item=>item.actorId===character.id && item.day===state.world.day && !item.done);
   const taskPlaces = {cook:['home','ichiraku'],tidy:['home'],shop:['market'],study:['library'],train:['training'],garden:['garden'],clinic:['hospital'],rest:['home','tea-house']};
   for (const id of (taskPlaces[assignment?.task] || [])) add(id);
@@ -298,11 +299,13 @@ function locationChoicesFor(character,period,state) {
   for (const id of (temperamentSpots[character.style] || [])) add(id);
   if (period === 'evening') {
     for (const id of ['ichiraku','tea-house','garden','river','market']) add(id);
+    if (state?.discoveredLocations?.includes('music-hall')) add('music-hall');
   }
   if (period === 'night') {
     for (const id of ['home','tea-house','garden','ichiraku']) add(id);
+    if (state?.discoveredLocations?.includes('music-hall')) add('music-hall');
   }
-  for (const id of ['main-street','market','garden','tea-house','library','home','training','river','ichiraku','flower-shop','hospital','gate','academy','hokage','forest','memorial','campsite','bathhouse','dojo','archive','residential','rooftop','greenhouse']) add(id);
+  for (const id of ['main-street','market','garden','tea-house','library','home','training','river','ichiraku','flower-shop','hospital','gate','academy','hokage','forest','memorial','campsite','bathhouse','dojo','archive','residential','rooftop','greenhouse','music-hall']) add(id);
   return choices;
 }
 

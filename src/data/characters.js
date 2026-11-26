@@ -29,15 +29,21 @@ const cast = [
   ['shizune','Шизуне','Медицинский помощник','Ответственная, заботливая, организованная и немного тревожная.','Любит порядок, животных и людей, которые умеют благодарить.',['медицина','порядок','забота'],'🐷','#c8b3a7','#83706b','hospital','warm']
 ];
 
+const TRIPTYCH_ART = new Set(['anko','ayame','konan','sakura','hanabi','hinata']);
+const CLEAN_PORTRAIT_ART = new Set(['haku','hanabi','hinata','kurenai','kurotsuchi','kushina','mabui','mikoto','mirai','mito','rin','sakura','samui','sarada','shizune','tayuya','temari','tenten','tsunade']);
+
 export const CHARACTERS = cast.map(([id,name,role,personality,notes,likes,icon,c1,c2,startLocation,style]) => ({
   id,name,role,personality,notes,likes,icon,colors:[c1,c2],startLocation,style,
   intro:`${name} здесь. ${personality}`,
-  art:['anko','ayame','konan','sakura','hanabi','hinata'].includes(id)
+  art:TRIPTYCH_ART.has(id)
     ? ['daily','shinobi','festival'].map((variant,index)=>({
         src:`assets/characters/${id}/${variant}.webp`,
         label:['Повседневный образ','Тренировка шиноби','Вечерний фестиваль'][index]
       }))
-    : [{src:`assets/characters/${id}/portrait.webp`,label:'Портрет персонажа'}],
+    : [{
+        src:`assets/characters/${id}/${CLEAN_PORTRAIT_ART.has(id)?'portrait-clean':'portrait'}.webp`,
+        label:CLEAN_PORTRAIT_ART.has(id)?'Портрет без подписи':'Портрет персонажа'
+      }],
   secret:id==='haku'
 }));
 export const getCharacter = id => CHARACTERS.find(character => character.id === id);
