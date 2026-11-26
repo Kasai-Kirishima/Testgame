@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import {createInitialState,getBond} from '../src/core/store.js';
 import {CHARACTERS,getCharacter} from '../src/data/characters.js';
 import {ORIGINS,LOCATIONS} from '../src/data/world.js';
-import {travelTo,doActivity,assignDailyTask,sleepUntilMorning,skipTime} from '../src/core/life.js';
+import {travelTo,doActivity,assignDailyTask,sleepUntilMorning,skipTime,updateNpcPositions,advanceTime} from '../src/core/life.js';
 import {talkToCharacter,analyzeText} from '../src/core/gm.js';
 import {renderView} from '../src/ui/render.js';
 
@@ -16,6 +16,11 @@ assert.equal(ORIGINS.length,10,'Должно быть 10 вариантов пр
 assert.equal(LOCATIONS.length,17,'Карта должна содержать 17 мест');
 assert.equal(state.unlocked.length,27,'Все персонажи, кроме секретного Хаку, доступны в начале');
 assert.equal(getCharacter('haku').secret,true,'Хаку должен быть секретным персонажем');
+updateNpcPositions(state,true);
+const scheduledLocations=Object.values(state.npcLocations);
+assert.equal(new Set(scheduledLocations).size,scheduledLocations.length,'At most one NPC may be assigned to each location');
+assert.ok(scheduledLocations.length<=LOCATIONS.length,'NPC schedule must not overfill locations');
+for (const minute of [8*60,13*60,18*60,23*60]) { state.world.minute=minute; updateNpcPositions(state,true); const positions=Object.values(state.npcLocations); assert.equal(new Set(positions).size,positions.length,'NPCs must never share a scheduled location'); }
 const detailedCharacters = new Set(['anko','ayame','konan','sakura','hanabi','hinata']);
 for (const character of CHARACTERS) {
   assert.equal(character.art.length,detailedCharacters.has(character.id)?3:1,`${character.name}: число изображений должно соответствовать готовым материалам`);
@@ -35,6 +40,10 @@ const firstTalk = talkToCharacter(state,ayame,'Привет! Как проход
 assert.ok(firstTalk.reply.length > 20,'Игровой мастер должен дать содержательный ответ');
 assert.equal(getBond(state,'ayame').meetings,1,'Встреча должна учитываться');
 assert.equal(analyzeText('Я обещаю помочь завтра').kind,'promise','Должен распознаваться тип обещания');
+assert.equal(analyzeText('Что тебе нравится?').kind,'interests','GM should understand an interest question');
+assert.equal(analyzeText('Давай составим план на день').kind,'plan','GM should understand planning messages');
+const whereReply = talkToCharacter(state,ayame,'Где ты сейчас?');
+assert.ok(whereReply.reply.includes('Сейчас'), 'Location questions must use the live schedule without crashing');
 
 talkToCharacter(state,ayame,'Я обещаю помочь тебе на кухне.');
 const promise = state.scroll.find(item=>item.kind==='promise' && item.characterId==='ayame' && !item.done);
@@ -61,6 +70,10 @@ assert.equal(state.assignments.find(item=>item.actorId==='ayame').done,true,'П�
 skipTime(state,2);
 assert.ok(state.world.minute >= 0 && state.world.minute < 1440,'Время должно оставаться в пределах суток');
 
+const petState=createInitialState({name:'Зоовладелец'}); petState.pets=[{uid:'p1',name:'Мару',hunger:30,mood:60,energy:55}]; advanceTime(petState,1440);
+assert.equal(petState.pets[0].hunger,48,'Pet hunger should rise gently after a full day');
+assert.equal(petState.pets[0].mood,55,'Pet mood should reflect unattended daily care');
+
 state.ui.view='world';
 assert.match(renderView(state),/Хроники Конохи/,'Главная страница должна рендериться');
 assert.match(renderView(state),/world-action-form/,'Главная страница должна содержать поле действий');
@@ -80,10 +93,37 @@ state.ui.view='bag';
 assert.match(renderView(state),/Инвентарь/,'Экран инвентаря должен рендериться');
 state.ui.view='day';
 assert.match(renderView(state),/Распорядок дня/,'Экран планов должен рендериться');
+state.ui.view='phone';
+assert.match(renderView(state),/Konohagram/,'Smartphone feed page should render');
+state.ui.view='pets';
+assert.match(renderView(state),/Магазин животных/,'Pet store page should render');
 state.ui.view='settings';
 assert.match(renderView(state),/Настройки/,'Экран настроек должен рендериться');
 state.ui.view='map';
 assert.match(renderView(state),/ref-location-grid/,'Карта должна рендериться отдельной страницей');
+
+// Assigned daily activities should influence the NPC's actual location.
+const routineState=createInitialState({name:'Планировщик'}); routineState.unlocked=['ayame']; updateNpcPositions(routineState,true);
+const routinePlan=assignDailyTask(routineState,'ayame','train');
+assert.equal(routinePlan.ok,true);
+assert.equal(routineState.npcLocations.ayame,'training','A training assignment should move the NPC to the training ground');
+
+// The village exploration task counts unique places, not repeated trips.
+const exploreState=createInitialState({name:'Путешественник'});
+const exploreQuest=()=>exploreState.scroll.find(item=>item.id==='first-walk');
+travelTo(exploreState,'ichiraku'); assert.equal(exploreQuest().progress,2);
+travelTo(exploreState,'main-street'); assert.equal(exploreQuest().progress,2,'Returning to the start should not add another unique location');
+travelTo(exploreState,'ichiraku'); assert.equal(exploreQuest().progress,2,'Revisiting the same place should not count twice');
+travelTo(exploreState,'market'); assert.equal(exploreQuest().progress,3);
+assert.equal(exploreQuest().done,true,'Three different locations should complete the exploration task');
+
+// Clinic quest only completes after an on-site visit and actual medical help.
+const clinicState=createInitialState({name:'Медик'});
+const clinicQuest=clinicState.scroll.find(item=>item.id==='clinic-help');
+clinicState.world.location='main-street'; clinicQuest.visited=true; doActivity(clinicState,'clinic');
+assert.equal(clinicQuest.done,false,'Clinic quest must not complete away from the hospital');
+clinicState.world.location='hospital'; doActivity(clinicState,'clinic');
+assert.equal(clinicQuest.done,true,'Clinic quest completes after helping at the hospital');
 
 // Haku's clue is designed to appear only during winter exploration.
 for(let i=0;i<21;i++) sleepUntilMorning(state);

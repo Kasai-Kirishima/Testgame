@@ -20,7 +20,8 @@ class FakeElement {
   constructor(id='') {
     this.id = id; this.className = ''; this.classList = new FakeClassList(this);
     this.dataset = {}; this.style = {}; this.children = []; this.value = '';
-    this.textContent = ''; this.innerHTML = ''; this.disabled = false; this.files = [];
+    this.textContent = ''; this.innerHTML = ''; this.disabled = false; this.files = []; this.data = {}; this.classList = new FakeClassList(this);
+    this.matches = selector => selector.startsWith('.') ? this.classList.contains(selector.slice(1)) : false;
   }
   append(...items) { this.children.push(...items); }
   remove() { this.removed = true; }
@@ -68,9 +69,11 @@ assert.ok(getElement('player-origin').innerHTML.includes('Житель Коно�
 const randomNameButton = {dataset:{action:'random-name'},textContent:'Случайное имя',closest(){return this;}};
 click({target:{closest:()=>randomNameButton,classList:{contains:()=>false}}});
 assert.ok(getElement('player-name').value.length>2,'random name button must fill the character name');
+context.window.NEG_TEST.randomize();
+for (const id of ['player-origin','player-style','player-look','player-clan','player-chakra','player-specialty','player-gender','player-hair','player-eyes','player-goal','player-village','player-tool','player-age','player-mark']) assert.ok(getElement(id).value,`full random creator fills ${id}`);
 
 const submit = listeners.submit?.[0];
-const form = {id:'creation-form',data:{name:'Проверка',origin:'shinobi',style:'balanced',look:'casual',mark:'none',gender:'female',age:'22',clan:'Хьюга',chakra:'wind',specialty:'sensors',hair:'long',eyes:'Фиолетовые',goal:'explore',village:'konoha',signatureTool:'scroll'}};
+const form = new FakeElement('creation-form'); Object.assign(form,{id:'creation-form',data:{name:'Проверка',origin:'shinobi',style:'balanced',look:'casual',mark:'none',gender:'female',age:'22',clan:'Хьюга',chakra:'wind',specialty:'sensors',hair:'long',eyes:'Фиолетовые',goal:'explore',village:'konoha',signatureTool:'scroll'}});
 submit({target:form,preventDefault(){}});
 assert.equal(getElement('game-screen').classList.contains('hidden'),false,'creation form must start the game');
 assert.equal(context.window.NEG_TEST.state().player.village,'konoha','creator should store village selection');
@@ -80,26 +83,31 @@ assert.ok(getElement('view-root').innerHTML.includes('Хроники Конох�
 assert.ok(getElement('view-root').innerHTML.includes('world-action-form'),'world screen must show free-text actions');
 assert.ok(getElement('view-root').innerHTML.includes('world-dialogue-form'),'world screen must show free-text dialogue');
 assert.ok(getElement('view-root').innerHTML.includes('data-action="patrol"'),'world screen must expose patrol action');
-const worldActionForm = {id:'world-action-form',data:{action:'Я иду в больницу.'}};
+const worldActionForm = new FakeElement('world-action-form'); Object.assign(worldActionForm,{id:'world-action-form',data:{action:'Я иду в больницу.'}});
 submit({target:worldActionForm,preventDefault(){}});
 assert.equal(context.window.NEG_TEST.state().world.location,'hospital','free-text movement must navigate to a named location');
 assert.ok(context.window.NEG_TEST.state().ui.lastActionResult.includes('направляешься'),'free-text action must return a narrated result');
-const worldDialogueForm = {id:'world-dialogue-form',data:{characterId:'sakura',message:'Привет, Сакура! Как прошёл твой день?'}};
+const worldDialogueForm = new FakeElement('world-dialogue-form'); context.window.NEG_TEST.state().npcLocations.sakura='hospital'; Object.assign(worldDialogueForm,{id:'world-dialogue-form',data:{characterId:'sakura',message:'Привет, Сакура! Как прошёл твой день?'}});
 submit({target:worldDialogueForm,preventDefault(){}});
 assert.equal(context.window.NEG_TEST.state().ui.view,'profile','free-text dialogue must open the selected character profile page');
 assert.ok(context.window.NEG_TEST.state().dialogues.sakura.some(message=>message.from==='player' && message.text.includes('Как прошёл')),'free-text dialogue must be saved in the character history');
-const naturalActionForm = {id:'world-action-form',data:{action:'Иду к Хинате и спрашиваю, как прошёл её день.'}};
+const naturalActionForm = new FakeElement('world-action-form'); context.window.NEG_TEST.state().npcLocations.hinata='hospital'; Object.assign(naturalActionForm,{id:'world-action-form',data:{action:'Иду к Хинате и спрашиваю, как прошёл её день.'}});
 submit({target:naturalActionForm,preventDefault(){}});
 assert.equal(context.window.NEG_TEST.state().ui.targetId,'hinata','free-text RP must resolve an inflected character name');
 assert.ok(context.window.NEG_TEST.state().dialogues.hinata.some(message=>message.from==='player' && message.text.includes('спрашиваю')),'action text can include dialogue and resolve it to a character');
 assert.ok(JSON.parse(local.get('naruto-enot-garem-save-v2')).player.name === 'Проверка','new game must save progress');
 const navHandler = listeners.click?.[1];
 assert.equal(typeof navHandler,'function','page navigation handler must initialize');
+context.window.NEG_TEST.state().ui.view='world';
+const fakeApp = {dataset:{view:'world'},matches:()=>false,closest:selector=>selector==='button[data-view]'?null:null};
+navHandler({target:{closest:selector=>selector==='button[data-view]'?null:fakeApp}});
+assert.equal(context.window.NEG_TEST.state().ui.view,'world','clicks inside the app must not be misread as navigation');
+
 const mapNav = {dataset:{view:'map'},closest(){return this;}};
-navHandler({target:{closest:selector=>selector==='[data-view]'?mapNav:null}});
+navHandler({target:{closest:selector=>selector==='button[data-view]'?mapNav:null}});
 assert.equal(context.window.NEG_TEST.state().ui.view,'map','map must be a separate page');
 const peopleNav = {dataset:{view:'people'},closest(){return this;}};
-navHandler({target:{closest:selector=>selector==='[data-view]'?peopleNav:null}});
+navHandler({target:{closest:selector=>selector==='button[data-view]'?peopleNav:null}});
 assert.equal(context.window.NEG_TEST.state().ui.view,'people','character list must be a separate page');
 const openProfileButton = {dataset:{action:'open-person',id:'sakura'},textContent:'Сакура',closest(){return this;}};
 click({target:{closest:selector=>selector==='[data-action]'?openProfileButton:null,classList:{contains:()=>false}}});
@@ -122,6 +130,20 @@ assert.ok(context.window.NEG_TEST.state().encounter?.won || context.window.NEG_T
 const closeButton = {dataset:{action:'close-encounter'},textContent:'Закрыть',closest(){return this;}};
 click({target:{closest:()=>closeButton,classList:{contains:()=>false}}});
 assert.equal(context.window.NEG_TEST.state().encounter,null,'encounter can be closed');
+
+// Phone/social network, pet ownership and in-world pet actions.
+const socialPostForm = new FakeElement('social-post-form'); Object.assign(socialPostForm,{id:'social-post-form',data:{post:'Сегодня гулял по Конохе и нашёл новую чайную.'}});
+submit({target:socialPostForm,preventDefault(){}});
+assert.ok(context.window.NEG_TEST.state().phone.posts.some(post=>post.text.includes('новую чайную')),'phone post must be published from manual text');
+const phoneMessageForm = new FakeElement('phone-message-form'); Object.assign(phoneMessageForm,{id:'phone-message-form',data:{characterId:'ayame',message:'Привет! Как сегодня дела в Ичираку?'}});
+submit({target:phoneMessageForm,preventDefault(){}});
+assert.ok(context.window.NEG_TEST.state().phone.messages.some(message=>message.from==='npc' && message.characterId==='ayame'),'phone message must get a local-GM reply');
+const testPet = {id:'konoha-cat',uid:'pet-test',name:'Мару',kind:'Кот',icon:'🐈',affection:10,hunger:45,mood:55,energy:80};
+context.window.NEG_TEST.state().pets.push(testPet);
+context.window.NEG_TEST.action('Кормлю кота Мару');
+assert.equal(testPet.hunger,10,'free-text pet care must reduce hunger');
+context.window.NEG_TEST.action('Играю с Мару');
+assert.ok(testPet.affection>10 && testPet.mood>55,'free-text pet play must improve affection and mood');
 
 const galleryFiles = ['daily','shinobi','festival'];
 const detailedCharacters = ['anko','ayame','konan','sakura','hanabi','hinata'];

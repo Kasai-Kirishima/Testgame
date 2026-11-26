@@ -3,11 +3,13 @@ import {ENEMIES,getEnemy} from './data/enemies.js';
 import {ORIGINS,LOCATIONS,getLocation} from './data/world.js';
 import {createInitialState,loadState,saveState,clearSave,addFeed,updateBond,removeItem,addItem} from './core/store.js';
 import {talkToCharacter} from './core/gm.js';
-import {travelTo,doActivity,skipTime,sleepUntilMorning,assignDailyTask,tickAction} from './core/life.js';
+import {travelTo,doActivity,skipTime,sleepUntilMorning,assignDailyTask,tickAction,updateNpcPositions,getNpcLocation} from './core/life.js';
+import {getPet} from './data/pets.js';
 import {renderView,renderStatus,populateOrigins,updateOriginNote,renderSettings,escapeHTML} from './ui/render.js';
 
 const PIXABAY_TRACK = 'https://pixabay.com/music/ambient-japanese-style-ambient-475587/';
 let state = loadState();
+if (state) updateNpcPositions(state,true);
 const elements = {
   title: document.getElementById('title-screen'),
   creation: document.getElementById('creation-screen'),
@@ -36,6 +38,34 @@ function randomPlayerName() {
   const given=NAME_BANK[gender] || NAME_BANK.other;
   const pick=list=>list[Math.floor(Math.random()*list.length)];
   return `${pick(given)} ${pick(FAMILY_BANK)}`;
+}
+
+function randomizeCreator() {
+  const pick = list => list[Math.floor(Math.random()*list.length)];
+  const choices = {
+    'player-origin':['resident','shinobi','traveler','guest','medic','merchant','craft','instructor','clan','otherworld'],
+    'player-style':['balanced','bold','kind','quiet','witty'],
+    'player-look':['casual','shinobi','festival','travel','raincoat'],
+    'player-clan':['none','Узумаки','Учиха','Хьюга','Нара','Яманака','Акимичи','Инузука','Абураме','Хатаке','Сарутоби','Другой / неизвестный'],
+    'player-chakra':['fire','water','wind','earth','lightning','balanced'],
+    'player-specialty':['taijutsu','ninjutsu','genjutsu','medical','sensors','craft','none'],
+    'player-gender':['male','female','other'],
+    'player-hair':['short','medium','long','tied','wild'],
+    'player-eyes':['Карие','Серые','Голубые','Зелёные','Чёрные','Фиолетовые'],
+    'player-goal':['protect','master','explore','family','fame','peace'],
+    'player-village':['konoha','suna','kiri','iwa','kumo','independent'],
+    'player-tool':['kunai','shuriken','katana','scroll','medicine','wire'],
+    'player-age':['18','19','20','21','22','25','30'],
+    'player-mark':['none','scar','earring','ribbon','glasses']
+  };
+  for (const [id,values] of Object.entries(choices)) {
+    const field=document.getElementById(id);
+    if (field) field.value=pick(values);
+  }
+  const name=document.getElementById('player-name');
+  if (name) name.value=randomPlayerName();
+  updateOriginNote();
+  toast('Случайный персонаж создан полностью. Можно изменить любые параметры.');
 }
 
 function persist() {
@@ -71,6 +101,7 @@ function showScreen(name) {
 
 function startGame(player) {
   state = createInitialState(player);
+  updateNpcPositions(state,true);
   state.ui.screen = 'game';
   addFeed(state,`${state.player.name} начинает новую историю в Конохе. Прошлое: ${state.player.originName}.`);
   saveState(state);
@@ -122,6 +153,8 @@ function addCustomPromise(text) {
 function handleQuest(action,id) {
   const quest = state.scroll.find(item => item.id === id);
   if (!quest || quest.done) return;
+  if (action === 'quest-complete' && quest.id==='first-walk' && (quest.progress||0)<(quest.target||3)) { toast(`Нужно посетить ещё ${(quest.target||3)-(quest.progress||0)} места. Прогресс: ${quest.progress||0}/${quest.target||3}.`); return; }
+  if (action === 'quest-complete' && quest.id==='clinic-help' && !quest.done) { toast('Сначала зайди в больницу и помоги медицинскому корпусу через текстовое действие.'); return; }
   if (action === 'quest-complete') {
     quest.done = true;
     quest.completedDay = state.world.day;
@@ -198,15 +231,29 @@ function findMentionedLocation(text) {
   return LOCATION_ALIASES.find(entry=>clean.includes(entry.alias.replace(/ё/g,'е')))?.id || '';
 }
 
+function findMentionedLocations(text) {
+  const clean=String(text||'').toLowerCase().replace(/ё/g,'е');
+  const hits=LOCATION_ALIASES.map(entry=>({id:entry.id,index:clean.indexOf(entry.alias.replace(/ё/g,'е'))}))
+    .filter(entry=>entry.index>=0).sort((a,b)=>a.index-b.index);
+  const unique=[];
+  for(const hit of hits) if(!unique.some(item=>item.id===hit.id)) unique.push(hit);
+  return unique.map(item=>item.id);
+}
+
 function findMentionedCharacter(text) {
   const clean = String(text || '').toLocaleLowerCase('ru-RU').replace(/ё/g,'е');
-  return CHARACTERS.find(character => {
-    if (!state.unlocked.includes(character.id)) return false;
-    const base = character.name.toLocaleLowerCase('ru-RU').replace(/ё/g,'е');
-    const stem = base.length > 4 ? base.slice(0,-1) : base;
-    const variants = [...new Set([base,stem,`${stem}а`,`${stem}у`,`${stem}е`,`${stem}ы`,`${stem}и`,`${stem}ой`,`${stem}ом`])];
-    return variants.some(variant => new RegExp(`(?:^|[^\p{L}])${variant}(?=$|[^\p{L}])`,'u').test(clean));
-  });
+  const variantsFor = name => {
+    const base=name.toLocaleLowerCase('ru-RU').replace(/ё/g,'е');
+    const variants=[base];
+    if (/[ая]$/.test(base)) {
+      const stem=base.slice(0,-1);
+      variants.push(stem,`${stem}у`,`${stem}е`,`${stem}ой`,`${stem}ою`,`${stem}ы`,`${stem}и`);
+    } else if (/[ео]$/.test(base)) {
+      variants.push(base.slice(0,-1),base.slice(0,-1)+'е');
+    }
+    return [...new Set(variants)].filter(v=>v.length>=3).sort((a,b)=>b.length-a.length);
+  };
+  return CHARACTERS.find(character => state.unlocked.includes(character.id) && variantsFor(character.name).some(variant => clean.includes(variant))) || null;
 }
 
 function setActionResult(input,result) {
@@ -221,16 +268,26 @@ function executeFreeAction(rawText) {
   const clean = raw.toLowerCase().replace(/ё/g,'е');
   state.ui.lastActionText = raw;
   let resultParts = [];
-  const movement = /(?:^|\s)(иду|пойду|пойти|схожу|сходить|направляюсь|отправляюсь|двигаюсь|возвращаюсь|захожу|зайду|перехожу|перемещаюсь|прогуляюсь|бегу|подхожу|выхожу)(?:\s|$)/i.test(clean);
-  const destinationId = findMentionedLocation(clean);
+  const movement = /(?:^|\s)(иду|идем|идём|пойду|пойти|схожу|сходить|пошел|пошёл|пошла|направляюсь|отправляюсь|отправился|отправилась|двигаюсь|возвращаюсь|захожу|зайду|зайти|перехожу|перемещаюсь|прогуляюсь|бегу|подхожу|выхожу|вышел|вышла|ищу|навещаю|встречаю|посещаю|посетить)(?:\s|$)/i.test(clean);
+  const mentionedCharacter = findMentionedCharacter(clean);
+  const mentionedNpcPlace = mentionedCharacter ? getNpcLocation(state,mentionedCharacter.id) : '';
+  const explicitLocation = findMentionedLocation(clean);
+  const locationsInText = findMentionedLocations(clean);
+  const destinationId = explicitLocation || (mentionedNpcPlace && /(?:иду|пойду|ищу|навещаю|встречаю|подхожу)/i.test(clean) ? mentionedNpcPlace : '');
   if (destinationId && (movement || /^(?:в|на|к)\s/.test(clean))) {
-    const destination = getLocation(destinationId);
-    if (travelTo(state,destinationId)) { const local = CHARACTERS.find(item=>state.unlocked.includes(item.id) && item.startLocation===destinationId); if (local) state.ui.sceneCharacterId=local.id; resultParts.push(`Ты направляешься в «${destination.name}». ${destination.desc}`); }
-    else resultParts.push(`Ты уже находишься в месте «${destination.name}».`);
+    const route = movement && locationsInText.length ? locationsInText : [destinationId];
+    for (const stopId of route) {
+      const destination = getLocation(stopId);
+      if (travelTo(state,stopId)) {
+        const local = CHARACTERS.find(item=>state.unlocked.includes(item.id) && getNpcLocation(state,item.id)===stopId);
+        if (local) state.ui.sceneCharacterId=local.id;
+        resultParts.push(`Ты направляешься в «${destination.name}». ${destination.desc}`);
+      } else if (stopId===route[0]) resultParts.push(`Ты уже находишься в месте «${destination.name}».`);
+    }
   }
 
-  const character = findMentionedCharacter(clean);
-  const speaksToCharacter = character && /(?:говорю|сказал|спрашиваю|спросил|поговорить|поговорю|обращаюсь|здороваюсь|приветствую|поздоровал|привет|здравствуй|подхожу|иду к|зову|отвечаю|передаю|предлагаю помощь|помогаю|приглашаю|дарю)/i.test(clean);
+  const character = mentionedCharacter;
+  const speaksToCharacter = character && /(?:говорю|сказал|спрашиваю|спросил|поговорить|поговорю|обращаюсь|здороваюсь|приветствую|поздоровал|привет|здравствуй|зову|отвечаю|передаю|предлагаю помощь|помогаю|приглашаю|дарю|рассказываю|спрашиваю у)/i.test(clean);
   if (speaksToCharacter) {
     state.ui.sceneCharacterId = character.id;
     state.ui.targetId = character.id;
@@ -246,7 +303,12 @@ function executeFreeAction(rawText) {
     return;
   }
 
-  if (character && !destinationId) {
+  if (character && !speaksToCharacter) {
+    const currentNpcPlace = getNpcLocation(state,character.id);
+    if (currentNpcPlace && state.world.location !== currentNpcPlace) {
+      resultParts.push(`${character.name} сейчас находится в другом месте — ${getLocation(currentNpcPlace).name}. Напиши, что направляешься туда, чтобы встретиться.`);
+      setActionResult(raw,resultParts.join(' ')); render(); return;
+    }
     state.ui.sceneCharacterId = character.id;
     state.ui.targetId = character.id;
     state.ui.view = 'profile';
@@ -259,22 +321,38 @@ function executeFreeAction(rawText) {
     return;
   }
 
-  let activityType = '';
+  const activityRules = [
+    ['train',/(тренир|тренировка|отрабатываю прием|отрабатываю технику|контроль чакры)/i],
+    ['search',/(осматрива|обыскива|ищу вещи|исследую|проверяю окрестности|собираю находки)/i],
+    ['rest',/(отдыхаю|прилег|сажусь отдохнуть|расслабляюсь|сижу на скамейке)/i],
+    ['meal',/(ем|перекусываю|заказываю рамен|обедаю|ужинаю|поесть)/i],
+    ['focus',/(медитир|сосредоточиваюсь|концентрируюсь)/i],
+    ['help',/(помогаю|помочь|поддерживаю|лечу|помогаю медикам)/i],
+    ['cook',/(готовлю|приготовить еду|варю чай|готовлю бэнто)/i],
+    ['read',/(читаю|изучаю свиток|изучаю книгу|занимаюсь в библиотеке)/i],
+    ['garden',/(поливаю|ухаживаю за садом|сажаю цветы|собираю цветы)/i],
+    ['tidy',/(убираю|наводю порядок|наводжу порядок|прибираюсь|мою пол|мою посуду|вытираю пыль)/i],
+    ['read',/(учу|повторяю конспект|занимаюсь языком|пишу заметки)/i],
+    ['garden',/(собираю урожай|сажаю рассаду|подстригаю кусты)/i]
+  ];
+  const activityTypes=activityRules.filter(([,pattern])=>pattern.test(clean)).map(([type])=>type);
+  const pet = (state.pets || []).find(item => clean.includes(String(item.name||'').toLowerCase()) || /(питомц|животн|кот|собак|кролик|ястреб|черепах)/i.test(clean));
+  if (pet && /(кормлю|накормил|накормлю|даю корм|кормить)/i.test(clean)) {
+    pet.hunger = Math.max(0,(pet.hunger ?? 45)-35); pet.affection = Math.min(100,(pet.affection||0)+3); tickAction(state,8);
+    resultParts.push(`Ты покормил ${pet.name}. Питомец спокойно доедает и выглядит довольным.`);
+  } else if (pet && /(играю|поиграю|играть|бросаю мяч)/i.test(clean)) {
+    pet.mood = Math.min(100,(pet.mood ?? 55)+18); pet.affection = Math.min(100,(pet.affection||0)+8); tickAction(state,12);
+    resultParts.push(`Ты поиграл с ${pet.name}. Настроение питомца улучшилось, а доверие к тебе выросло.`);
+  } else if (pet && /(гуляю|прогулк|вывожу|вожу гулять)/i.test(clean)) {
+    pet.energy = Math.max(0,(pet.energy ?? 80)-12); pet.affection = Math.min(100,(pet.affection||0)+6); tickAction(state,18);
+    resultParts.push(`Ты прогулялся с ${pet.name}. Свежий воздух пошёл вам обоим на пользу.`);
+  }
   if (/(ложусь спать|иду спать|засыпаю|отправляюсь спать)/i.test(clean)) {
     sleepUntilMorning(state);
     resultParts.push('Ты устраиваешься поудобнее и отдыхаешь до утра.');
-  } else if (/(тренирую|тренировка|отрабатываю прием|отрабатываю технику|контроль чакры)/i.test(clean)) activityType = 'train';
-  else if (/(осматрива|обыскива|ищу|исследую|проверяю окрестности|собираю находки)/i.test(clean)) activityType = 'search';
-  else if (/(отдыхаю|прилег|сажусь отдохнуть|расслабляюсь|сижу на скамейке)/i.test(clean)) activityType = 'rest';
-  else if (/(ем|перекусываю|заказываю рамен|обедаю|ужинаю|поесть)/i.test(clean)) activityType = 'meal';
-  else if (/(медитир|сосредоточиваюсь|концентрируюсь)/i.test(clean)) activityType = 'focus';
-  else if (/(помогаю|помочь|поддерживаю|лечу|помогаю медикам)/i.test(clean)) activityType = state.world.location==='hospital' ? 'clinic' : 'help';
-  else if (/(готовлю|приготовить еду|варю чай|готовлю бэнто)/i.test(clean)) activityType = 'cook';
-  else if (/(читаю|изучаю свиток|изучаю книгу|занимаюсь в библиотеке)/i.test(clean)) activityType = 'read';
-  else if (/(поливаю|ухаживаю за садом|сажаю цветы|собираю цветы)/i.test(clean)) activityType = 'garden';
-  else if (/(убираю|наводю порядок|наводжу порядок|прибираюсь)/i.test(clean)) activityType = 'tidy';
-
-  if (/(покупаю|покупка|купить|приобретаю)/i.test(clean)) {
+  }
+  const purchaseMatch=/(покупаю|покупка|купить|приобретаю|заказываю)/i.test(clean);
+  if (purchaseMatch) {
     const price = state.world.location === 'flower-shop' ? 16 : 12;
     if (state.player.stats.coins >= price) {
       state.player.stats.coins -= price;
@@ -285,9 +363,13 @@ function executeFreeAction(rawText) {
       tickAction(state,20);
       resultParts.push(`Покупка завершена: ${item.name}. Потрачено ${price} рё.`);
     } else resultParts.push('Не хватает рё на эту покупку. Можно поискать небольшую подработку или выбрать другое занятие.');
-  } else if (activityType) {
-    resultParts.push(doActivity(state,activityType));
-  } else if (!destinationId || !movement) {
+  }
+  for (const activityType of activityTypes) {
+    if (activityType==='help' && state.world.location==='hospital') resultParts.push(doActivity(state,'clinic'));
+    else resultParts.push(doActivity(state,activityType));
+  }
+  const petActionDone = Boolean(pet && /(кормлю|накормил|накормлю|даю корм|кормить|играю|поиграю|играть|бросаю мяч|гуляю|прогулк|вывожу|вожу гулять)/i.test(clean));
+  if (!purchaseMatch && !activityTypes.length && !destinationId && !petActionDone) {
     tickAction(state,12);
     resultParts.push(`Ты выполняешь задуманное: «${raw}». ${getLocation(state.world.location).desc}`);
   }
@@ -303,6 +385,12 @@ function sendWorldDialogue(characterId,rawText) {
   const character = getCharacter(characterId);
   const text = String(rawText || '').trim().slice(0,500);
   if (!character || !state.unlocked.includes(character.id) || !text) return;
+  const npcPlace = getNpcLocation(state,character.id);
+  if (npcPlace !== state.world.location) {
+    state.ui.lastActionText = text;
+    state.ui.lastActionResult = `${character.name} сейчас не здесь. Она находится в ${npcPlace ? getLocation(npcPlace).name : 'другой части деревни'}. Напиши ей через смартфон или отправляйся туда.`;
+    render(); toast('Персонаж сейчас в другой локации.'); return;
+  }
   state.ui.sceneCharacterId = character.id;
   state.ui.targetId = character.id;
   state.ui.view = 'profile';
@@ -313,6 +401,33 @@ function sendWorldDialogue(characterId,rawText) {
   state.ui.lastActionResult = `${character.name}: ${response.reply}`;
   addFeed(state,`${state.player.name} поговорил с ${character.name}.`);
   render();
+}
+
+function publishPhonePost(rawText) {
+  const text=String(rawText||'').trim().slice(0,220);
+  if (!text) return;
+  if (!state.phone) state.phone={tab:'feed',posts:[],messages:[],lastPostAction:0};
+  state.phone.posts.unshift({id:`player-post-${Date.now()}`,authorId:null,text,day:state.world.day,minute:state.world.minute,likes:0,liked:false});
+  state.phone.posts=state.phone.posts.slice(0,40);
+  state.phone.tab='feed';
+  addFeed(state,'Ты опубликовал новую запись в Konohagram.');
+  render(); toast('Публикация размещена.');
+}
+
+function sendPhoneMessage(characterId,rawText) {
+  const character=getCharacter(characterId);
+  const text=String(rawText||'').trim().slice(0,500);
+  if (!character || !state.unlocked.includes(character.id) || !text) return;
+  appendDialogue(character.id,'player',text);
+  const response=talkToCharacter(state,character,text);
+  appendDialogue(character.id,'npc',response.reply);
+  if (!state.phone) state.phone={tab:'messages',posts:[],messages:[],lastPostAction:0};
+  state.phone.messages.push({characterId,from:'player',text,day:state.world.day,minute:state.world.minute});
+  state.phone.messages.push({characterId,from:'npc',text:response.reply,day:state.world.day,minute:state.world.minute});
+  state.phone.messages=state.phone.messages.slice(-80);
+  state.phone.tab='messages';
+  addFeed(state,`Новое сообщение: ${character.name} ответила в смартфоне.`);
+  state.ui.view='phone'; render(); toast(`Сообщение отправлено ${character.name}.`);
 }
 
 function exportSave() {
@@ -344,11 +459,11 @@ function renderEncounter() {
     </section></div>`;
 }
 
-function startPatrol() {
+function startPatrol(enemyId='') {
   if (!state) return;
   const remote = ['forest','gate','campsite'].includes(state.world.location);
   const pool = remote ? ENEMIES : ENEMIES.filter(enemy=>enemy.id!=='stone-guardian');
-  const enemy = pool[(state.world.day + state.world.actions + Math.floor(Math.random()*pool.length)) % pool.length];
+  const enemy = getEnemy(enemyId) || pool[(state.world.day + state.world.actions + Math.floor(Math.random()*pool.length)) % pool.length];
   state.encounter = {enemyId:enemy.id,hp:enemy.hp,maxHp:enemy.hp,playerHp:100,log:[`Ты замечаешь: ${enemy.description}`],rounds:0,won:false,lost:false};
   tickAction(state,15);
   addFeed(state,`Патруль: встреча с противником «${enemy.name}».`);
@@ -443,15 +558,21 @@ document.addEventListener('click',event=>{
   switch (action) {
     case 'new-game': populateOrigins(); showScreen('creation'); break;
     case 'random-name': { const field=document.getElementById('player-name'); if(field) field.value=randomPlayerName(); break; }
+    case 'random-character': randomizeCreator(); break;
     case 'continue': { const loaded = loadState(); if (loaded) { state=loaded; showScreen('game'); } else toast('Сохранение не найдено.'); break; }
     case 'home': showScreen('title'); break;
     case 'open-settings': switchView('settings'); break;
+    case 'phone-tab': state.phone.tab=type==='messages'?'messages':'feed'; render(); break;
+    case 'phone-like': { const post=state.phone.posts.find(item=>item.id===id); if(post){post.liked=!post.liked;post.likes=Math.max(0,(post.likes||0)+(post.liked?1:-1));render();} break; }
+    case 'buy-pet': { const pet=getPet(id); if(!pet) break; if((state.pets||[]).length>=5){toast('Можно завести не больше пяти питомцев.');break;} if(state.player.stats.coins<pet.price){toast('Не хватает рё.');break;} state.player.stats.coins-=pet.price; const names={ 'konoha-cat':['Мару','Юки','Сора'],'ninja-dog':['Ака','Кума','Рэй'],'white-rabbit':['Момо','Широ','Хана'],'courier-hawk':['Хая','Тори','Казэ'],'pond-turtle':['Каме','Тама','Нори']}; const choices=names[id]||['Тама']; const name=choices[Math.floor(Math.random()*choices.length)]; state.pets.push({...pet,uid:`pet-${Date.now()}`,name,affection:5,hunger:45,mood:55,energy:80}); addFeed(state,`В доме появился новый питомец: ${name} (${pet.kind}).`); render();toast(`${name} теперь твой питомец!`); break; }
+    case 'pet-care': { const pet=state.pets.find(item=>item.uid===id); if(pet){ if(type==='feed'){pet.hunger=Math.max(0,(pet.hunger??45)-35);pet.affection=Math.min(100,(pet.affection||0)+3);tickAction(state,8);} else if(type==='walk'){pet.energy=Math.max(0,(pet.energy??80)-12);pet.affection=Math.min(100,(pet.affection||0)+6);tickAction(state,18);} else {pet.mood=Math.min(100,(pet.mood??55)+18);pet.affection=Math.min(100,(pet.affection||0)+8);tickAction(state,12);} addFeed(state,`Ты позаботился о питомце ${pet.name}.`); render();toast(`${pet.name} рад вниманию.`);} break; }
     case 'close-modal': elements.modal.innerHTML=''; break;
     case 'skip-time': skipTime(state,Number(hours)||1); render(); break;
     case 'sleep': sleepUntilMorning(state); render(); toast('Наступило утро.'); break;
-    case 'travel': if (travelTo(state,id)) { const local = CHARACTERS.find(character=>state.unlocked.includes(character.id) && character.startLocation===id); if (local) state.ui.sceneCharacterId=local.id; render(); } else toast('Ты уже находишься здесь.'); break;
+    case 'travel': if (travelTo(state,id)) { const local = CHARACTERS.find(character=>state.unlocked.includes(character.id) && getNpcLocation(state,character.id)===id); state.ui.sceneCharacterId=local?.id || ''; render(); } else toast('Ты уже находишься здесь.'); break;
     case 'activity': doActivity(state,type); render(); break;
     case 'patrol': startPatrol(); break;
+    case 'scene-patrol': startPatrol(id); break;
     case 'combat-move': combatMove(type); break;
     case 'close-encounter': state.encounter=null; elements.modal.innerHTML=''; render(); break;
     case 'open-person': state.ui.view='profile'; state.ui.targetId=id; state.ui.sceneCharacterId=id; render(); break;
@@ -485,7 +606,8 @@ document.addEventListener('click',event=>{
 });
 
 document.addEventListener('click',event=>{
-  const nav = event.target.closest('[data-view]');
+  // #app itself also carries data-view for CSS; only actual navigation buttons may switch pages.
+  const nav = event.target.closest('button[data-view]');
   if (nav && state) switchView(nav.dataset.view);
 });
 
@@ -498,11 +620,13 @@ document.addEventListener('submit',event=>{
   if (event.target.id === 'world-action-form') {
     event.preventDefault();
     executeFreeAction(new FormData(event.target).get('action'));
+    return;
   }
   if (event.target.id === 'world-dialogue-form') {
     event.preventDefault();
     const form = new FormData(event.target);
     sendWorldDialogue(form.get('characterId'),form.get('message'));
+    return;
   }
   if (event.target.id === 'chat-form') {
     event.preventDefault();
@@ -515,6 +639,9 @@ document.addEventListener('submit',event=>{
     appendDialogue(character.id,'npc',result.reply);
     render();
   }
+  if (event.target.id === 'social-post-form') { event.preventDefault(); publishPhonePost(new FormData(event.target).get('post')); }
+  if (event.target.id === 'phone-message-form') { event.preventDefault(); const data=new FormData(event.target); sendPhoneMessage(data.get('characterId'),data.get('message')); }
+  if (event.target.classList?.contains?.('pet-name-form')) { event.preventDefault(); const pet=state.pets.find(item=>item.uid===event.target.dataset.petId); const name=String(new FormData(event.target).get('name')||'').trim().slice(0,20); if(pet&&name){pet.name=name;addFeed(state,`Ты выбрал новое имя для питомца: ${name}.`);render();toast('Имя питомца изменено.');} }
   if (event.target.id === 'assignment-form') { event.preventDefault(); assignPlan(event.target); }
   if (event.target.id === 'promise-form') { event.preventDefault(); addCustomPromise(new FormData(event.target).get('promise')); }
 });
@@ -536,7 +663,10 @@ window.addEventListener('beforeunload',persist);
 window.NEG_TEST = {
   start: () => { if (!state) startGame({name:'Тест',origin:'shinobi'}); else showScreen('game'); },
   state: () => state,
-  render: () => render()
+  render: () => render(),
+  action: text => executeFreeAction(text),
+  dialogue: (id,text) => sendWorldDialogue(id,text),
+  randomize: () => randomizeCreator()
 };
 
 showScreen(state ? 'title' : 'title');

@@ -53,6 +53,7 @@ export function advanceTime(state,minutes) {
   state.world.minute = total;
   if (state.world.day !== oldDay) {
     settleAssignments(state,state.world.day);
+    for (const pet of (state.pets || [])) { pet.hunger = Math.min(100,(pet.hunger ?? 45)+18); pet.mood = Math.max(0,(pet.mood ?? 55)-5); pet.energy = Math.min(100,(pet.energy ?? 80)+12); }
     if ((state.world.day - 1) % 7 === 0 && state.world.day > 1) {
       state.world.season = (state.world.season + 1) % 4;
       addFeed(state,`Сезон сменился: наступила ${SEASONS[state.world.season].toLowerCase()}.`);
@@ -64,6 +65,7 @@ export function advanceTime(state,minutes) {
     if (state.world.season === 3) pool = WEATHER.filter(item => item.id !== 'rain');
     state.world.weather = pool[Math.floor(Math.random() * pool.length)].id;
   }
+  updateNpcPositions(state,false);
   return state;
 }
 
@@ -93,6 +95,8 @@ export function tickAction(state,minutes=20) {
   state.world.actions += 1;
   advanceTime(state,minutes);
   maybeAddWorldEvent(state);
+  updateNpcPositions(state,false);
+  maybePhonePost(state);
   return state;
 }
 
@@ -118,10 +122,14 @@ export function travelTo(state,id) {
   state.world.location = id;
   tickAction(state,18);
   addFeed(state,`Ты пришёл в место «${place.name}». ${place.desc}`);
-  const walk = state.scroll.find(item => item.id === 'first-walk' && !item.done);
-  if (walk) {
-    walk.progress = Math.min(walk.target || 3,(walk.progress || 0) + 1);
-    if (walk.progress >= walk.target) { walk.done = true; addFeed(state,'Поручение «Осмотреть Коноху» завершено. Репутация выросла.'); state.player.stats.renown = Math.min(100,state.player.stats.renown+3); }
+  if (!Array.isArray(state.visitedLocations)) state.visitedLocations = [];
+  if (!state.visitedLocations.includes(id)) {
+    state.visitedLocations.push(id);
+    const walk = state.scroll.find(item => item.id === 'first-walk' && !item.done);
+    if (walk) {
+      walk.progress = Math.min(walk.target || 3,state.visitedLocations.length);
+      if (walk.progress >= (walk.target || 3)) { walk.done = true; addFeed(state,'Поручение «Осмотреть Коноху» завершено: ты посетил три разных места. Репутация выросла.'); state.player.stats.renown = Math.min(100,state.player.stats.renown+3); }
+    }
   }
   if (id === 'hospital') {
     const clinic = state.scroll.find(item => item.id === 'clinic-help' && !item.done);
@@ -165,15 +173,17 @@ export function doActivity(state,type) {
     case 'cook': addItem(state,{id:'bento',name:'Домашний бэнто',desc:'Простой обед, приготовленный дома.',kind:'food',qty:1}); stats.stamina = Math.min(100,stats.stamina+8); line = 'Ты приготовил бэнто. В сумке появился обед.'; break;
     case 'read': stats.focus = Math.min(100,stats.focus+10); stats.chakra = Math.min(100,stats.chakra+2); line = 'Чтение помогло отвлечься и узнать кое-что новое.'; break;
     case 'garden': stats.focus = Math.min(100,stats.focus+5); addItem(state,{id:'flower',name:'Полевые цветы',desc:'Свежие цветы из общественного сада.',kind:'gift',qty:1}); line = 'Ты помог в саду и собрал несколько свежих цветов.'; break;
-    case 'clinic': stats.renown = Math.min(100,stats.renown+2); stats.focus = Math.min(100,stats.focus+4); line = 'Ты помог медицинскому корпусу с повседневными делами.'; break;
+    case 'clinic': {
+      stats.renown = Math.min(100,stats.renown+2); stats.focus = Math.min(100,stats.focus+4);
+      line = 'Ты помог медицинскому корпусу с повседневными делами.';
+      const clinicQuest = state.scroll.find(item=>item.id==='clinic-help' && !item.done);
+      if (clinicQuest && state.world.location==='hospital' && clinicQuest.visited) { clinicQuest.done=true; clinicQuest.completedDay=state.world.day; addFeed(state,'Поручение «Помощь медицинскому корпусу» выполнено: ты помог медикам на месте.'); }
+      break;
+    }
     case 'tidy': stats.focus = Math.min(100,stats.focus+7); line = 'Ты навёл порядок. Теперь дома приятнее находиться.'; break;
     default: line = 'Ты провёл время в Конохе.';
   }
   addFeed(state,line);
-  if (type === 'clinic') {
-    const quest = state.scroll.find(item => item.id === 'clinic-help' && !item.done);
-    if (quest) { quest.done = true; addFeed(state,'Необязательное поручение медицинского корпуса завершено.'); }
-  }
   return line;
 }
 
@@ -184,12 +194,14 @@ export function assignDailyTask(state,actor,task) {
   const already = state.assignments.find(item => item.day === state.world.day && item.actorId === key && !item.done);
   if (already) {
     already.task = task;
+    updateNpcPositions(state,true);
     addFeed(state,`${already.actorName}: план на день изменён.`);
     return {ok:true,message:`План изменён: ${already.actorName}.`};
   }
   const character = CHARACTERS.find(item => item.id === actor);
   const actorName = actor === 'player' ? state.player.name : (character?.name || 'Участник команды');
   state.assignments.push({id:`plan-${state.world.day}-${key}`,day:state.world.day,actorId:key,actorName,characterId:character?.id || null,task,done:false});
+  updateNpcPositions(state,true);
   addFeed(state,`${actorName}: план на день — ${taskNames[task].toLowerCase()}.`);
   return {ok:true,message:`План назначен: ${actorName} — ${taskNames[task]}. Он будет выполнен после завершения дня.`};
 }
@@ -198,6 +210,119 @@ export function assignDailyTask(state,actor,task) {
 export function getWorldMood(state) {
   const weather = getWeather(state);
   return `${seasonLabel(state).toLowerCase()}, ${weather.label.toLowerCase()}. ${weather.effect}`;
+}
+
+const NPC_LIKE_LOCATIONS = {
+  ramen:['ichiraku','market'], cooking:['ichiraku','home'], help:['hospital','home'], медицина:['hospital'],
+  цветы:['flower-shop','garden'], мода:['market','flower-shop'], разговоры:['tea-house','main-street'],
+  стратегия:['library','hokage','gate'], тишина:['garden','tea-house','memorial'], чай:['tea-house','ichiraku'],
+  книги:['library','tea-house'], исследования:['library','forest'], порядок:['hokage','library','home'],
+  оригами:['library','tea-house'], сад:['garden','flower-shop'], природа:['forest','river','garden'],
+  семья:['home','ichiraku'], праздники:['market','festival'], документы:['hokage','library'],
+  дипломатия:['hokage','tea-house'], тренировки:['training','academy'], долг:['hokage','gate'],
+  история:['library','memorial'], свитки:['library','hokage'], живопись:['garden','river'], прогулки:['garden','river','main-street'],
+  цели:['academy','library'], музыка:['tea-house','market'], свобода:['river','forest'], состязания:['training','academy'],
+  ветер:['gate','river'], ремесло:['market','academy'], путешествия:['gate','market'], спокойствие:['garden','tea-house'],
+  забота:['hospital','home'], наблюдение:['memorial','garden','library'], розыгрыши:['market','training'], соревнования:['training','academy'],
+  острая:['ichiraku','market'], вызовы:['training','gate'], честность:['tea-house','training'],
+  умения:['academy','training'], красота:['flower-shop','market'], внимание:['library','garden'],
+  снежинки:['forest','river'], травы:['forest','hospital'],
+};
+
+function npcPeriod(minute) {
+  const hour = Math.floor(minute / 60) % 24;
+  if (hour >= 5 && hour < 10) return 'morning';
+  if (hour >= 10 && hour < 16) return 'day';
+  if (hour >= 16 && hour < 21) return 'evening';
+  return 'night';
+}
+
+function locationChoicesFor(character,period,state) {
+  const choices = [];
+  const add = id => { if (id && LOCATIONS.some(place=>place.id===id) && !choices.includes(id)) choices.push(id); };
+  const assignment = state?.assignments?.find(item=>item.actorId===character.id && item.day===state.world.day && !item.done);
+  const taskPlaces = {cook:['home','ichiraku'],tidy:['home'],shop:['market'],study:['library'],train:['training'],garden:['garden'],clinic:['hospital'],rest:['home','tea-house']};
+  for (const id of (taskPlaces[assignment?.task] || [])) add(id);
+  if (period === 'morning') add(character.startLocation);
+  const likes = (character.likes || []).map(v=>String(v).toLowerCase());
+  for (const like of likes) for (const id of (NPC_LIKE_LOCATIONS[like] || [])) add(id);
+  if (period === 'day') add(character.startLocation);
+  const temperamentSpots = {
+    quiet:['garden','tea-house','library','memorial'], warm:['ichiraku','flower-shop','garden','home'],
+    playful:['market','training','main-street','academy'], sharp:['training','gate','hokage','library'],
+    direct:['hokage','training','hospital','gate'], wise:['library','memorial','tea-house','hokage'],
+    formal:['hokage','library','hospital','academy'], bright:['flower-shop','market','garden','ichiraku'],
+    gentle:['hospital','garden','tea-house','home'], mysterious:['forest','memorial','river','gate']
+  };
+  for (const id of (temperamentSpots[character.style] || [])) add(id);
+  if (period === 'evening') {
+    for (const id of ['ichiraku','tea-house','garden','river','market']) add(id);
+  }
+  if (period === 'night') {
+    for (const id of ['home','tea-house','garden','ichiraku']) add(id);
+  }
+  for (const id of ['main-street','market','garden','tea-house','library','home','training','river','ichiraku','flower-shop','hospital','gate','academy','hokage','forest','memorial','campsite']) add(id);
+  return choices;
+}
+
+/** Place at most one heroine/NPC in each location for the current schedule slot. */
+export function updateNpcPositions(state,force=false) {
+  if (!state) return {};
+  const period = npcPeriod(state.world.minute);
+  const stamp = `${state.world.day}:${period}`;
+  if (!force && state.npcPeriod === stamp && state.npcLocations && Object.keys(state.npcLocations).length) return state.npcLocations;
+  const available = CHARACTERS.filter(character => state.unlocked?.includes(character.id));
+  // Characters with a player-assigned plan get priority so their task can influence their actual location.
+  const hasPlan = character => state.assignments?.some(item=>item.actorId===character.id && item.day===state.world.day && !item.done);
+  const planned = available.filter(hasPlan);
+  const unplanned = available.filter(character=>!hasPlan(character));
+  // Rotate each group independently so randomization never pushes assigned plans behind background NPCs.
+  const seedBase = (Number(state.npcShuffle)||0) + state.world.day * 3 + ['morning','day','evening','night'].indexOf(period) * 5;
+  const rotate = (list,seed) => list.length ? [...list.slice(seed % list.length),...list.slice(0,seed % list.length)] : [];
+  const ordered = [...rotate(planned,seedBase),...rotate(unplanned,seedBase + 7)];
+  const occupied = new Set();
+  const positions = {};
+  for (const character of ordered) {
+    const options = locationChoicesFor(character,period,state);
+    const seed = ((Number(state.npcShuffle)||0) + state.world.day * 31 + state.world.minute + character.id.length * 17) % Math.max(1,options.length);
+    const rotated = [...options.slice(seed),...options.slice(0,seed)];
+    const assignment = state.assignments?.find(item=>item.actorId===character.id && item.day===state.world.day && !item.done);
+    const taskPlaces = {cook:['home','ichiraku'],tidy:['home'],shop:['market'],study:['library'],train:['training'],garden:['garden'],clinic:['hospital'],rest:['home','tea-house']};
+    const assignedPlace = (taskPlaces[assignment?.task] || []).find(id=>!occupied.has(id));
+    const destination = assignedPlace || rotated.find(id=>!occupied.has(id));
+    if (!destination) continue; // Others are busy elsewhere; nobody is duplicated.
+    positions[character.id] = destination;
+    occupied.add(destination);
+  }
+  state.npcLocations = positions;
+  state.npcPeriod = stamp;
+  return positions;
+}
+
+export function getNpcLocation(state,characterId) {
+  const character = CHARACTERS.find(item=>item.id===characterId);
+  if (!character) return '';
+  if (!state.npcLocations || !state.npcPeriod) updateNpcPositions(state,true);
+  return state.npcLocations?.[characterId] || '';
+}
+
+function maybePhonePost(state) {
+  if (!state.phone) state.phone = {tab:'feed',posts:[],messages:[],lastPostAction:0};
+  if (state.world.actions < 2 || state.world.actions - (state.phone.lastPostAction || 0) < 3) return;
+  const present = CHARACTERS.filter(character => state.npcLocations?.[character.id]);
+  if (!present.length) return;
+  const character = present[(state.world.day + state.world.actions + state.world.minute) % present.length];
+  const topics = character.likes || ['дела'];
+  const topic = topics[(state.world.actions + character.id.length) % topics.length];
+  const lines = [
+    `Небольшая пауза между делами. Сегодня думаю о теме: ${topic}.`,
+    `Кто-нибудь знает хорошее место для ${topic}? Хочу сменить обстановку.`,
+    `Сегодняшний день оказался насыщенным. Хорошо, что нашлось время для ${topic}.`,
+    `Записка себе на будущее: не забывать про ${topic} и отдых.`
+  ];
+  state.phone.posts.unshift({id:`post-${state.world.day}-${state.world.actions}-${character.id}`,authorId:character.id,text:lines[(state.world.actions + state.world.day) % lines.length],day:state.world.day,minute:state.world.minute,likes:0,liked:false});
+  state.phone.posts = state.phone.posts.slice(0,40);
+  state.phone.lastPostAction = state.world.actions;
 }
 
 export function getLocationList() { return LOCATIONS; }

@@ -40,13 +40,19 @@ export function createInitialState(player = {}) {
       {id:'bento',name:'Домашний бэнто',desc:'Простой обед, приготовленный заранее.',qty:1,kind:'food'}
     ],
     scroll: [
-      {id:'first-walk',title:'Осмотреть Коноху',desc:'Посети три разных места и узнай, чем живёт деревня.',kind:'task',done:false,optional:true,progress:0,target:3},
+      {id:'first-walk',title:'Осмотреть Коноху',desc:'Посети три разных места и узнай, чем живёт деревня.',kind:'task',done:false,optional:true,progress:1,target:3},
       {id:'clinic-help',title:'Помощь медицинскому корпусу',desc:'Загляни в больницу и помоги с повседневными делами.',kind:'task',done:false,optional:true},
       {id:'secret-trail',title:'След на заснеженной тропе',desc:'Поищи необычные следы в лесу. Возможно, встретится редкий путешественник.',kind:'mystery',done:false,optional:true,hidden:true}
     ],
     feed: ['Ты прибыл в Коноху. Впереди целая деревня, полная незнакомых историй.'],
     unlocked,
     assignments: [],
+    npcLocations: {},
+    npcPeriod: '',
+    visitedLocations: ['main-street'],
+    npcShuffle: Math.floor(Math.random()*100000),
+    pets: [],
+    phone: {tab:'feed',posts:[],messages:[],lastPostAction:0},
     settings: {autosave:true,animations:true,textSize:'normal',contrast:'normal',musicLink:true,confirmReset:true},
     ui: {screen:'world',view:'world',targetId:'',sceneCharacterId:'hinata',lastActionText:'',lastActionResult:'Ты прибыл в Коноху. Напиши, куда хочешь пойти, что сделать или с кем поговорить.',showHelp:true}
   };
@@ -69,7 +75,13 @@ export function normalizeState(input) {
     scroll: Array.isArray(input.scroll) ? input.scroll : base.scroll,
     feed: Array.isArray(input.feed) ? input.feed : base.feed,
     unlocked: Array.isArray(input.unlocked) ? input.unlocked : base.unlocked,
-    assignments: Array.isArray(input.assignments) ? input.assignments : []
+    assignments: Array.isArray(input.assignments) ? input.assignments : [],
+    npcLocations: input.npcLocations && typeof input.npcLocations === 'object' ? input.npcLocations : {},
+    npcPeriod: typeof input.npcPeriod === 'string' ? input.npcPeriod : '',
+    visitedLocations: Array.isArray(input.visitedLocations) ? input.visitedLocations : [],
+    npcShuffle: Number.isFinite(Number(input.npcShuffle)) ? Number(input.npcShuffle) : Math.floor(Math.random()*100000),
+    pets: Array.isArray(input.pets) ? input.pets : [],
+    phone: {...base.phone,...(input.phone || {}),posts:Array.isArray(input.phone?.posts)?input.phone.posts:[],messages:Array.isArray(input.phone?.messages)?input.phone.messages:[]}
   };
 }
 
