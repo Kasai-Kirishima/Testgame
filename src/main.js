@@ -3,7 +3,10 @@ import {ENEMIES,getEnemy} from './data/enemies.js';
 import {ORIGINS,LOCATIONS,getLocation} from './data/world.js';
 import {createInitialState,loadState,saveState,clearSave,addFeed,updateBond,removeItem,addItem} from './core/store.js';
 import {talkToCharacter,npcOpeningLine,performConversationAction} from './core/gm.js';
-import {travelTo,doActivity,skipTime,sleepUntilMorning,assignDailyTask,tickAction,updateNpcPositions,getNpcLocation} from './core/life.js';
+import {travelTo,doActivity,skipTime,sleepUntilMorning,assignDailyTask,tickAction,advanceTime,updateNpcPositions,getNpcLocation,resolveWorldSituation} from './core/life.js';
+import {recordDailyProgress,gainSkillXP,craftItem,useCraftedItem} from './core/progression.js';
+import {evaluateAchievements} from './core/achievements.js';
+import {getMagazineIssue,getMagazinePage} from './data/secret-magazine.js';
 import {getPet} from './data/pets.js';
 import {getJob} from './data/jobs.js';
 import {renderView,renderStatus,populateOrigins,updateOriginNote,renderSettings,escapeHTML} from './ui/render.js';
@@ -78,6 +81,11 @@ function persist() {
 
 function render() {
   if (!state) return;
+  const newlyUnlocked = evaluateAchievements(state);
+  for (const achievement of newlyUnlocked) {
+    addFeed(state,`Получено достижение: «${achievement.title}» (+${achievement.points} очков).`);
+    toast(`🏆 ${achievement.title} · +${achievement.points} очков`);
+  }
   renderStatus(state);
   elements.view.innerHTML = renderView(state);
   animateCurrentDialogue();
@@ -178,6 +186,7 @@ function speakAsAction(characterId,type) {
   appendDialogue(characterId,'player',text);
   const result = talkToCharacter(state,character,text);
   appendDialogue(characterId,'npc',result.reply);
+  recordDailyProgress(state,'talk',1); gainSkillXP(state,'social',3);
   if (type === 'invite') {
     state.world.lastMeetup = {characterId,day:state.world.day,location:state.world.location};
     state.player.stats.stamina = Math.max(0,state.player.stats.stamina-2);
@@ -332,7 +341,7 @@ function executeFreeAction(rawText) {
   state.ui.lastActionText = raw;
   if (/(ищу работу|хочу устроиться|подработк|посмотреть вакансии|найти работу)/i.test(clean)) { state.ui.view='work'; state.ui.lastActionResult='Ты открываешь список доступных подработок. Выбери занятие, отправляйся по адресу и поговори с работодателем.'; addFeed(state,state.ui.lastActionResult); render(); return; }
   let resultParts = [];
-  const foodOrderIntent = /(я\s+голоден|я\s+голодна|проголодал|заказал\s+еду|заказала\s+еду|заказываю\s+еду|хочу\s+заказать\s+(?:рамен|еду)|заказал\s+рамен|заказала\s+рамен|перекусить)/i.test(clean);
+  const foodOrderIntent = /(я\s+голоден|я\s+голодна|проголодал|заказал\s+еду|заказала\s+еду|заказываю\s+еду|хочу\s+заказать\s+(?:рамен|еду)|заказал\s+рамен|заказала\s+рамен|заказываю\s+рамен|покупаю\s+рамен|куплю\s+рамен|покупаю\s+еду|перекусить)/i.test(clean);
   if (foodOrderIntent) {
     if (state.world.location==='ichiraku') {
       const cost=18;
@@ -447,6 +456,7 @@ function executeFreeAction(rawText) {
     state.ui.lastActionText = raw;
     state.ui.lastActionResult = line;
     addFeed(state,`${state.player.name}: ${raw}`);
+    recordDailyProgress(state,'talk',1); gainSkillXP(state,'social',5);
     render();
     return;
   }
@@ -547,8 +557,11 @@ function executeFreeAction(rawText) {
     sleepUntilMorning(state);
     resultParts.push('Ты устраиваешься поудобнее и отдыхаешь до утра.');
   }
-  const purchaseMatch=/(покупаю|покупка|купить|приобретаю|заказываю)/i.test(clean);
+  const purchaseMatch=/(покупаю|покупка|купить|приобретаю)/i.test(clean) && !/(заказываю рамен|заказываю еду)/i.test(clean);
   if (purchaseMatch) {
+    if (!['market','flower-shop'].includes(state.world.location)) {
+      resultParts.push('Для покупок отправляйся на рынок или в цветочную лавку. Здесь деньги не списываются.');
+    } else {
     const price = state.world.location === 'flower-shop' ? 16 : 12;
     if (state.player.stats.coins >= price) {
       state.player.stats.coins -= price;
@@ -559,6 +572,7 @@ function executeFreeAction(rawText) {
       tickAction(state,20);
       resultParts.push(`Покупка завершена: ${item.name}. Потрачено ${price} рё.`);
     } else resultParts.push('Не хватает рё на эту покупку. Можно поискать небольшую подработку или выбрать другое занятие.');
+    }
   }
   for (const activityType of activityTypes) {
     if (activityType==='help' && state.world.location==='hospital') resultParts.push(doActivity(state,'clinic'));
@@ -613,6 +627,7 @@ function sendWorldDialogue(characterId,rawText) {
   state.ui.lastActionText = text;
   state.ui.lastActionResult = `${character.name}: ${response.reply}`;
   addFeed(state,`${state.player.name} поговорил с ${character.name}.`);
+  recordDailyProgress(state,'talk',1); gainSkillXP(state,'social',5);
   render();
 }
 
@@ -630,6 +645,7 @@ function sendConversationAction(characterId,action) {
   state.ui.targetId=character.id;
   state.ui.view='conversation';
   addFeed(state,`${state.player.name} использовал дружеский жест в разговоре с ${character.name}.`);
+  recordDailyProgress(state,'talk',1); gainSkillXP(state,'social',2);
   render();
 }
 
@@ -694,10 +710,13 @@ function renderEncounter() {
 
 function startPatrol(enemyId='') {
   if (!state) return;
+  const hp=Number(state.player.stats.hp??100);
+  if (hp<=0) { toast('Сначала восстанови здоровье аптечкой.'); return; }
   const remote = ['forest','gate','campsite'].includes(state.world.location);
   const pool = remote ? ENEMIES : ENEMIES.filter(enemy=>enemy.id!=='stone-guardian');
-  const enemy = getEnemy(enemyId) || pool[(state.world.day + state.world.actions + Math.floor(Math.random()*pool.length)) % pool.length];
-  state.encounter = {enemyId:enemy.id,hp:enemy.hp,maxHp:enemy.hp,playerHp:100,log:[`Ты замечаешь: ${enemy.description}`],rounds:0,won:false,lost:false};
+  const requested = enemyId ? ENEMIES.find(item=>item.id===enemyId) : null;
+  const enemy = requested || pool[(state.world.day*11 + state.world.actions*7 + Math.floor(state.world.minute/30)) % pool.length];
+  state.encounter = {enemyId:enemy.id,hp:enemy.hp,maxHp:enemy.hp,playerHp:hp,log:[`Ты замечаешь: ${enemy.description}`],rounds:0,won:false,lost:false};
   tickAction(state,15);
   addFeed(state,`Патруль: встреча с противником «${enemy.name}».`);
   renderEncounter();
@@ -707,10 +726,12 @@ function startPatrol(enemyId='') {
 function combatMove(move) {
   const encounter = state?.encounter;
   if (!encounter || encounter.won || encounter.lost) return;
+  if (!['attack','technique','guard','retreat'].includes(move)) { toast('Выбери доступный боевой приём.'); return; }
   const enemy = getEnemy(encounter.enemyId);
   const stats = state.player.stats;
   if (move === 'retreat') {
     addFeed(state,`Ты отступил после встречи с «${enemy.name}», не рискуя продолжать бой.`);
+    advanceTime(state,5);
     state.encounter = null;
     elements.modal.innerHTML = '';
     render();
@@ -743,18 +764,22 @@ function combatMove(move) {
     stats.coins += enemy.reward;
     stats.renown = Math.min(100,stats.renown+2);
     stats.stamina = Math.max(0,stats.stamina-3);
+    recordDailyProgress(state,'patrol',1); gainSkillXP(state,'fieldcraft',8);
     addFeed(state,`Ты успешно завершил патруль и получил ${enemy.reward} рё.`);
   } else {
     const counter = Math.max(2,Math.round((enemy.attack + Math.floor(Math.random()*4))*counterScale));
-    encounter.playerHp = Math.max(0,encounter.playerHp-counter);
+    stats.hp = Math.max(0,(stats.hp??100)-counter);
+    encounter.playerHp = stats.hp;
     stats.stamina = Math.max(0,stats.stamina-2);
-    encounter.log.push(`${enemy.name} отвечает осторожным выпадом: стойкость снижена на ${counter}.`);
+    encounter.log.push(`${enemy.name} отвечает осторожным выпадом: здоровье снижено на ${counter}.`);
     if (encounter.playerHp <= 0) {
       encounter.lost = true;
       stats.stamina = Math.max(8,stats.stamina-8);
-      addFeed(state,`Ты завершил тренировочное столкновение отступлением от «${enemy.name}».`);
+      encounter.log.push('Сил больше не хватает продолжать столкновение. Перед следующей вылазкой нужно восстановить здоровье.');
+      addFeed(state,`Ты выбыл из патруля после столкновения с «${enemy.name}». Восстанови здоровье перед новой вылазкой.`);
     }
   }
+  advanceTime(state,4);
   renderEncounter();
   persist();
 }
@@ -853,10 +878,13 @@ document.addEventListener('click',event=>{
     case 'sleep': sleepUntilMorning(state); render(); toast('Наступило утро.'); break;
     case 'travel': if (travelTo(state,id)) { const local = CHARACTERS.find(character=>state.unlocked.includes(character.id) && getNpcLocation(state,character.id)===id); state.ui.sceneCharacterId=local?.id || ''; state.ui.view='world'; state.ui.targetId=''; state.ui.drawerOpen=false; document.getElementById('game-screen')?.classList.remove('drawer-open'); render(); toast(`Ты прибыл(а) в ${getLocation(id).name}. Переход занял ${state.ui.lastTravelMinutes} мин.`); } else toast(state.ui.travelFailure||'Не удалось перейти в это место.'); break;
     case 'activity': doActivity(state,type); render(); break;
+    case 'resolve-situation': { const result=resolveWorldSituation(state,id,type); toast(result.message); render(); break; }
+    case 'craft-item': { const result=craftItem(state,id); toast(result.message); render(); break; }
+    case 'use-crafted-item': { const result=useCraftedItem(state,id); toast(result.message); render(); break; }
     case 'patrol': startPatrol(); break;
     case 'scene-patrol': startPatrol(id); break;
     case 'combat-move': combatMove(type); break;
-    case 'close-encounter': state.encounter=null; elements.modal.innerHTML=''; render(); break;
+    case 'close-encounter': if(state.encounter && !state.encounter.won && !state.encounter.lost){combatMove('retreat');}else{state.encounter=null;elements.modal.innerHTML='';render();} break;
     case 'open-person': state.ui.view='profile'; state.ui.targetId=id; state.ui.sceneCharacterId=id; state.ui.profileArtIndex=0; render(); break;
     case 'open-conversation': {
       const character=getCharacter(id); if(!character)break;
@@ -874,6 +902,41 @@ document.addEventListener('click',event=>{
     case 'select-scene-character': state.ui.sceneCharacterId=id; render(); break;
     case 'back-people': state.ui.view='people'; state.ui.targetId=''; render(); break;
     case 'person-action': speakAsAction(id,type); break;
+    case 'discover-magazine': {
+      state.collectibles ||= {magazineFound:false,unlockedIssues:[],readPages:[]};
+      if (state.world.location!=='library') { toast('Старый стеллаж находится в библиотеке.'); break; }
+      if (state.collectibles.magazineFound) { toast('Ты уже нашёл альманах.'); break; }
+      tickAction(state,10);
+      state.collectibles.magazineFound=true;
+      state.collectibles.unlockedIssues=['issue-01'];
+      addFeed(state,'В библиотеке ты нашёл тонкий журнал без каталожного номера — «Листья и истории». Внутри есть пометки о других выпусках.');
+      state.ui.view='magazine'; state.ui.targetId=''; render(); toast('Найден секретный альманах: «Листья и истории».'); break;
+    }
+    case 'find-magazine-issue': {
+      state.collectibles ||= {magazineFound:false,unlockedIssues:[],readPages:[]};
+      const issue=getMagazineIssue(id);
+      if (!state.collectibles.magazineFound || !issue) { toast('Сначала найди первый выпуск в библиотеке.'); break; }
+      if (state.world.location!==issue.foundAt) { toast(`Ищи этот выпуск в локации: ${getLocation(issue.foundAt).name}.`); break; }
+      if (state.collectibles.unlockedIssues.includes(id)) { toast('Этот выпуск уже есть в коллекции.'); break; }
+      if (id==='issue-03' && !state.collectibles.unlockedIssues.includes('issue-02')) { toast('Сначала найди второй выпуск в архиве.'); break; }
+      tickAction(state,12);
+      state.collectibles.unlockedIssues.push(id);
+      addFeed(state,`Ты нашёл выпуск № ${issue.number}: «${issue.title}».`);
+      state.ui.view='magazine'; render(); toast(`Найден выпуск № ${issue.number}!`); break;
+    }
+    case 'read-magazine': {
+      state.collectibles ||= {magazineFound:false,unlockedIssues:[],readPages:[]};
+      const page=getMagazinePage(id);
+      if (!page || !state.collectibles.magazineFound) { toast('Страница не найдена.'); break; }
+      const issueForPage = ['issue-01','issue-02','issue-03'].map(getMagazineIssue).find(issue=>issue?.pages.some(entry=>entry.id===id));
+      if (!issueForPage || !state.collectibles.unlockedIssues.includes(issueForPage.id)) { toast('Этот выпуск ещё не найден.'); break; }
+      if (state.collectibles.readPages.includes(id)) { toast('Эта страница уже прочитана.'); break; }
+      state.collectibles.readPages.push(id);
+      gainSkillXP(state,'knowledge',3);
+      state.player.stats.focus=Math.min(100,(state.player.stats.focus||0)+2);
+      addFeed(state,`Прочитана страница альманаха: «${page.title}».`);
+      render(); toast('Страница прочитана. +3 опыта знаний и +2 внимания.'); break;
+    }
     case 'secret-hint':
       if (state.world.secretClue && !state.unlocked.includes('haku')) {
         state.unlocked.push('haku'); state.ui.view='profile'; state.ui.targetId='haku';
@@ -906,7 +969,7 @@ document.addEventListener('click',event=>{
     }
     case 'visit-job': if(travelTo(state,id)){state.ui.view='work';render();} break;
     case 'apply-job': {const job=getJob(id);if(!job)break;if(state.world.location!==job.place){toast('Нужно прийти на место работы.');break;}state.player.jobId=id;render();toast(`Ты договорился о работе: ${job.name}.`);break;}
-    case 'work-shift': {const job=getJob(id);if(!job||state.player.jobId!==id||state.world.location!==job.place){toast('Сначала выбери работу и приди на место.');break;}if(state.player.lastWorkDay!==state.world.day){state.player.lastWorkDay=state.world.day;state.player.workShifts=0;}if(state.player.workShifts>=2){toast('На сегодня смен достаточно.');break;}state.player.workShifts++;state.player.stats.coins+=job.wage;state.player.stats.stamina=Math.max(5,state.player.stats.stamina-14);tickAction(state,job.duration);addFeed(state,`Смена завершена: ${job.name}. Получено ${job.wage} рё.`);render();toast(`Смена окончена. +${job.wage} рё.`);break;}
+    case 'work-shift': {const job=getJob(id);if(!job||state.player.jobId!==id||state.world.location!==job.place){toast('Сначала выбери работу и приди на место.');break;}if(state.player.lastWorkDay!==state.world.day){state.player.lastWorkDay=state.world.day;state.player.workShifts=0;}if(state.player.workShifts>=2){toast('На сегодня смен достаточно.');break;}state.player.workShifts++;state.player.workShiftsTotal=(state.player.workShiftsTotal||0)+1;state.player.stats.coins+=job.wage;state.player.stats.stamina=Math.max(5,state.player.stats.stamina-14);tickAction(state,job.duration);recordDailyProgress(state,'work',1);gainSkillXP(state,'support',5);addFeed(state,`Смена завершена: ${job.name}. Получено ${job.wage} рё.`);render();toast(`Смена окончена. +${job.wage} рё.`);break;}
     case 'save-now': saveState(state); toast('Сохранение записано в браузер.'); break;
     case 'export-save': exportSave(); break;
     case 'import-save': document.getElementById('import-file')?.click(); break;
@@ -989,7 +1052,9 @@ window.NEG_TEST = {
   render: () => render(),
   action: text => executeFreeAction(text),
   dialogue: (id,text) => sendWorldDialogue(id,text),
-  randomize: () => randomizeCreator()
+  randomize: () => randomizeCreator(),
+  patrol: enemyId => startPatrol(enemyId || ''),
+  combat: move => combatMove(move)
 };
 
 showScreen(state ? 'title' : 'title');

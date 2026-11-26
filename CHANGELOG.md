@@ -1,13 +1,29 @@
+## v1.5.0
+- Added 21 Steam-style achievements with points, progress bars, hidden conditions and save migration.
+- Added the secret collectible journal “Листья и истории”: discovered in the library, with later issues hidden in the scroll archive and tea house. The magazine remains absent from navigation until discovered.
+- Added nine original editorial pages about Konoha, crafts, training, market life, cooking and travel; each uses existing local environment artwork. Reading gives a small knowledge/focus reward once per page.
+- Reused existing game assets only; no images generated and no external archive imagery embedded.
+- Added migration-safe persistence and dedicated tests for achievement unlocks, issue gating, page reading, asset existence and hidden navigation.
+
 # Changelog
 
-## v1.4.6
+## v1.4.8
+- Added a daily board with three rotating optional contracts, progress tracking, one-time rewards and a 14-day history.
+- Added six character-skill tracks with XP and five mastery levels, plus a home workbench with three useful recipes and consumable items.
+- Added choice-based location situations across the village; situations now require the player to return to the correct place, validate required items and prevent duplicate rewards.
+- Improved patrol combat edge cases: persistent player HP, correct handling of insufficient chakra, rejection of unknown moves, retreat cost when closing an active encounter, and blocking new patrols at zero HP.
+- Improved free-text purchase handling so purchases outside shops do not spend money/time, while ramen orders (including natural purchase phrasing) use Ichiraku's restaurant flow.
+- Hardened time advancement against invalid numeric input and added regression coverage for all the above.
+- Rebuilt the standalone runtime and passed all nine automated test suites. A real Chromium launch was attempted but the sandbox browser process did not complete startup; no browser-playthrough is claimed.
+
+## v1.4.7
 - Reworked the local GM's reciprocal dialogue flow: NPC opening prompts are now personality-specific and tracked as pending questions so natural player answers can be understood in context.
 - Added per-character memory for player-shared interests, goals, hometown, pets and work; players can ask what an NPC remembers, and trusted characters can proactively revisit a remembered topic on later encounters.
 - Varied reply selection by character, turn count and in-game time so repeating the same sentence does not always return the same wording.
 - Added a cooldown for repeating the same social action; repeated gestures no longer farm friendship/trust and receive an in-character explanation.
 - Added focused QA for NPC-led prompts, natural answer handling, player-fact memory, proactive memory callbacks, reply variation and action anti-farming.
 - Preserved the existing 500-phrase and 14,000 established-dialogue regression checks, all 50 response categories and 100 conversation actions.
-- Rebuilt the standalone runtime and validated the project in a headless Chromium browser.
+- Rebuilt the standalone runtime and validated the interaction flow through the standalone VM/DOM smoke suite.
 
 ## v1.4.5
 - Audited all 28 character portrait/gallery references against the actual bundled files.

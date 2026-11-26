@@ -1,6 +1,7 @@
 import {WEATHER,SEASONS,LOCATIONS,getLocation} from '../data/world.js';
-import {getBond,updateBond,addFeed,addItem} from './store.js';
+import {getBond,updateBond,addFeed,addItem,removeItem} from './store.js';
 import {CHARACTERS} from '../data/characters.js';
+import {ensureDailyBoard,recordDailyProgress,gainSkillXP} from './progression.js';
 
 export function clockLabel(minute) {
   const h = Math.floor(minute / 60) % 24;
@@ -69,7 +70,9 @@ function settleAssignments(state,day) {
 
 export function advanceTime(state,minutes) {
   const oldDay = state.world.day;
-  let total = state.world.minute + Math.max(0,minutes);
+  const safeMinutes=Math.max(0,Number.isFinite(Number(minutes))?Number(minutes):0);
+  const currentMinute=Math.max(0,Number.isFinite(Number(state.world.minute))?Number(state.world.minute):0);
+  let total = currentMinute + safeMinutes;
   while (total >= 1440) {
     total -= 1440;
     state.world.day += 1;
@@ -84,6 +87,7 @@ export function advanceTime(state,minutes) {
       addFeed(state,`Сезон сменился: наступила ${SEASONS[state.world.season].toLowerCase()}.`);
     }
     state.world.weather = WEATHER[(state.world.day + state.world.season * 2) % WEATHER.length].id;
+    ensureDailyBoard(state);
   } else if (Math.random() < 0.12) {
     let pool = WEATHER;
     if (state.world.season === 1) pool = WEATHER.filter(item => item.id !== 'snow');
@@ -95,25 +99,86 @@ export function advanceTime(state,minutes) {
 }
 
 const WORLD_EVENTS = [
-  {title:'Потерянная записка',desc:'На скамейке лежит записка. Можно отнести её в резиденцию или оставить на доске находок.',place:'main-street'},
-  {title:'Суета на рынке',desc:'Торговцу нужна помощь с небольшими покупками. Это простой шанс проявить себя.',place:'market'},
-  {title:'Разговор в саду',desc:'В саду кто-то ищет тихое место, чтобы подумать. Можно составить компанию.',place:'garden'},
-  {title:'Командное испытание',desc:'На площадке собирают небольшую группу для упражнения на контроль чакры.',place:'training'},
-  {title:'Смена в больнице',desc:'Медицинскому корпусу нужны дополнительные руки для повседневных дел.',place:'hospital'},
-  {title:'Неизвестная тропа',desc:'После дождя заметны следы, ведущие к старой лесной беседке.',place:'forest'},
-  {title:'Городская подготовка к празднику',desc:'На главной улице развешивают фонари. Можно помочь с украшениями.',place:'main-street'},
-  {title:'Книжный обмен',desc:'В библиотеке собирают книги для обмена. Возможно, найдётся что-то интересное.',place:'library'}
+  {id:'market-parcels',title:'Коробки у торгового ряда',desc:'Порыв ветра опрокинул коробки у прилавка. Торговец пытается удержать товар, а несколько свёртков уже катятся по улице.',place:'market',choices:[
+    {id:'collect',label:'Помочь собрать коробки',outcome:'Вы вместе собрали товар. Торговец благодарит за быструю помощь.',effects:{renown:2,coins:8},skill:'support',xp:4},
+    {id:'sort',label:'Разложить товар по местам',outcome:'Ты аккуратно рассортировал покупки. Торговец запомнил твою внимательность.',effects:{focus:5,renown:1},skill:'knowledge',xp:4}
+  ]},
+  {id:'garden-sapling',title:'Саженец после ливня',desc:'В саду молодой саженец накренился после дождя. Рядом лежат подпорки и небольшая лейка.',place:'garden',choices:[
+    {id:'support',label:'Укрепить саженец',outcome:'Саженец выпрямлен и закреплён. Смотритель сада обещает присмотреть за ним.',effects:{renown:2,focus:3},item:{id:'flower',name:'Полевые цветы',desc:'Небольшой букет из общественного сада.',kind:'gift',qty:1},skill:'support',xp:5},
+    {id:'water',label:'Полить соседние клумбы',outcome:'Ты полил соседние клумбы и убрал садовый инвентарь на место.',effects:{stamina:4,renown:1},skill:'support',xp:3}
+  ]},
+  {id:'training-target',title:'Сбившаяся мишень',desc:'На тренировочной площадке мишень перекосилась, а начинающий ученик не может понять, как правильно оценивать дистанцию.',place:'training',choices:[
+    {id:'coach',label:'Объяснить принцип расчёта',outcome:'Ты спокойно объяснил, как оценивать расстояние и направление. Ученик благодарит за урок.',effects:{focus:6,renown:2},skill:'knowledge',xp:5},
+    {id:'repair',label:'Починить крепление',outcome:'Мишень снова стоит ровно. Инструктор отмечает твою практичность.',effects:{stamina:-3,renown:2},skill:'fieldcraft',xp:5}
+  ]},
+  {id:'clinic-supplies',title:'Перепутанные медицинские свёртки',desc:'В больнице несколько коробок с перевязочными материалами оказались не на своих полках. Медсестра просит помочь с сортировкой.',place:'hospital',choices:[
+    {id:'sort',label:'Рассортировать материалы',outcome:'Материалы разложены по подписям. Медперсоналу стало проще работать.',effects:{focus:5,renown:2},skill:'support',xp:6},
+    {id:'donate',label:'Передать лечебную траву',outcome:'Ты передал лечебную траву в медицинский корпус. Её добавят в общий запас.',requires:{item:'herb',qty:1},effects:{renown:3,coins:4},skill:'support',xp:6}
+  ]},
+  {id:'forest-footprints',title:'Следы у старой беседки',desc:'После дождя у лесной тропы видны необычные следы. Рядом нет признаков опасности, но кажется, что кто-то потерял небольшой свёрток.',place:'forest',choices:[
+    {id:'inspect',label:'Осмотреть тропу внимательно',outcome:'Ты нашёл свёрток с чистой бумагой и оставил его у сторожки, чтобы владелец мог забрать находку.',effects:{focus:4,renown:1},item:{id:'paper',name:'Качественная бумага',desc:'Бумага из найденного свёртка.',kind:'material',qty:1},skill:'fieldcraft',xp:6},
+    {id:'mark',label:'Оставить отметку для патруля',outcome:'Ты отметил место на карте патруля. Следующая смена сможет проверить тропу.',effects:{renown:2,coins:5},skill:'fieldcraft',xp:5}
+  ]},
+  {id:'street-note',title:'Записка на скамье',desc:'На главной улице ты замечаешь записку с адресом. Похоже, её выронил кто-то из жителей.',place:'main-street',choices:[
+    {id:'notice',label:'Отнести записку на доску находок',outcome:'Записка попала на доску находок. Владелец сможет её забрать.',effects:{renown:2,focus:2},skill:'support',xp:4},
+    {id:'ask',label:'Спросить прохожих, кто её ищет',outcome:'Один из прохожих узнаёт почерк и обещает передать записку владельцу.',effects:{renown:1},skill:'social',xp:4}
+  ]},
+  {id:'library-book',title:'Книга без каталожного номера',desc:'В библиотеке обнаружилась старая книга без каталожной карточки. Библиотекарь не уверен, куда её вернуть.',place:'library',choices:[
+    {id:'catalog',label:'Помочь найти раздел',outcome:'По оглавлению и теме ты определил подходящий раздел. Книга вернулась на полку.',effects:{focus:7,renown:1},skill:'knowledge',xp:7},
+    {id:'copy',label:'Сделать заметку для каталога',outcome:'Ты составил краткую карточку, чтобы книгу было проще находить.',effects:{focus:5},item:{id:'paper',name:'Качественная бумага',desc:'Оставшийся лист для заметок.',kind:'material',qty:1},skill:'knowledge',xp:6}
+  ]},
+  {id:'river-lantern',title:'Фонарь у берега',desc:'У берега реки застрял бумажный фонарь с праздничной ленточкой. Он ещё цел, но течение может унести его дальше.',place:'river',choices:[
+    {id:'retrieve',label:'Осторожно достать фонарь',outcome:'Ты достал фонарь и отнёс его к месту подготовки к празднику.',effects:{renown:2,stamina:-2},skill:'fieldcraft',xp:5},
+    {id:'signal',label:'Позвать смотрителя берега',outcome:'Смотритель забрал фонарь специальным шестом и поблагодарил за внимательность.',effects:{renown:1,focus:2},skill:'support',xp:4}
+  ]},
+  {id:'ramen-order',title:'Перепутанный заказ в Ичираку',desc:'На стойке оказался лишний бэнто: похоже, два заказа перепутали. Повар пытается найти покупателя.',place:'ichiraku',choices:[
+    {id:'check',label:'Помочь сверить заказы',outcome:'Вы нашли владельца заказа по записке. Повар угостил тебя чаем за помощь.',effects:{renown:1,stamina:5},item:{id:'tea',name:'Зелёный чай',desc:'Чай от повара Ичираку.',kind:'gift',qty:1},skill:'support',xp:4},
+    {id:'wait',label:'Подождать, пока найдётся покупатель',outcome:'Покупатель вернулся сам. Ты не вмешивался, но помог сохранить порядок.',effects:{focus:3},skill:'social',xp:2}
+  ]},
+  {id:'tea-umbrella',title:'Забытый зонт',desc:'В чайном домике остался зонт. За окном начинается дождь, и хозяин не знает, кому он принадлежит.',place:'tea-house',choices:[
+    {id:'register',label:'Оставить зонт у хозяина',outcome:'Хозяин записал находку в журнал забытых вещей.',effects:{renown:2},skill:'support',xp:4},
+    {id:'dry',label:'Аккуратно просушить зонт',outcome:'Ты просушил зонт и оставил его у входа, чтобы владелец мог забрать вещь.',effects:{focus:4},skill:'craft',xp:3}
+  ]},
+  {id:'greenhouse-labels',title:'Перепутанные таблички',desc:'В теплице ветер перемешал таблички с названиями растений. Смотритель просит помочь восстановить порядок.',place:'greenhouse',choices:[
+    {id:'identify',label:'Сверить растения по справочнику',outcome:'Ты сверил листья со справочником и вернул таблички на места.',effects:{focus:6,renown:2},skill:'knowledge',xp:6},
+    {id:'organize',label:'Подготовить новые таблички',outcome:'Ты подготовил новые таблички и разложил их по грядкам.',effects:{renown:1},item:{id:'paper',name:'Качественная бумага',desc:'Остаток материала после табличек.',kind:'material',qty:1},skill:'craft',xp:5}
+  ]}
 ];
 
 function maybeAddWorldEvent(state) {
   if (state.world.actions === 0 || state.world.actions % 4 !== 0) return;
-  const pending = state.scroll.some(item => item.kind === 'event' && !item.done);
+  const pending = state.scroll.some(item => item.kind === 'situation' && !item.done && !item.cancelled);
   if (pending) return;
   const candidates = WORLD_EVENTS.filter(item => item.place === state.world.location);
-  const pool = candidates.length ? candidates : WORLD_EVENTS;
-  const event = pool[(state.world.day + state.world.actions + state.world.minute) % pool.length];
-  state.scroll.unshift({...event,id:`event-${state.world.day}-${state.world.actions}`,kind:'event',done:false,optional:true});
-  addFeed(state,`Новое событие: ${event.title}.`);
+  if (!candidates.length) return;
+  const event = candidates[(state.world.day + state.world.actions + state.world.minute) % candidates.length];
+  const entry={id:`situation-${event.id}-${state.world.day}-${state.world.actions}`,title:event.title,desc:event.desc,kind:'situation',scenarioId:event.id,choices:event.choices.map(choice=>({id:choice.id,label:choice.label})),done:false,optional:true,day:state.world.day};
+  state.scroll.unshift(entry);
+  addFeed(state,`Необычная ситуация: ${event.title}. В свитке появились варианты действий.`);
+}
+
+export function resolveWorldSituation(state,entryId,choiceId) {
+  const entry=state.scroll.find(item=>item.id===entryId && item.kind==='situation');
+  if (!entry || entry.done || entry.cancelled) return {ok:false,message:'Эта ситуация уже завершена или недоступна.'};
+  const scenario=WORLD_EVENTS.find(item=>item.id===entry.scenarioId);
+  const choice=scenario?.choices.find(item=>item.id===choiceId);
+  if (!choice) return {ok:false,message:'Такого варианта нет.'};
+  if (state.world.location!==scenario.place) return {ok:false,message:`Чтобы разобраться с этой ситуацией, вернись в «${getLocation(scenario.place).name}».`};
+  if (choice.requires?.item && (state.inventory.find(item=>item.id===choice.requires.item)?.qty||0)<(choice.requires.qty||1)) return {ok:false,message:'Для этого решения не хватает нужного предмета.'};
+  if (choice.requires?.item) removeItem(state,choice.requires.item,choice.requires.qty||1);
+  const stats=state.player.stats;
+  for (const [key,value] of Object.entries(choice.effects||{})) {
+    if (!(key in stats)) continue;
+    const max=key==='coins'?999999:100;
+    stats[key]=Math.max(0,Math.min(max,(Number(stats[key])||0)+value));
+  }
+  if (choice.item) addItem(state,choice.item);
+  if (choice.skill) gainSkillXP(state,choice.skill,choice.xp||3);
+  entry.done=true;
+  entry.completedDay=state.world.day;
+  entry.outcome=choice.outcome;
+  addFeed(state,`${entry.title}: ${choice.outcome}`);
+  return {ok:true,message:choice.outcome};
 }
 
 export function tickAction(state,minutes=20) {
@@ -166,6 +231,8 @@ export function travelTo(state,id) {
   if (!Array.isArray(state.visitedLocations)) state.visitedLocations = [];
   if (!state.visitedLocations.includes(id)) {
     state.visitedLocations.push(id);
+    recordDailyProgress(state,'visit',1);
+    gainSkillXP(state,'fieldcraft',4);
     const walk = state.scroll.find(item => item.id === 'first-walk' && !item.done);
     if (walk) {
       walk.progress = Math.min(walk.target || 3,state.visitedLocations.length);
@@ -187,45 +254,49 @@ export function travelTo(state,id) {
 
 export function doActivity(state,type) {
   const stats = state.player.stats;
+  const validTypes=new Set(['rest','meal','train','help','search','focus','barrier','cook','read','garden','clinic','tidy']);
+  if (!validTypes.has(type)) return 'Неизвестное занятие.';
+  if (type==='meal' && stats.coins<12) return 'Не хватает 12 рё на полноценный обед. Время и деньги не потрачены.';
+  if (type==='barrier' && stats.chakra<8) return 'Чакры маловато для защитного упражнения. Время не потрачено.';
+  if (['train','barrier'].includes(type) && stats.stamina<4) return 'Ты слишком устал для тренировки. Сначала отдохни.';
   tickAction(state,25);
   let line = '';
+  const masteryBonus=skill=>Math.max(0,getSkillLevelSafe(state,skill)-1);
   switch (type) {
-    case 'rest': stats.stamina = Math.min(100,stats.stamina+18); stats.focus = Math.min(100,stats.focus+7); line = 'Ты немного отдохнул. Силы восстановлены.'; break;
-    case 'meal':
-      if (stats.coins >= 12) { stats.coins -= 12; stats.stamina = Math.min(100,stats.stamina+24); line = 'Горячий обед восстановил силы. Потрачено 12 рё.'; }
-      else line = 'Не хватает рё на полноценный обед. Можно отдохнуть дома.';
-      break;
-    case 'train': stats.stamina = Math.max(0,stats.stamina-10); stats.chakra = Math.min(100,stats.chakra+9); stats.focus = Math.min(100,stats.focus+5); stats.renown = Math.min(100,stats.renown+1); line = 'Ты выполнил тренировочное упражнение на контроль чакры. Навыки немного улучшились.'; break;
-    case 'help': stats.renown = Math.min(100,stats.renown+2); stats.focus = Math.min(100,stats.focus+3); addItem(state,{id:'herb',name:'Лечебная трава',desc:'Полезная находка для медицинского корпуса.',kind:'material',qty:1}); line = 'Ты помог местным жителям. Репутация выросла, а в сумке появилась лечебная трава.'; break;
+    case 'rest': stats.stamina = Math.min(100,stats.stamina+18); stats.focus = Math.min(100,stats.focus+7); line = 'Ты немного отдохнул. Силы восстановлены.'; recordDailyProgress(state,'rest'); gainSkillXP(state,'chakra',2); break;
+    case 'meal': stats.coins -= 12; stats.stamina = Math.min(100,stats.stamina+24); line = 'Горячий обед восстановил силы. Потрачено 12 рё.'; break;
+    case 'train': stats.stamina = Math.max(0,stats.stamina-10); stats.chakra = Math.min(100,stats.chakra+9+masteryBonus('chakra')); stats.focus = Math.min(100,stats.focus+5); stats.renown = Math.min(100,stats.renown+1); line = 'Ты выполнил тренировочное упражнение на контроль чакры. Навыки немного улучшились.'; recordDailyProgress(state,'train'); gainSkillXP(state,'chakra',8); break;
+    case 'help': stats.renown = Math.min(100,stats.renown+2); stats.focus = Math.min(100,stats.focus+3); addItem(state,{id:'herb',name:'Лечебная трава',desc:'Полезная находка для медицинского корпуса.',kind:'material',qty:1}); line = 'Ты помог местным жителям. Репутация выросла, а в сумке появилась лечебная трава.'; recordDailyProgress(state,'help'); gainSkillXP(state,'support',7); break;
     case 'search': {
       const drops = [
         {id:'tea',name:'Зелёный чай',desc:'Ароматный чай для спокойного перерыва.',kind:'gift'},
         {id:'flower',name:'Полевые цветы',desc:'Небольшой букет, собранный у дороги.',kind:'gift'},
-        {id:'paper',name:'Качественная бумага',desc:'Подойдёт для записок и оригами.',kind:'gift'},
+        {id:'paper',name:'Качественная бумага',desc:'Подойдёт для записок и оригами.',kind:'material'},
         {id:'herb',name:'Лечебная трава',desc:'Полезная находка для медицинского корпуса.',kind:'material'}
       ];
-      const item = drops[Math.floor(Math.random()*drops.length)]; addItem(state,{...item,qty:1}); line = `Во время осмотра территории ты нашёл: ${item.name}.`; break;
+      const item = drops[Math.floor(Math.random()*drops.length)]; addItem(state,{...item,qty:1}); line = `Во время осмотра территории ты нашёл: ${item.name}.`; recordDailyProgress(state,'search'); gainSkillXP(state,'fieldcraft',6); break;
     }
-    case 'focus': stats.chakra = Math.min(100,stats.chakra+14); stats.focus = Math.min(100,stats.focus+8); line = 'Ты спокойно сосредоточился и восстановил контроль над чакрой.'; break;
-    case 'barrier':
-      if (stats.chakra >= 8) { stats.chakra -= 8; stats.focus = Math.min(100,stats.focus+5); line = 'Ты потренировал защитный барьер и безопасную эвакуацию команды. Упражнение завершено.'; }
-      else line = 'Чакры маловато. Сначала отдохни или потренируй концентрацию.';
-      break;
-    case 'cook': addItem(state,{id:'bento',name:'Домашний бэнто',desc:'Простой обед, приготовленный дома.',kind:'food',qty:1}); stats.stamina = Math.min(100,stats.stamina+8); line = 'Ты приготовил бэнто. В сумке появился обед.'; break;
-    case 'read': stats.focus = Math.min(100,stats.focus+10); stats.chakra = Math.min(100,stats.chakra+2); line = 'Чтение помогло отвлечься и узнать кое-что новое.'; break;
-    case 'garden': stats.focus = Math.min(100,stats.focus+5); addItem(state,{id:'flower',name:'Полевые цветы',desc:'Свежие цветы из общественного сада.',kind:'gift',qty:1}); line = 'Ты помог в саду и собрал несколько свежих цветов.'; break;
+    case 'focus': stats.chakra = Math.min(100,stats.chakra+14); stats.focus = Math.min(100,stats.focus+8); line = 'Ты спокойно сосредоточился и восстановил контроль над чакрой.'; gainSkillXP(state,'chakra',5); break;
+    case 'barrier': stats.chakra -= 8; stats.focus = Math.min(100,stats.focus+5); line = 'Ты потренировал защитный барьер и безопасную эвакуацию команды. Упражнение завершено.'; gainSkillXP(state,'chakra',7); break;
+    case 'cook': addItem(state,{id:'bento',name:'Домашний бэнто',desc:'Простой обед, приготовленный дома.',kind:'food',qty:1}); stats.stamina = Math.min(100,stats.stamina+8); line = 'Ты приготовил бэнто. В сумке появился обед.'; gainSkillXP(state,'craft',5); break;
+    case 'read': stats.focus = Math.min(100,stats.focus+10); stats.chakra = Math.min(100,stats.chakra+2); line = 'Чтение помогло отвлечься и узнать кое-что новое.'; recordDailyProgress(state,'study'); gainSkillXP(state,'knowledge',7); break;
+    case 'garden': stats.focus = Math.min(100,stats.focus+5); addItem(state,{id:'flower',name:'Полевые цветы',desc:'Свежие цветы из общественного сада.',kind:'gift',qty:1}); line = 'Ты помог в саду и собрал несколько свежих цветов.'; recordDailyProgress(state,'garden'); gainSkillXP(state,'support',5); break;
     case 'clinic': {
       stats.renown = Math.min(100,stats.renown+2); stats.focus = Math.min(100,stats.focus+4);
       line = 'Ты помог медицинскому корпусу с повседневными делами.';
+      recordDailyProgress(state,'help'); gainSkillXP(state,'support',7);
       const clinicQuest = state.scroll.find(item=>item.id==='clinic-help' && !item.done);
       if (clinicQuest && state.world.location==='hospital' && clinicQuest.visited) { clinicQuest.done=true; clinicQuest.completedDay=state.world.day; addFeed(state,'Поручение «Помощь медицинскому корпусу» выполнено: ты помог медикам на месте.'); }
       break;
     }
-    case 'tidy': stats.focus = Math.min(100,stats.focus+7); line = 'Ты навёл порядок. Теперь дома приятнее находиться.'; break;
-    default: line = 'Ты провёл время в Конохе.';
+    case 'tidy': stats.focus = Math.min(100,stats.focus+7); line = 'Ты навёл порядок. Теперь дома приятнее находиться.'; gainSkillXP(state,'craft',3); break;
   }
   addFeed(state,line);
   return line;
+}
+
+function getSkillLevelSafe(state,skill) {
+  return Math.max(1,Math.min(5,Number(state.skills?.[skill]?.level)||1));
 }
 
 export function assignDailyTask(state,actor,task) {

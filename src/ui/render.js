@@ -6,6 +6,9 @@ import {PETS} from '../data/pets.js';
 import {JOBS,getJob} from '../data/jobs.js';
 import {getEnemy} from '../data/enemies.js';
 import {CONVERSATION_ACTIONS,CONVERSATION_ACTION_GROUPS} from '../data/conversation-actions.js';
+import {ensureDailyBoard,SKILL_META,getSkillLevel,RECIPES,canCraft} from '../core/progression.js';
+import {ACHIEVEMENTS,getAchievementProgress} from '../core/achievements.js';
+import {MAGAZINE_ISSUES} from '../data/secret-magazine.js';
 
 export const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g,char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
@@ -49,6 +52,11 @@ function renderWorld(state) {
   const enemyVisible = Boolean(enemyId && ((state.world.day * 13 + state.world.actions * 7 + state.world.minute) % 4 === 1));
   const ambientEnemy = enemyVisible ? getEnemy(enemyId) : null;
   const ambientPet = state.pets?.[0];
+  const foundIssues = state.collectibles?.unlockedIssues || [];
+  let secretSearch='';
+  if (place.id==='library' && !state.collectibles?.magazineFound) secretSearch='<button class="secret-find-btn" data-action="discover-magazine">🔎 Осмотреть старый стеллаж</button>';
+  else if (place.id==='archive' && state.collectibles?.magazineFound && !foundIssues.includes('issue-02')) secretSearch='<button class="secret-find-btn" data-action="find-magazine-issue" data-id="issue-02">📜 Проверить папку старых заметок</button>';
+  else if (place.id==='tea-house' && foundIssues.includes('issue-02') && !foundIssues.includes('issue-03')) secretSearch='<button class="secret-find-btn" data-action="find-magazine-issue" data-id="issue-03">🍵 Поговорить о старых выпусках</button>';
   return `<section class="rp-full-scene" aria-label="Игровая сцена">
       <img class="rp-full-bg" src="${escapeHTML(sceneImage||'assets/backgrounds/konoha-main.webp')}" alt="${escapeHTML(place.name)}" loading="eager" decoding="async">
       <div class="rp-full-vignette"></div>
@@ -64,7 +72,7 @@ function renderWorld(state) {
       <form id="world-action-form" class="rp-text-action"><label><span>СВОБОДНОЕ ДЕЙСТВИЕ</span><small>Пиши, что делаешь, куда идёшь или что исследуешь</small></label><textarea name="action" rows="2" maxlength="700" placeholder="Например: осматриваю витрину, затем захожу в цветочную лавку…" required>${escapeHTML(state.ui.lastActionText||'')}</textarea><button class="btn btn-primary" type="submit">Выполнить ↗</button></form>
       <form id="world-dialogue-form" class="rp-text-dialogue"><label><span>ТВОЯ РЕПЛИКА</span><small>${activeCharacter?`Разговор с ${escapeHTML(activeCharacter.name)} · только ручной ввод`:'Рядом сейчас никого нет'}</small></label>${activeCharacter?`<input type="hidden" name="characterId" value="${activeCharacter.id}"><textarea name="message" rows="2" maxlength="700" placeholder="Напиши своими словами, что говоришь…" required></textarea><button class="btn btn-soft" type="submit">Сказать ➤</button>`:`<div class="rp-empty-talk">Персонаж появится в этой сцене, когда окажется в локации. Можно отправиться по карте или немного подождать.</div><button class="btn btn-soft" type="button" data-view="map">Открыть карту</button>`}</form>
     </section>
-    <div class="rp-bottom-shortcuts"><button data-view="locations">🌸 Локации</button><button data-view="map">⌖ Карта</button><button data-view="scroll">📜 Задания</button><button data-view="gallery">▧ Галерея</button><button data-action="skip-time" data-hours="1">◷ +1 час</button></div>`;
+    <div class="rp-bottom-shortcuts"><button data-view="locations">🌸 Локации</button><button data-view="map">⌖ Карта</button><button data-view="scroll">📜 Задания</button><button data-view="gallery">▧ Галерея</button><button data-view="achievements">🏆 Достижения</button>${state.collectibles?.magazineFound?'<button data-view="magazine">📖 Альманах</button>':''}${secretSearch}<button data-action="skip-time" data-hours="1">◷ +1 час</button>${['training','forest','gate','campsite'].includes(place.id)?'<button data-action="patrol">🥋 Учебный патруль</button>':''}</div>`;
 }
 function renderMap(state) {
   const place = getLocation(state.world.location);
@@ -237,16 +245,22 @@ function renderPets(state) {
 }
 
 function renderScroll(state) {
+  const board=ensureDailyBoard(state);
   const entries = state.scroll.filter(item=>!item.hidden || item.visited);
   const history=entries.filter(item=>item.done||item.cancelled);
   const active=entries.filter(item=>!item.done&&!item.cancelled);
   const shown=state.ui.questTab==='history'?history:active;
-  return `${heading('Задания','Обещания, просьбы героинь и личные цели. Награды отображаются только тогда, когда о них прямо сказано.')}
-    <section class="quest-banner"><div><small>🌸 СВИТОК КОНОХИ</small><h3>Твои дела и обещания</h3><p>Задание может появиться после разговора, договорённости или твоей собственной цели.</p></div></section>
+  const contracts=board.contracts.map(item=>`<article class="daily-contract ${item.done?'done':''}"><div class="daily-contract-icon">${item.done?'✓':'✦'}</div><div class="daily-contract-copy"><b>${escapeHTML(item.title)}</b><small>${escapeHTML(item.desc)}</small><div class="quest-progress"><i style="width:${Math.min(100,(item.progress/item.target)*100)}%"></i></div><small>${item.progress}/${item.target} · награда ${item.reward} рё</small></div>${item.done?'<span class="done-mark">✓</span>':''}</article>`).join('');
+  const skills=Object.entries(SKILL_META).map(([id,meta])=>{const skill=state.skills?.[id]||{level:1,xp:0};const level=getSkillLevel(state,id);const goal=level*20;const progress=level>=5?100:Math.min(100,(skill.xp/goal)*100);return `<article class="mastery-chip"><span>${meta.icon}</span><div><b>${escapeHTML(meta.name)} · ур. ${level}</b><div class="quest-progress"><i style="width:${progress}%"></i></div><small>${level>=5?'Максимальный уровень':`${skill.xp}/${goal} опыта`}</small></div></article>`}).join('');
+  return `${heading('Задания','Ежедневные поручения, необычные события, обещания и личные цели. Выбор в ситуациях влияет на награды и развитие навыков.')}
+    <section class="quest-banner"><div><small>🌸 СВИТОК КОНОХИ</small><h3>Твои дела и обещания</h3><p>Завершай ежедневные поручения и выбирай, как поступить в неожиданных ситуациях.</p></div></section>
+    <section class="panel-card daily-board"><div class="card-head"><h3>Поручения на день ${board.day}</h3><small>${board.contracts.filter(item=>item.done).length}/${board.contracts.length} ГОТОВО</small></div><div class="daily-contract-list">${contracts}</div><p class="chat-hint">Новые поручения появляются утром. Незавершённые задачи истекают без штрафа.</p></section>
+    <section class="panel-card mastery-panel"><div class="card-head"><h3>Развитие навыков</h3><small>ОПЫТ ЗА ДЕЙСТВИЯ</small></div><div class="mastery-grid">${skills}</div></section>
     <div class="quest-tabs"><button data-action="quest-tab" data-id="active" class="${state.ui.questTab!=='history'?'active':''}">Активные <b>${active.length}</b></button><button data-action="quest-tab" data-id="history" class="${state.ui.questTab==='history'?'active':''}">История <b>${history.length}</b></button></div>
-    <section class="panel-card"><div class="scroll-list">${shown.length?shown.map(item=>`<article class="scroll-item ${item.done?'completed':''}"><div class="scroll-icon">${item.kind==='promise'?'🌸':item.kind==='mystery'?'❔':'📜'}</div><div><strong>${escapeHTML(item.title)}</strong><p>${escapeHTML(item.desc)}</p>${item.progress!=null?`<div class="quest-progress"><i style="width:${Math.min(100,(item.progress/(item.target||1))*100)}%"></i></div>`:''}<small class="scroll-state">${item.done?(item.cancelled?'Отменено':'Выполнено'):(item.deadline?`Срок: ${escapeHTML(item.deadline)}`:'Без указанного срока')}</small></div><div class="quest-actions">${!item.done?`<button class="mini-btn" data-action="quest-complete" data-id="${item.id}">Отметить</button><button class="mini-btn muted-btn" data-action="quest-ignore" data-id="${item.id}">Отложить</button>${item.kind==='promise'?`<button class="mini-btn muted-btn" data-action="quest-cancel" data-id="${item.id}">Отменить</button>`:''}`:'<span class="done-mark">✓</span>'}</div></article>`).join(''):'<div class="empty-state">В этом разделе пока нет записей.</div>'}</div></section>
-    <section class="panel-card promise-card"><div class="card-head"><h3>Поставить личную цель</h3><small>ЗАПИСЬ ИГРОКА</small></div><form id="promise-form" class="promise-form"><input name="promise" maxlength="140" placeholder="Например: встретиться с Темари до вечера" required><button class="btn btn-primary" type="submit">Добавить</button></form><p class="chat-hint">Личная цель не даёт награды сама по себе — это твоя заметка и ориентир.</p></section>`;
+    <section class="panel-card"><div class="scroll-list">${shown.length?shown.map(item=>`<article class="scroll-item ${item.done?'completed':''}"><div class="scroll-icon">${item.kind==='promise'?'🌸':item.kind==='mystery'?'❔':item.kind==='situation'?'✨':'📜'}</div><div><strong>${escapeHTML(item.title)}</strong><p>${escapeHTML(item.desc)}</p>${item.progress!=null?`<div class="quest-progress"><i style="width:${Math.min(100,(item.progress/(item.target||1))*100)}%"></i></div>`:''}${item.outcome?`<p class="situation-outcome">${escapeHTML(item.outcome)}</p>`:''}<small class="scroll-state">${item.done?(item.cancelled?'Отменено':'Выполнено'):(item.deadline?`Срок: ${escapeHTML(item.deadline)}`:'Без указанного срока')}</small></div><div class="quest-actions">${item.kind==='situation'&&!item.done?item.choices.map(choice=>`<button class="mini-btn" data-action="resolve-situation" data-id="${item.id}" data-type="${choice.id}">${escapeHTML(choice.label)}</button>`).join(''):!item.done?`<button class="mini-btn" data-action="quest-complete" data-id="${item.id}">Отметить</button><button class="mini-btn muted-btn" data-action="quest-ignore" data-id="${item.id}">Отложить</button>${item.kind==='promise'?`<button class="mini-btn muted-btn" data-action="quest-cancel" data-id="${item.id}">Отменить</button>`:''}`:'<span class="done-mark">✓</span>'}</div></article>`).join(''):'<div class="empty-state">В этом разделе пока пусто.</div>'}</div></section>
+    <section class="panel-card promise-card"><div class="card-head"><h3>Поставить личную цель</h3><small>ЗАПИСЬ ИГРОКА</small></div><form id="promise-form" class="promise-form"><input name="promise" maxlength="140" placeholder="Например: встретиться с Темари до вечера" required><button class="btn btn-primary" type="submit">Добавить</button></form><p class="chat-hint">Личная цель не даёт награду сама по себе — это твоя заметка и ориентир.</p></section>`;
 }
+
 function renderBag(state) {
   const looks = [['casual','Повседневная одежда','Удобный вариант для прогулок.'],['shinobi','Форма шиноби','Практичный стиль для тренировок.'],['festival','Праздничное кимоно','Наряд для городского праздника.'],['travel','Дорожный плащ','Подходит для прохладной погоды и поездок.'],['raincoat','Дождевой плащ','Удобно в дождь и ветер.']];
   const kinds=[['all','Всё'],['food','Еда'],['gift','Подарки'],['clothing','Одежда'],['pet','Питомцам'],['material','Материалы'],['other','Прочее']];
@@ -257,10 +271,11 @@ function renderBag(state) {
   return `${heading('Инвентарь','Выбери предмет, чтобы посмотреть описание и доступные действия. Вещи можно хранить в домашнем схроне.')}
     <section class="bag-heading"><div><small>🌸 ЛИЧНЫЕ ВЕЩИ</small><h3>Инвентарь</h3><p>${state.inventory.reduce((sum,item)=>sum+item.qty,0)} предметов в сумке</p></div></section>
     <div class="bag-tabs">${kinds.map(([id,label])=>`<button data-action="bag-filter" data-id="${id}" class="${filter===id?'active':''}">${label}</button>`).join('')}</div>
-    <section class="panel-card"><div class="inventory-grid">${filtered.length?filtered.map(item=>`<article class="item-card ${selected?.id===item.id?'selected':''}"><button class="item-select" data-action="select-item" data-id="${item.id}"><img class="item-art" src="assets/ui/${iconFor(item)}.svg" alt=""><span><strong>${escapeHTML(item.name)}</strong><small>${item.kind==='gift'?'Подарок':item.kind==='food'?'Еда':item.kind==='clothing'?'Одежда':item.kind==='pet'?'Для питомцев':'Материал'}</small></span><b class="quantity">×${item.qty}</b></button><div class="item-tools">${item.kind==='gift'?`<button class="mini-btn" data-action="choose-gift" data-id="${item.id}">🎁 Подарить</button>`:''}${item.kind==='food'?`<button class="mini-btn" data-action="use-food" data-id="${item.id}">Использовать</button>`:''}${item.kind==='pet'?`<button class="mini-btn" data-action="pet-item" data-id="${item.id}">Использовать</button>`:''}</div></article>`).join(''):'<div class="empty-state">В этой категории пока пусто.</div>'}</div>
-      ${selected?`<section class="item-detail-panel"><div class="item-detail-art"><img src="assets/ui/${iconFor(selected)}.svg" alt=""></div><div class="item-detail-copy"><small>ВЫБРАННЫЙ ПРЕДМЕТ</small><h3>${escapeHTML(selected.name)}</h3><p>${escapeHTML(selected.desc||'Описание пока неизвестно.')}</p><div class="item-detail-meta"><span>Категория: ${escapeHTML(selected.kind)}</span><b>Количество: ${selected.qty}</b></div><div class="item-detail-actions">${selected.kind==='gift'?`<button class="btn btn-primary" data-action="choose-gift" data-id="${selected.id}">Подарить</button>`:''}${selected.kind==='food'?`<button class="btn btn-primary" data-action="use-food" data-id="${selected.id}">Использовать</button>`:''}${selected.kind==='pet'?`<button class="btn btn-primary" data-action="pet-item" data-id="${selected.id}">Использовать для питомца</button>`:''}</div></div></section>`:''}
+    <section class="panel-card"><div class="inventory-grid">${filtered.length?filtered.map(item=>`<article class="item-card ${selected?.id===item.id?'selected':''}"><button class="item-select" data-action="select-item" data-id="${item.id}"><img class="item-art" src="assets/ui/${iconFor(item)}.svg" alt=""><span><strong>${escapeHTML(item.name)}</strong><small>${item.kind==='gift'?'Подарок':item.kind==='food'?'Еда':item.kind==='clothing'?'Одежда':item.kind==='pet'?'Для питомцев':'Материал'}</small></span><b class="quantity">×${item.qty}</b></button><div class="item-tools">${item.kind==='gift'?`<button class="mini-btn" data-action="choose-gift" data-id="${item.id}">🎁 Подарить</button>`:''}${item.kind==='food'&&item.id!=='herbal-tea'?`<button class="mini-btn" data-action="use-food" data-id="${item.id}">Использовать</button>`:''}${item.kind==='pet'?`<button class="mini-btn" data-action="pet-item" data-id="${item.id}">Использовать</button>`:''}${item.id==='field-kit'||item.id==='herbal-tea'?`<button class="mini-btn" data-action="use-crafted-item" data-id="${item.id}">Применить</button>`:''}</div></article>`).join(''):'<div class="empty-state">В этой категории пока пусто.</div>'}</div>
+      ${selected?`<section class="item-detail-panel"><div class="item-detail-art"><img src="assets/ui/${iconFor(selected)}.svg" alt=""></div><div class="item-detail-copy"><small>ВЫБРАННЫЙ ПРЕДМЕТ</small><h3>${escapeHTML(selected.name)}</h3><p>${escapeHTML(selected.desc||'Описание пока неизвестно.')}</p><div class="item-detail-meta"><span>Категория: ${escapeHTML(selected.kind)}</span><b>Количество: ${selected.qty}</b></div><div class="item-detail-actions">${selected.kind==='gift'?`<button class="btn btn-primary" data-action="choose-gift" data-id="${selected.id}">Подарить</button>`:''}${selected.kind==='food'&&selected.id!=='herbal-tea'?`<button class="btn btn-primary" data-action="use-food" data-id="${selected.id}">Использовать</button>`:''}${selected.kind==='pet'?`<button class="btn btn-primary" data-action="pet-item" data-id="${selected.id}">Использовать для питомца</button>`:''}${selected.id==='field-kit'||selected.id==='herbal-tea'?`<button class="btn btn-primary" data-action="use-crafted-item" data-id="${selected.id}">Применить</button>`:''}</div></div></section>`:''}
     </section>
     <section class="panel-card outfit-card"><div class="card-head"><h3>Гардероб</h3><small>${state.world.location==='home'?'ДОМАШНИЙ ШКАФ':state.world.location==='market'?'МАГАЗИН ОДЕЖДЫ':'ПЕРЕОДЕВАНИЕ ДОМА ИЛИ В МАГАЗИНЕ'}</small></div><div class="outfit-grid">${looks.map(([id,name,desc])=>{const owned=(state.player.ownedLooks||['casual','shinobi']).includes(id);const price={festival:48,travel:36,raincoat:30}[id]||0;const canChange=['home','market'].includes(state.world.location);return `<article class="outfit-option ${state.player.look===id?'selected':''}"><span>👘</span><b>${name}</b><small>${desc}</small>${owned?`<button class="mini-btn" data-action="outfit" data-id="${id}" ${!canChange?'disabled':''}>${state.player.look===id?'Надето':canChange?'Переодеться':'Доступно дома'}</button>`:`<button class="mini-btn" data-action="buy-outfit" data-id="${id}" ${state.world.location!=='market'?'disabled':''}>Купить · ${price} рё</button>`}</article>`}).join('')}</div></section>
+    <section class="panel-card craft-panel"><div class="card-head"><h3>Мастерская</h3><small>${state.world.location==='home'?'ДОМАШНИЙ РАБОЧИЙ СТОЛ':'ДОСТУПНО ТОЛЬКО ДОМА'}</small></div><p class="chat-hint">Комбинируй найденные материалы. Рецепты открыты сразу, но требуют нужных ресурсов.</p><div class="craft-grid">${RECIPES.map(recipe=>`<article class="craft-recipe"><div class="craft-recipe-icon">${recipe.id==='field-kit'?'🩹':recipe.id==='herbal-tea'?'🍵':'💐'}</div><b>${escapeHTML(recipe.name)}</b><p>${escapeHTML(recipe.desc)}</p><small>Нужно: ${Object.entries(recipe.ingredients).map(([id,qty])=>`${qty}× ${id==='herb'?'трава':id==='paper'?'бумага':id==='tea'?'чай':'цветы'}`).join(' · ')}</small><button class="mini-btn" data-action="craft-item" data-id="${recipe.id}" ${canCraft(state,recipe.id)?'':'disabled'}>Изготовить</button></article>`).join('')}</div></section>
     ${state.world.location==='home'?`<section class="home-storage-grid"><article><b>🧊 Холодильник</b><p>Запасы еды дома: ${state.inventory.filter(x=>x.kind==='food').reduce((a,x)=>a+x.qty,0)}</p><button class="mini-btn" data-action="home-storage" data-id="fridge">Открыть</button></article><article><b>👘 Шкаф</b><p>Купленные наряды: ${(state.player.ownedLooks||[]).length}</p><button class="mini-btn" data-action="home-storage" data-id="wardrobe">Открыть</button></article></section>`:''}`;
 }
 function renderJobs(state) {
@@ -295,6 +310,39 @@ function renderHelp() {
     <section class="help-grid"><article class="panel-card"><h3>Свободные действия</h3><p>Пиши обычным текстом: «иду в цветочную лавку», «осматриваю комнату», «покупаю чай», «жду Аяме у входа». Игровой мастер проверит место, время и доступность действия.</p></article><article class="panel-card"><h3>Диалоги</h3><p>Для личной беседы персонаж должен находиться рядом. Напиши свою реплику вручную. Первое знакомство сдержанное; имя запоминается после представления.</p></article><article class="panel-card"><h3>Герои и галерея</h3><p>В разделе «Герои» показываются только те, с кем уже было личное взаимодействие. Изображения попадают в галерею после появления в RP.</p></article><article class="panel-card"><h3>Задания и обещания</h3><p>Задания могут появиться после разговора или твоего собственного плана. Награда указывается только если персонаж её назвал. Обещания можно отменять.</p></article><article class="panel-card"><h3>Карта и перемещения</h3><p>Переходы занимают игровое время. Резкий уход с договорённой встречи может быть замечен и повлиять на доверие.</p></article><article class="panel-card"><h3>Сохранение</h3><p>Прогресс сохраняется в этом браузере. На другом устройстве используй экспорт и импорт сохранения в настройках.</p></article></section>`;
 }
 
+function renderAchievements(state) {
+  const unlocked = state.achievements?.unlocked || [];
+  const unlockedIds = new Set(unlocked.map(item=>item.id));
+  const points = state.achievements?.points || 0;
+  const rows = ACHIEVEMENTS.map(item=>{
+    const done=unlockedIds.has(item.id);
+    const progress=getAchievementProgress(item,state);
+    const hidden=item.hidden && !done;
+    const title=hidden?'Секретное достижение':item.title;
+    const desc=hidden?'Условия открытия неизвестны.':item.desc;
+    return `<article class="achievement-card ${done?'is-unlocked':''} ${hidden?'is-hidden':''}">
+      <div class="achievement-icon">${hidden?'？':item.icon}</div>
+      <div class="achievement-body"><div class="achievement-topline"><b>${escapeHTML(title)}</b><span>${done?`+${item.points} оч.`:`${item.points} оч.`}</span></div><p>${escapeHTML(desc)}</p>
+      ${done?`<small class="achievement-state">Получено · день ${unlocked.find(x=>x.id===item.id)?.day||1}</small>`:hidden?'<small class="achievement-state">Скрыто</small>':`<div class="achievement-progress"><i style="width:${progress.percent}%"></i></div><small class="achievement-state">${progress.value} / ${progress.target}</small>`}</div>
+      <span class="achievement-check">${done?'✓':hidden?'✦':'◌'}</span></article>`;
+  }).join('');
+  return `${heading('Достижения','Трофеи за исследования, знакомства, мастерство и секреты Конохи. Некоторые условия скрыты — открывай их сам.')}
+    <section class="achievement-summary panel-card"><div><small>ОТКРЫТО</small><strong>${unlocked.length} / ${ACHIEVEMENTS.length}</strong></div><div><small>ОЧКИ ДОСТИЖЕНИЙ</small><strong>${points}</strong></div><div><small>СЕКРЕТНЫЕ</small><strong>${ACHIEVEMENTS.filter(x=>x.hidden&&unlockedIds.has(x.id)).length} / ${ACHIEVEMENTS.filter(x=>x.hidden).length}</strong></div></section>
+    <section class="achievement-grid">${rows}</section>`;
+}
+
+function renderMagazine(state) {
+  const collection=state.collectibles||{magazineFound:false,unlockedIssues:[],readPages:[]};
+  const unlocked=new Set(collection.unlockedIssues||[]);
+  const read=new Set(collection.readPages||[]);
+  const issues=MAGAZINE_ISSUES.filter(issue=>unlocked.has(issue.id));
+  const pages=issues.flatMap(issue=>issue.pages.map(page=>({issue,page})));
+  return `${heading('Листья и истории','Тайный коллекционный альманах о людях, местах и маленьких открытиях Конохи.')}
+    <section class="magazine-masthead"><div class="magazine-cover-scene" style="background-image:linear-gradient(90deg,rgba(19,14,26,.15),rgba(19,14,26,.84)),url('${issues[issues.length-1]?.cover||'assets/backgrounds/library.webp'}')"><div class="magazine-cover-mark"><small>ЧАСТНОЕ ИЗДАНИЕ · КОНОХА</small><strong>ЛИСТЬЯ</strong><span>ИСТОРИИ ИЗ ЖИЗНИ ДЕРЕВНИ</span></div></div><div class="magazine-info"><div class="eyebrow">КОЛЛЕКЦИЯ · ${issues.length} / ${MAGAZINE_ISSUES.length} ВЫПУСКА</div><h3>Найденное не всегда лежит на виду</h3><p>Старые заметки, интервью, маршруты и ремесленные советы. Новые выпуски появляются в разных уголках деревни.</p><div class="magazine-progress"><i style="width:${Math.round(issues.length/MAGAZINE_ISSUES.length*100)}%"></i></div><small>${read.size} страниц прочитано</small></div></section>
+    ${issues.length?issues.map(issue=>`<section class="magazine-issue"><div class="magazine-issue-head"><div><small>ВЫПУСК № ${issue.number}</small><h3>${escapeHTML(issue.title)}</h3><p>${escapeHTML(issue.subtitle)}</p></div><div class="magazine-issue-cover" style="background-image:url('${issue.cover}')"></div></div><div class="magazine-pages">${issue.pages.map(page=>{const isRead=read.has(page.id);return `<article class="magazine-page ${isRead?'page-read':''}"><div class="magazine-page-image" style="background-image:url('${page.image}')"></div><div class="magazine-page-copy"><small>${escapeHTML(page.author)}</small><h4>${escapeHTML(page.title)}</h4><p>${escapeHTML(page.text)}</p><button class="btn ${isRead?'btn-soft':'btn-primary'}" data-action="read-magazine" data-id="${page.id}" ${isRead?'disabled':''}>${isRead?'✓ Прочитано':'Прочитать страницу'}</button></div></article>`}).join('')}</div></section>`).join(''):'<section class="panel-card empty-state">Альманах ещё не найден. В библиотеке Конохи стоит внимательнее осмотреть старые стеллажи.</section>'}
+    <section class="panel-card magazine-clue"><b>Подсказка к следующему выпуску</b><p>${issues.length===0?'Ищи старую книжную полку в библиотеке.':issues.length===1?'Второй выпуск связан с архивом свитков.':'Следующая запись могла остаться в чайном домике.'}</p><button class="btn btn-soft" data-view="map">Открыть карту Конохи</button></section>`;
+}
+
 export function renderView(state) {
   switch (state.ui.view) {
     case 'map': return renderMap(state);
@@ -316,6 +364,8 @@ export function renderView(state) {
     case 'settings': return renderSettingsPage(state);
     case 'locations': return renderLocations(state);
     case 'gallery': return renderGallery(state);
+    case 'achievements': return renderAchievements(state);
+    case 'magazine': return state.collectibles?.magazineFound ? renderMagazine(state) : renderLocations(state);
     case 'help': return renderHelp(state);
     case 'world':
     default: return renderWorld(state);
@@ -340,6 +390,7 @@ export function renderStatus(state) {
   const place = getLocation(state.world.location);
   document.getElementById('current-place').innerHTML = `<span class="pin"><img src="assets/ui/cropped/location.png" alt="">${place.icon}</span><b>${place.name}</b><small>${place.area}</small>`;
   const activeView = ['profile','conversation'].includes(state.ui.view) ? 'people' : state.ui.view;
+  document.querySelectorAll('[data-view="magazine"]').forEach(button=>{button.hidden=!state.collectibles?.magazineFound;});
   document.querySelectorAll('.nav-item,.side-nav-item').forEach(button=>button.classList.toggle('active',button.dataset.view===activeView));
 }
 
