@@ -1,3 +1,4 @@
+import {STARTER_CLOTHING,normalizeEquipment} from '../data/clothing.js';
 import {ORIGINS} from '../data/world.js';
 import {CHARACTERS} from '../data/characters.js';
 
@@ -15,6 +16,8 @@ export function createInitialState(player = {}) {
       originName: origin.name,
       style: player.style || 'balanced',
       look: player.look || 'casual',
+      equipment: normalizeEquipment(player.equipment,player.look||'casual'),
+      ownedClothing: [...new Set([...STARTER_CLOTHING,...(Array.isArray(player.ownedClothing)?player.ownedClothing:[]),...Object.values(normalizeEquipment(player.equipment,player.look||'casual'))])],
       ownedLooks: Array.isArray(player.ownedLooks) ? [...new Set([...player.ownedLooks, player.look || 'casual'])] : [...new Set(['casual','shinobi',player.look || 'casual'])],
       jobId: player.jobId || '',
       workShifts: Number(player.workShifts)||0,
@@ -92,13 +95,13 @@ export function normalizeState(input) {
     meetingHistory: input.meetingHistory && typeof input.meetingHistory === 'object' ? input.meetingHistory : {},
     dialogueMeta: input.dialogueMeta && typeof input.dialogueMeta === 'object' ? input.dialogueMeta : {},
     companions: Array.isArray(input.companions) ? input.companions : [],
-    player: {...base.player,...input.player,ownedLooks:Array.isArray(input.player?.ownedLooks)?[...new Set([...input.player.ownedLooks,input.player?.look||base.player.look])]:[...new Set([...base.player.ownedLooks,input.player?.look||base.player.look])],workShifts:Number(input.player?.workShifts)||0,workShiftsTotal:Math.max(0,Number(input.player?.workShiftsTotal)||0),lastWorkDay:Number(input.player?.lastWorkDay)||0,stats:{...base.player.stats,...input.player?.stats,hp:Number(input.player?.stats?.hp??base.player.stats.hp)}},
+    player: {...base.player,...input.player,equipment:normalizeEquipment(input.player?.equipment,input.player?.look||base.player.look),ownedClothing:[...new Set([...STARTER_CLOTHING,...(Array.isArray(input.player?.ownedClothing)?input.player.ownedClothing:[]),...Object.values(normalizeEquipment(input.player?.equipment,input.player?.look||base.player.look))])],ownedLooks:Array.isArray(input.player?.ownedLooks)?[...new Set([...input.player.ownedLooks,input.player?.look||base.player.look])]:[...new Set([...base.player.ownedLooks,input.player?.look||base.player.look])],workShifts:Number(input.player?.workShifts)||0,workShiftsTotal:Math.max(0,Number(input.player?.workShiftsTotal)||0),lastWorkDay:Number(input.player?.lastWorkDay)||0,stats:{...base.player.stats,...input.player?.stats,hp:Number(input.player?.stats?.hp??base.player.stats.hp)}},
     world: {...base.world,...input.world},
     dailyBoard: input.dailyBoard && typeof input.dailyBoard==='object' ? input.dailyBoard : base.dailyBoard,
     dailyBoardHistory: Array.isArray(input.dailyBoardHistory) ? input.dailyBoardHistory.slice(0,14) : [],
     skills: {...base.skills,...(input.skills||{})},
     settings: {...base.settings,...input.settings},
-    ui: {...base.ui,...input.ui,drawerOpen:false,questTab:['active','history'].includes(input.ui?.questTab)?input.ui.questTab:'active',bagTab:['all','food','gift','clothing','material','other'].includes(input.ui?.bagTab)?input.ui.bagTab:'all',profileArtIndex:Math.max(0,Number(input.ui?.profileArtIndex)||0)},
+    ui: {...base.ui,...input.ui,wardrobeSlot:['head','top','outer','bottom','shoes','accessory'].includes(input.ui?.wardrobeSlot)?input.ui.wardrobeSlot:'top',wardrobePreview:input.ui?.wardrobePreview&&typeof input.ui.wardrobePreview==='object'?input.ui.wardrobePreview:null,drawerOpen:false,questTab:['active','history'].includes(input.ui?.questTab)?input.ui.questTab:'active',bagTab:['all','food','gift','clothing','material','other'].includes(input.ui?.bagTab)?input.ui.bagTab:'all',profileArtIndex:Math.max(0,Number(input.ui?.profileArtIndex)||0)},
     bonds: input.bonds && typeof input.bonds === 'object' ? input.bonds : {},
     memories: input.memories && typeof input.memories === 'object' ? input.memories : {},
     dialogues: input.dialogues && typeof input.dialogues === 'object' ? input.dialogues : {},

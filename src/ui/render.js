@@ -9,6 +9,7 @@ import {CONVERSATION_ACTIONS,CONVERSATION_ACTION_GROUPS} from '../data/conversat
 import {ensureDailyBoard,SKILL_META,getSkillLevel,RECIPES,canCraft} from '../core/progression.js';
 import {ACHIEVEMENTS,getAchievementProgress} from '../core/achievements.js';
 import {MAGAZINE_ISSUES} from '../data/secret-magazine.js';
+import {CLOTHING,CLOTHING_BY_ID,CLOTHING_SLOTS,LOOK_TO_PRESET,normalizeEquipment} from '../data/clothing.js';
 
 export const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g,char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
@@ -21,26 +22,25 @@ function avatar(character,large=false) {
   return `<div class="person-avatar ${large?'large':''}" style="--av1:${character.colors[0]};--av2:${character.colors[1]}">${portrait?`<img src="${portrait}" alt="" loading="lazy"><span class="avatar-fallback">${character.icon}</span>`:character.icon}</div>`;
 }
 
-function getPlayerOutfitSrc(player={}) {
-  const gender=player.gender||'male';
-  const look=player.look||'casual';
-  const male={casual:'male-casual',shinobi:'male-shinobi',festival:'male-formal',travel:'male-travel',raincoat:'male-raincoat',workwear:'male-work'};
-  const female={casual:'female-travel',shinobi:'female-shinobi',festival:'female-festival',travel:'female-travel',raincoat:'female-travel',workwear:'female-shinobi'};
-  const chosen=(gender==='female'?female:male)[look] || (gender==='female'?'female-travel':'male-casual');
-  const exists=['male-casual','male-formal','male-work','male-shinobi','male-travel','male-raincoat','female-festival','female-shinobi','female-travel'].includes(chosen);
-  return exists?`assets/player/outfits/${chosen}.png`:'';
+function renderPlayerAvatarStack(player={}) {
+  const equipment=normalizeEquipment(player.equipment,player.look);
+  const hair=['short','medium','long','tied','wild'].includes(player.hair)?player.hair:'medium';
+  const base=player.gender==='female'?'base-body-female.svg':'base-body.svg';
+  const order=['bottom','shoes','top','outer','accessory','head'];
+  return `<div class="player-avatar-layer-stack"><img src="assets/player/layers/${base}" alt=""><img src="assets/player/layers/hair-${hair}.svg" alt="">${order.map(slot=>{const item=CLOTHING_BY_ID[equipment[slot]];return item?`<img src="${item.src}" alt="">`:''}).join('')}</div>`;
 }
+
+function renderLayeredPlayer(player={},equipment={},className='wardrobe-avatar-stage') {
+  const normalized=normalizeEquipment(equipment,player.look);
+  const hair=['short','medium','long','tied','wild'].includes(player.hair)?player.hair:'medium';
+  const base=player.gender==='female'?'base-body-female.svg':'base-body.svg';
+  const order=['bottom','shoes','top','outer','accessory','head'];
+  return `<div class="${className}" aria-label="Предпросмотр выбранной одежды"><img class="wardrobe-avatar-base" src="assets/player/layers/${base}" alt="Основа персонажа"><img class="wardrobe-avatar-layer layer-hair" src="assets/player/layers/hair-${hair}.svg" alt="Причёска персонажа">${order.map(slot=>{const item=CLOTHING_BY_ID[normalized[slot]];return item?`<img class="wardrobe-avatar-layer layer-${slot}" data-slot="${slot}" src="${item.src}" alt="${escapeHTML(item.name)}">`:''}).join('')}</div>`;
+}
+
 function getPetImage(pet={}) {
   return pet.image || PETS.find(item=>item.id===pet.id)?.image || '';
 }
-function getPlayerAvatarSrc(player={}) {
-  const gender=player.gender||'male'; const look=player.look||'casual';
-  const male={casual:'male-casual',shinobi:'male-shinobi',festival:'male-formal',travel:'male-travel',raincoat:'male-raincoat',workwear:'male-work'};
-  const female={casual:'female-travel',shinobi:'female-shinobi',festival:'female-festival',travel:'female-travel',raincoat:'female-travel',workwear:'female-shinobi'};
-  const chosen=(gender==='female'?female:male)[look] || (gender==='female'?'female-travel':'male-casual');
-  return `assets/player/avatars/${chosen}.png`;
-}
-
 function renderWorld(state) {
   const place = getLocation(state.world.location);
   const weather = getWeather(state);
@@ -306,24 +306,37 @@ function renderBag(state) {
   const selected=filtered.find(item=>item.id===state.ui.selectedItemId)||filtered[0]||null;
   const iconFor=item=>({tea:'assets/ui/tea.svg',flower:'assets/ui/generated/gift.png',paper:'assets/ui/generated/scroll-case.png',herb:'assets/ui/herb.svg',bento:'assets/ui/generated/ramen-bowl.png','pet-snack':'assets/ui/generated/gift-box.png','field-kit':'assets/ui/pouch.svg','herbal-tea':'assets/ui/tea.svg','pressed-bouquet':'assets/ui/generated/gift.png'}[item.id]||'assets/ui/pouch.svg');
   const owned=state.player.ownedLooks||['casual','shinobi'];
+  const ownedClothing=new Set(state.player.ownedClothing||[]);
+  const equipment=normalizeEquipment(state.player.equipment,state.player.look);
   const canChange=['home','market'].includes(state.world.location);
-  const selectedLook=looks.find(([id])=>id===state.player.look)||looks[0];
-  const selectedArt=selectedLook?.[3]?`assets/player/outfits/${selectedLook[3]}.png`:'';
+  const activeSlot=CLOTHING_SLOTS.some(slot=>slot.id===state.ui.wardrobeSlot)?state.ui.wardrobeSlot:'top';
+  const slotInfo=CLOTHING_SLOTS.find(slot=>slot.id===activeSlot)||CLOTHING_SLOTS[1];
+  const slotItems=CLOTHING.filter(item=>item.slot===activeSlot);
+  const previewId=state.ui.wardrobePreview?.slot===activeSlot&&CLOTHING_BY_ID[state.ui.wardrobePreview.itemId]?.slot===activeSlot?state.ui.wardrobePreview.itemId:equipment[activeSlot];
+  const previewItem=CLOTHING_BY_ID[previewId]||slotItems[0];
+  const previewIndex=Math.max(0,slotItems.findIndex(item=>item.id===previewItem.id));
+  const previewEquipment={...equipment,[activeSlot]:previewItem.id};
+  const slotTabs=CLOTHING_SLOTS.map(slot=>`<button class="wardrobe-slot-tab ${activeSlot===slot.id?'active':''}" data-action="wardrobe-slot" data-id="${slot.id}"><span>${slot.icon}</span><b>${slot.label}</b><small>${escapeHTML(CLOTHING_BY_ID[equipment[slot.id]]?.name||'Не выбрано')}</small></button>`).join('');
+  const previewOwned=ownedClothing.has(previewItem.id);
+  const previewButton=previewOwned?`<button class="btn btn-primary" data-action="wardrobe-equip" data-id="${previewItem.id}" data-slot="${activeSlot}" ${!canChange?'disabled':''}>${equipment[activeSlot]===previewItem.id?'Уже надето':'Надеть'}</button>`:state.world.location==='market'?`<button class="btn btn-primary" data-action="buy-clothing" data-id="${previewItem.id}" data-slot="${activeSlot}">Купить · ${previewItem.price} рё</button>`:`<button class="btn btn-primary" disabled>Купить можно на рынке</button>`;
+  const wardrobeDesigner=`<section class="wardrobe-designer panel-card"><div class="card-head"><div><h3>Собери образ по частям</h3><small>КАК В СИМУЛЯТОРАХ ЖИЗНИ · СЛОИ НЕ КОНФЛИКТУЮТ</small></div><span class="wardrobe-place-tag">${canChange?'МОЖНО ПЕРЕОДЕТЬСЯ':'ПРЕДПРОСМОТР'}</span></div>
+      <div class="wardrobe-designer-layout"><div class="wardrobe-preview-column">${renderLayeredPlayer(state.player,previewEquipment)}<div class="wardrobe-preview-caption"><b>${escapeHTML(state.player.name)}</b><small>Предпросмотр: ${escapeHTML(previewItem.name)}</small></div></div>
+      <div class="wardrobe-controls"><div class="wardrobe-slot-tabs">${slotTabs}</div><article class="wardrobe-item-picker"><div class="wardrobe-item-visual"><img src="assets/player/layers/thumbs/${previewItem.id}.svg" alt="${escapeHTML(previewItem.name)}"></div><div class="wardrobe-item-copy"><small>${escapeHTML(slotInfo.title.toUpperCase())} · ${previewIndex+1}/${slotItems.length}</small><h4>${escapeHTML(previewItem.name)}</h4><p>${escapeHTML(previewItem.desc)}</p><span class="wardrobe-fit-label">${previewOwned?'В гардеробе':`Цена: ${previewItem.price} рё`}</span></div><div class="wardrobe-arrow-row"><button class="wardrobe-arrow" data-action="wardrobe-cycle" data-slot="${activeSlot}" data-dir="-1" aria-label="Предыдущий предмет">‹</button><button class="wardrobe-arrow" data-action="wardrobe-cycle" data-slot="${activeSlot}" data-dir="1" aria-label="Следующий предмет">›</button></div><div class="wardrobe-picker-actions">${previewButton}<button class="btn btn-ghost" data-action="wardrobe-reset-preview">Сбросить просмотр</button></div></article><p class="wardrobe-rule-note"><b>Правила слоёв:</b> один предмет на каждый слот. Футболка не заменяет брюки, обувь выбирается отдельно, а куртка или жилет надевается поверх верха. ${!canChange?'Для сохранения образа вернись домой или зайди в магазин одежды.':''}</p></div></div>
+      <div class="wardrobe-equipped-row">${CLOTHING_SLOTS.map(slot=>`<span><small>${slot.label}</small><b>${escapeHTML(CLOTHING_BY_ID[equipment[slot.id]]?.name||'—')}</b></span>`).join('')}</div></section>`;
   const outfitCards=looks.map(([id,name,desc,art])=>{
     const isOwned=owned.includes(id); const price=prices[id]||0;
-    return `<article class="outfit-option ${state.player.look===id?'selected':''} ${isOwned?'owned':'locked'}"><div class="outfit-art-wrap">${art?`<img src="assets/player/outfits/${art}.png" alt="${escapeHTML(name)}" loading="lazy">`:'<span class="outfit-placeholder">👘</span>'}</div><b>${escapeHTML(name)}</b><small>${escapeHTML(desc)}</small>${isOwned?`<button class="mini-btn" data-action="outfit" data-id="${id}" ${!canChange?'disabled':''}>${state.player.look===id?'Надето':canChange?'Переодеться':'Доступно дома'}</button>`:`<button class="mini-btn" data-action="buy-outfit" data-id="${id}" ${state.world.location!=='market'?'disabled':''}>Купить · ${price} рё</button>`}</article>`;
+    return `<article class="outfit-option ${(state.player.activeWardrobePreset||LOOK_TO_PRESET[state.player.look]||'casual')===LOOK_TO_PRESET[id]?'selected':''} ${isOwned?'owned':'locked'}"><div class="outfit-art-wrap">${art?`<img src="assets/player/outfits/${art}.png" alt="${escapeHTML(name)}" loading="lazy">`:'<span class="outfit-placeholder">👘</span>'}</div><b>${escapeHTML(name)}</b><small>${escapeHTML(desc)}</small>${isOwned?`<button class="mini-btn" data-action="outfit" data-id="${id}" ${!canChange?'disabled':''}>${(state.player.activeWardrobePreset||LOOK_TO_PRESET[state.player.look]||'casual')===LOOK_TO_PRESET[id]?'Комплект надет':canChange?'Применить комплект':'Доступно дома'}</button>`:`<button class="mini-btn" data-action="buy-outfit" data-id="${id}" ${state.world.location!=='market'?'disabled':''}>Купить · ${price} рё</button>`}</article>`;
   }).join('');
-  const preset=(label,id,emoji)=>`<button class="wardrobe-preset ${state.player.look===id?'active':''}" data-action="outfit" data-id="${id}" ${!owned.includes(id)||!canChange?'disabled':''}><span>${emoji}</span><b>${label}</b><small>${owned.includes(id)?(state.player.look===id?'Сейчас надето':'Надеть комплект'):'Нужно купить на рынке'}</small></button>`;
   return `${heading('Инвентарь','Предметы, одежда и мастерская. Выбирай вещи и собирай подходящий комплект для работы, прогулки, тренировки или встречи.')}
     <section class="bag-heading"><div><small>🌸 ЛИЧНЫЕ ВЕЩИ</small><h3>Инвентарь</h3><p>${state.inventory.reduce((sum,item)=>sum+item.qty,0)} предметов в сумке</p></div></section>
     <div class="bag-tabs">${kinds.map(([id,label])=>`<button data-action="bag-filter" data-id="${id}" class="${filter===id?'active':''}">${label}</button>`).join('')}</div>
     <section class="panel-card"><div class="inventory-grid">${filtered.length?filtered.map(item=>`<article class="item-card ${selected?.id===item.id?'selected':''}"><button class="item-select" data-action="select-item" data-id="${item.id}"><img class="item-art" src="${iconFor(item)}" alt="" loading="lazy"><span><strong>${escapeHTML(item.name)}</strong><small>${item.kind==='gift'?'Подарок':item.kind==='food'?'Еда':item.kind==='clothing'?'Одежда':item.kind==='pet'?'Для питомцев':item.kind==='material'?'Материал':'Прочее'}</small></span><b class="quantity">×${item.qty}</b></button><div class="item-tools">${item.kind==='gift'?`<button class="mini-btn" data-action="choose-gift" data-id="${item.id}">🎁 Подарить</button>`:''}${item.kind==='food'&&item.id!=='herbal-tea'?`<button class="mini-btn" data-action="use-food" data-id="${item.id}">Использовать</button>`:''}${item.kind==='pet'?`<button class="mini-btn" data-action="pet-item" data-id="${item.id}">Использовать</button>`:''}${item.id==='field-kit'||item.id==='herbal-tea'?`<button class="mini-btn" data-action="use-crafted-item" data-id="${item.id}">Применить</button>`:''}</div></article>`).join(''):'<div class="empty-state">В этой категории пока пусто.</div>'}</div>
       ${selected?`<section class="item-detail-panel"><div class="item-detail-art"><img src="${iconFor(selected)}" alt=""></div><div class="item-detail-copy"><small>ВЫБРАННЫЙ ПРЕДМЕТ</small><h3>${escapeHTML(selected.name)}</h3><p>${escapeHTML(selected.desc||'Описание пока неизвестно.')}</p><div class="item-detail-meta"><span>Категория: ${escapeHTML(selected.kind)}</span><b>Количество: ${selected.qty}</b></div><div class="item-detail-actions">${selected.kind==='gift'?`<button class="btn btn-primary" data-action="choose-gift" data-id="${selected.id}">Подарить</button>`:''}${selected.kind==='food'&&selected.id!=='herbal-tea'?`<button class="btn btn-primary" data-action="use-food" data-id="${selected.id}">Использовать</button>`:''}${selected.kind==='pet'?`<button class="btn btn-primary" data-action="pet-item" data-id="${selected.id}">Использовать для питомца</button>`:''}${selected.id==='field-kit'||selected.id==='herbal-tea'?`<button class="btn btn-primary" data-action="use-crafted-item" data-id="${selected.id}">Применить</button>`:''}</div></div></section>`:''}
     </section>
-    <section class="panel-card wardrobe-panel"><div class="card-head"><div><h3>Гардероб</h3><small>СОБИРАЙ ОБРАЗ ПОД СВОИ ПЛАНЫ</small></div><small>${state.world.location==='home'?'ДОМАШНИЙ ШКАФ':state.world.location==='market'?'МАГАЗИН ОДЕЖДЫ':'ПЕРЕОДЕВАНИЕ ДОМА ИЛИ В МАГАЗИНЕ'}</small></div>
-      <div class="wardrobe-current"><div class="wardrobe-current-art">${selectedArt?`<img src="${selectedArt}" alt="Текущий образ">`:'<span>👤</span>'}</div><div><small>ТЕКУЩИЙ ОБРАЗ</small><h3>${escapeHTML(selectedLook[1])}</h3><p>${escapeHTML(selectedLook[2])}</p><div class="wardrobe-current-tags"><span>Свидание · ${state.player.look==='festival'?'подходит':'можно выбрать кимоно'}</span><span>Работа · ${state.player.look==='workwear'?'подходит':'есть рабочая форма'}</span></div></div></div>
-      <div class="wardrobe-presets">${preset('На свидание','festival','🌸')}${preset('На работу','workwear','🧰')}${preset('На тренировку','shinobi','🥋')}${preset('На прогулку','casual','🌿')}</div>
-      <div class="outfit-grid">${outfitCards}</div><p class="chat-hint">Новые комплекты продаются на рынке. Переодеться можно дома или в магазине одежды; выбор сохраняется в сохранении игры.</p></section>
+    ${wardrobeDesigner}
+    <section class="panel-card wardrobe-panel"><div class="card-head"><div><h3>Быстрые комплекты</h3><small>ГОТОВЫЕ СОЧЕТАНИЯ ИЗ ОТКРЫТЫХ ВЕЩЕЙ</small></div><small>ПРЕСЕТЫ</small></div>
+      <div class="wardrobe-presets">${['date','work','training','walk'].map((id)=>{const names={date:['На свидание','🌸'],work:['На работу','🧰'],training:['На тренировку','🥋'],walk:['На прогулку','🌿']};return `<button class="wardrobe-preset ${state.player.activeWardrobePreset===id?'active':''}" data-action="wardrobe-preset" data-id="${id}"><span>${names[id][1]}</span><b>${names[id][0]}</b><small>Применить сочетание</small></button>`}).join('')}</div>
+      <details class="ready-outfit-details"><summary>Готовые комплекты целиком <small>Старые образы из гардероба</small></summary><div class="outfit-grid">${outfitCards}</div></details><p class="chat-hint">Каждый слот независим: верх, внешний слой, низ, обувь, головной убор и аксессуар. Предметы для примерки можно выбирать стрелками; покупка доступна на рынке.</p></section>
     <section class="panel-card craft-panel"><div class="card-head"><h3>Мастерская</h3><small>${state.world.location==='home'?'ДОМАШНИЙ РАБОЧИЙ СТОЛ':'ДОСТУПНО ТОЛЬКО ДОМА'}</small></div><p class="chat-hint">Комбинируй найденные материалы. Рецепты открыты сразу, но требуют нужных ресурсов.</p><div class="craft-grid">${RECIPES.map(recipe=>`<article class="craft-recipe"><div class="craft-recipe-icon"><img src="${recipe.id==='field-kit'?'assets/ui/pouch.svg':recipe.id==='herbal-tea'?'assets/ui/tea.svg':'assets/ui/generated/gift.png'}" alt=""></div><b>${escapeHTML(recipe.name)}</b><p>${escapeHTML(recipe.desc)}</p><small>Нужно: ${Object.entries(recipe.ingredients).map(([id,qty])=>`${qty}× ${id==='herb'?'трава':id==='paper'?'бумага':id==='tea'?'чай':'цветы'}`).join(' · ')}</small><button class="mini-btn" data-action="craft-item" data-id="${recipe.id}" ${canCraft(state,recipe.id)?'':'disabled'}>Изготовить</button></article>`).join('')}</div></section>
     ${state.world.location==='home'?`<section class="home-storage-grid"><article><b><img class="storage-heading-icon" src="assets/ui/generated/ramen-bowl.png" alt=""> Холодильник</b><p>Запасы еды дома: ${state.inventory.filter(x=>x.kind==='food').reduce((a,x)=>a+x.qty,0)}</p><button class="mini-btn" data-action="home-storage" data-id="fridge">Открыть</button></article><article><b><img class="storage-heading-icon" src="assets/ui/generated/gift-box.png" alt=""> Шкаф</b><p>Купленные наряды: ${(state.player.ownedLooks||[]).length}</p><button class="mini-btn" data-action="home-storage" data-id="wardrobe">Открыть</button></article></section>`:''}`;
 }
@@ -438,8 +451,7 @@ export function renderStatus(state) {
   document.getElementById('player-name-label').textContent = state.player.name;
   document.getElementById('player-origin-label').textContent = `${state.player.originName}${state.player.clan && state.player.clan!=='none' ? ` · ${state.player.clan}` : ''}`;
   const playerAvatar=document.getElementById('player-avatar');
-  const playerAvatarSrc=getPlayerAvatarSrc(state.player);
-  if(playerAvatar){playerAvatar.innerHTML=`<img src="${playerAvatarSrc}" alt="Образ ${escapeHTML(state.player.name)}">`;playerAvatar.classList.add('has-player-art');}
+  if(playerAvatar){playerAvatar.innerHTML=renderPlayerAvatarStack(state.player);playerAvatar.classList.add('has-player-art');}
   document.getElementById('player-stats').innerHTML = statLine('Выносливость',stats.stamina)+statLine('Чакра',stats.chakra)+statLine('Внимание',stats.focus)+`<div class="stat-row"><span>Репутация</span><b>${stats.renown}</b></div><div class="stat-row"><span>Рё</span><b>¥${stats.coins}</b></div>`;
   const place = getLocation(state.world.location);
   document.getElementById('current-place').innerHTML = `<span class="pin"><img src="assets/ui/cropped/location.png" alt="">${place.icon}</span><b>${place.name}</b><small>${place.area}</small>`;

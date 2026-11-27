@@ -233,59 +233,331 @@
       "transparent": true
     }
   },
-  "playerAvatars": {
-    "female-festival": {
-      "src": "assets/player/avatars/female-festival.png",
-      "width": 181,
-      "height": 246,
+  "playerClothingLayers": {
+    "head-none": {
+      "slot": "head",
+      "src": "assets/player/layers/head-none.svg",
+      "thumbnail": "assets/player/layers/thumbs/head-none.svg",
       "transparent": true
     },
-    "female-shinobi": {
-      "src": "assets/player/avatars/female-shinobi.png",
-      "width": 141,
-      "height": 247,
+    "head-leaf-band": {
+      "slot": "head",
+      "src": "assets/player/layers/head-leaf-band.svg",
+      "thumbnail": "assets/player/layers/thumbs/head-leaf-band.svg",
       "transparent": true
     },
-    "female-travel": {
-      "src": "assets/player/avatars/female-travel.png",
-      "width": 162,
-      "height": 247,
+    "head-cloth-band": {
+      "slot": "head",
+      "src": "assets/player/layers/head-cloth-band.svg",
+      "thumbnail": "assets/player/layers/thumbs/head-cloth-band.svg",
       "transparent": true
     },
-    "male-casual": {
-      "src": "assets/player/avatars/male-casual.png",
-      "width": 214,
-      "height": 378,
+    "head-flower-pin": {
+      "slot": "head",
+      "src": "assets/player/layers/head-flower-pin.svg",
+      "thumbnail": "assets/player/layers/thumbs/head-flower-pin.svg",
       "transparent": true
     },
-    "male-formal": {
-      "src": "assets/player/avatars/male-formal.png",
-      "width": 290,
-      "height": 378,
+    "head-beret": {
+      "slot": "head",
+      "src": "assets/player/layers/head-beret.svg",
+      "thumbnail": "assets/player/layers/thumbs/head-beret.svg",
       "transparent": true
     },
-    "male-raincoat": {
-      "src": "assets/player/avatars/male-raincoat.png",
-      "width": 267,
-      "height": 369,
+    "head-floral-ribbon": {
+      "slot": "head",
+      "src": "assets/player/layers/head-floral-ribbon.svg",
+      "thumbnail": "assets/player/layers/thumbs/head-floral-ribbon.svg",
       "transparent": true
     },
-    "male-shinobi": {
-      "src": "assets/player/avatars/male-shinobi.png",
-      "width": 215,
-      "height": 370,
+    "top-basic": {
+      "slot": "top",
+      "src": "assets/player/layers/top-basic.svg",
+      "thumbnail": "assets/player/layers/thumbs/top-basic.svg",
       "transparent": true
     },
-    "male-travel": {
-      "src": "assets/player/avatars/male-travel.png",
-      "width": 247,
-      "height": 381,
+    "top-shinobi": {
+      "slot": "top",
+      "src": "assets/player/layers/top-shinobi.svg",
+      "thumbnail": "assets/player/layers/thumbs/top-shinobi.svg",
       "transparent": true
     },
-    "male-work": {
-      "src": "assets/player/avatars/male-work.png",
-      "width": 223,
-      "height": 380,
+    "top-work": {
+      "slot": "top",
+      "src": "assets/player/layers/top-work.svg",
+      "thumbnail": "assets/player/layers/thumbs/top-work.svg",
+      "transparent": true
+    },
+    "top-formal": {
+      "slot": "top",
+      "src": "assets/player/layers/top-formal.svg",
+      "thumbnail": "assets/player/layers/thumbs/top-formal.svg",
+      "transparent": true
+    },
+    "top-knit": {
+      "slot": "top",
+      "src": "assets/player/layers/top-knit.svg",
+      "thumbnail": "assets/player/layers/thumbs/top-knit.svg",
+      "transparent": true
+    },
+    "top-kimono": {
+      "slot": "top",
+      "src": "assets/player/layers/top-kimono.svg",
+      "thumbnail": "assets/player/layers/thumbs/top-kimono.svg",
+      "transparent": true
+    },
+    "top-blouse": {
+      "slot": "top",
+      "src": "assets/player/layers/top-blouse.svg",
+      "thumbnail": "assets/player/layers/thumbs/top-blouse.svg",
+      "transparent": true
+    },
+    "top-academy": {
+      "slot": "top",
+      "src": "assets/player/layers/top-academy.svg",
+      "thumbnail": "assets/player/layers/thumbs/top-academy.svg",
+      "transparent": true
+    },
+    "top-hoodie": {
+      "slot": "top",
+      "src": "assets/player/layers/top-hoodie.svg",
+      "thumbnail": "assets/player/layers/thumbs/top-hoodie.svg",
+      "transparent": true
+    },
+    "top-festival": {
+      "slot": "top",
+      "src": "assets/player/layers/top-festival.svg",
+      "thumbnail": "assets/player/layers/thumbs/top-festival.svg",
+      "transparent": true
+    },
+    "outer-none": {
+      "slot": "outer",
+      "src": "assets/player/layers/outer-none.svg",
+      "thumbnail": "assets/player/layers/thumbs/outer-none.svg",
+      "transparent": true
+    },
+    "outer-vest": {
+      "slot": "outer",
+      "src": "assets/player/layers/outer-vest.svg",
+      "thumbnail": "assets/player/layers/thumbs/outer-vest.svg",
+      "transparent": true
+    },
+    "outer-jacket": {
+      "slot": "outer",
+      "src": "assets/player/layers/outer-jacket.svg",
+      "thumbnail": "assets/player/layers/thumbs/outer-jacket.svg",
+      "transparent": true
+    },
+    "outer-haori": {
+      "slot": "outer",
+      "src": "assets/player/layers/outer-haori.svg",
+      "thumbnail": "assets/player/layers/thumbs/outer-haori.svg",
+      "transparent": true
+    },
+    "outer-raincoat": {
+      "slot": "outer",
+      "src": "assets/player/layers/outer-raincoat.svg",
+      "thumbnail": "assets/player/layers/thumbs/outer-raincoat.svg",
+      "transparent": true
+    },
+    "outer-travel": {
+      "slot": "outer",
+      "src": "assets/player/layers/outer-travel.svg",
+      "thumbnail": "assets/player/layers/thumbs/outer-travel.svg",
+      "transparent": true
+    },
+    "outer-cardigan": {
+      "slot": "outer",
+      "src": "assets/player/layers/outer-cardigan.svg",
+      "thumbnail": "assets/player/layers/thumbs/outer-cardigan.svg",
+      "transparent": true
+    },
+    "outer-wintercoat": {
+      "slot": "outer",
+      "src": "assets/player/layers/outer-wintercoat.svg",
+      "thumbnail": "assets/player/layers/thumbs/outer-wintercoat.svg",
+      "transparent": true
+    },
+    "outer-short-haori": {
+      "slot": "outer",
+      "src": "assets/player/layers/outer-short-haori.svg",
+      "thumbnail": "assets/player/layers/thumbs/outer-short-haori.svg",
+      "transparent": true
+    },
+    "bottom-trousers": {
+      "slot": "bottom",
+      "src": "assets/player/layers/bottom-trousers.svg",
+      "thumbnail": "assets/player/layers/thumbs/bottom-trousers.svg",
+      "transparent": true
+    },
+    "bottom-shinobi": {
+      "slot": "bottom",
+      "src": "assets/player/layers/bottom-shinobi.svg",
+      "thumbnail": "assets/player/layers/thumbs/bottom-shinobi.svg",
+      "transparent": true
+    },
+    "bottom-cargo": {
+      "slot": "bottom",
+      "src": "assets/player/layers/bottom-cargo.svg",
+      "thumbnail": "assets/player/layers/thumbs/bottom-cargo.svg",
+      "transparent": true
+    },
+    "bottom-formal": {
+      "slot": "bottom",
+      "src": "assets/player/layers/bottom-formal.svg",
+      "thumbnail": "assets/player/layers/thumbs/bottom-formal.svg",
+      "transparent": true
+    },
+    "bottom-hakama": {
+      "slot": "bottom",
+      "src": "assets/player/layers/bottom-hakama.svg",
+      "thumbnail": "assets/player/layers/thumbs/bottom-hakama.svg",
+      "transparent": true
+    },
+    "bottom-skirt-long": {
+      "slot": "bottom",
+      "src": "assets/player/layers/bottom-skirt-long.svg",
+      "thumbnail": "assets/player/layers/thumbs/bottom-skirt-long.svg",
+      "transparent": true
+    },
+    "bottom-jeans": {
+      "slot": "bottom",
+      "src": "assets/player/layers/bottom-jeans.svg",
+      "thumbnail": "assets/player/layers/thumbs/bottom-jeans.svg",
+      "transparent": true
+    },
+    "bottom-pleated-skirt": {
+      "slot": "bottom",
+      "src": "assets/player/layers/bottom-pleated-skirt.svg",
+      "thumbnail": "assets/player/layers/thumbs/bottom-pleated-skirt.svg",
+      "transparent": true
+    },
+    "bottom-wide-pants": {
+      "slot": "bottom",
+      "src": "assets/player/layers/bottom-wide-pants.svg",
+      "thumbnail": "assets/player/layers/thumbs/bottom-wide-pants.svg",
+      "transparent": true
+    },
+    "bottom-festival-hakama": {
+      "slot": "bottom",
+      "src": "assets/player/layers/bottom-festival-hakama.svg",
+      "thumbnail": "assets/player/layers/thumbs/bottom-festival-hakama.svg",
+      "transparent": true
+    },
+    "shoes-sandals": {
+      "slot": "shoes",
+      "src": "assets/player/layers/shoes-sandals.svg",
+      "thumbnail": "assets/player/layers/thumbs/shoes-sandals.svg",
+      "transparent": true
+    },
+    "shoes-sneakers": {
+      "slot": "shoes",
+      "src": "assets/player/layers/shoes-sneakers.svg",
+      "thumbnail": "assets/player/layers/thumbs/shoes-sneakers.svg",
+      "transparent": true
+    },
+    "shoes-boots": {
+      "slot": "shoes",
+      "src": "assets/player/layers/shoes-boots.svg",
+      "thumbnail": "assets/player/layers/thumbs/shoes-boots.svg",
+      "transparent": true
+    },
+    "shoes-formal": {
+      "slot": "shoes",
+      "src": "assets/player/layers/shoes-formal.svg",
+      "thumbnail": "assets/player/layers/thumbs/shoes-formal.svg",
+      "transparent": true
+    },
+    "shoes-high-top": {
+      "slot": "shoes",
+      "src": "assets/player/layers/shoes-high-top.svg",
+      "thumbnail": "assets/player/layers/thumbs/shoes-high-top.svg",
+      "transparent": true
+    },
+    "shoes-winter": {
+      "slot": "shoes",
+      "src": "assets/player/layers/shoes-winter.svg",
+      "thumbnail": "assets/player/layers/thumbs/shoes-winter.svg",
+      "transparent": true
+    },
+    "accessory-none": {
+      "slot": "accessory",
+      "src": "assets/player/layers/accessory-none.svg",
+      "thumbnail": "assets/player/layers/thumbs/accessory-none.svg",
+      "transparent": true
+    },
+    "accessory-scarf": {
+      "slot": "accessory",
+      "src": "assets/player/layers/accessory-scarf.svg",
+      "thumbnail": "assets/player/layers/thumbs/accessory-scarf.svg",
+      "transparent": true
+    },
+    "accessory-belt": {
+      "slot": "accessory",
+      "src": "assets/player/layers/accessory-belt.svg",
+      "thumbnail": "assets/player/layers/thumbs/accessory-belt.svg",
+      "transparent": true
+    },
+    "accessory-brooch": {
+      "slot": "accessory",
+      "src": "assets/player/layers/accessory-brooch.svg",
+      "thumbnail": "assets/player/layers/thumbs/accessory-brooch.svg",
+      "transparent": true
+    },
+    "accessory-tote": {
+      "slot": "accessory",
+      "src": "assets/player/layers/accessory-tote.svg",
+      "thumbnail": "assets/player/layers/thumbs/accessory-tote.svg",
+      "transparent": true
+    },
+    "accessory-gloves": {
+      "slot": "accessory",
+      "src": "assets/player/layers/accessory-gloves.svg",
+      "thumbnail": "assets/player/layers/thumbs/accessory-gloves.svg",
+      "transparent": true
+    },
+    "accessory-flower-clip": {
+      "slot": "accessory",
+      "src": "assets/player/layers/accessory-flower-clip.svg",
+      "thumbnail": "assets/player/layers/thumbs/accessory-flower-clip.svg",
+      "transparent": true
+    },
+    "accessory-shoulderbag": {
+      "slot": "accessory",
+      "src": "assets/player/layers/accessory-shoulderbag.svg",
+      "thumbnail": "assets/player/layers/thumbs/accessory-shoulderbag.svg",
+      "transparent": true
+    }
+  },
+  "playerBases": {
+    "male": {
+      "src": "assets/player/layers/base-body.svg",
+      "transparent": true
+    },
+    "female": {
+      "src": "assets/player/layers/base-body-female.svg",
+      "transparent": true
+    }
+  },
+  "playerHair": {
+    "short": {
+      "src": "assets/player/layers/hair-short.svg",
+      "transparent": true
+    },
+    "medium": {
+      "src": "assets/player/layers/hair-medium.svg",
+      "transparent": true
+    },
+    "long": {
+      "src": "assets/player/layers/hair-long.svg",
+      "transparent": true
+    },
+    "tied": {
+      "src": "assets/player/layers/hair-tied.svg",
+      "transparent": true
+    },
+    "wild": {
+      "src": "assets/player/layers/hair-wild.svg",
       "transparent": true
     }
   }

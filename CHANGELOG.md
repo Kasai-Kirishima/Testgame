@@ -1,3 +1,14 @@
+# Changelog
+
+## v1.5.4
+- Expanded the layered player wardrobe from 31 to 49 separate SVG clothing pieces across six strict slots: headwear, top, outer layer, bottoms, shoes and accessories.
+- Added more everyday, work, academy, festival, cold-weather and date-ready clothing, including blouses, hoodies, formal academy tops, cardigans, winter coats, short haori, jeans, wide trousers, a long pleated skirt, high-top shoes and accessories.
+- Added a true arrow-driven selector: left/right previews one item in the selected slot and the player avatar updates immediately; only items in that slot can be equipped, so incompatible combinations such as bottoms on the head are rejected.
+- Kept the six outfit presets migration-safe and composed only from starter-owned items; extra pieces are bought at the market and can be worn at home or in the shop.
+- Rebuilt 49 inline SVG thumbnail crops from their matching clothing layers; all assets remain vector-based with transparent backgrounds and share the avatar coordinate system.
+- Removed stale visual-preview and debug images from the release root, keeping only the current wardrobe preview; preserved all game assets, current character art, backgrounds and save data compatibility.
+- Updated the art manifest and regression tests for layered player rendering, item-slot validation, arrow cycling, purchases, outfit presets and legacy-save migration.
+
 ## v1.5.2
 - Added eight additional fully clothed portrait variants for Ino, Temari, Kurenai, Tsunade, Mirai, Karin, Tenten and Shizune; each variant unlocks after two personal meetings and is appended without replacing existing character art.
 - Added five category-colored achievement medal assets and wired achievement cards to render the matching medal by category.
@@ -18,8 +29,6 @@
 - Added nine original editorial pages about Konoha, crafts, training, market life, cooking and travel; each uses existing local environment artwork. Reading gives a small knowledge/focus reward once per page.
 - Reused existing game assets only; no images generated and no external archive imagery embedded.
 - Added migration-safe persistence and dedicated tests for achievement unlocks, issue gating, page reading, asset existence and hidden navigation.
-
-# Changelog
 
 ## v1.5.3
 - Integrated the generated transparent player outfit sprites into the wardrobe: six male and three fully clothed female looks, including casual, shinobi, festival, travel, raincoat and workwear variants.

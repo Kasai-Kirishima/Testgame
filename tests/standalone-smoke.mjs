@@ -269,7 +269,7 @@ const uiSprites = ['leaf-mark','flower','sun','location','coin','gem','settings'
 for (const sprite of uiSprites) {
   assert.ok(fs.existsSync(new URL(`../assets/ui/cropped/${sprite}.png`, import.meta.url)),`UI sprite ${sprite} must exist`);
 }
-assert.ok(fs.existsSync(new URL('../ui-atlas-preview.jpg', import.meta.url)),'UI sprite atlas preview must exist');
+assert.ok(fs.existsSync(new URL('../wardrobe-preview.jpg', import.meta.url)),'Current wardrobe preview must exist');
 
 
 // Work and wardrobe buttons must have real effects, not merely render.
@@ -294,6 +294,25 @@ context.window.NEG_TEST.action('Иду домой.');
 const putOnOutfit = {dataset:{action:'outfit',id:'festival'},textContent:'Переодеться',closest(){return this;}};
 click({target:{closest:()=>putOnOutfit,classList:{contains:()=>false}}});
 assert.equal(context.window.NEG_TEST.state().player.look,'festival','Owned clothing can be equipped at home');
+// Modular wardrobe: arrows preview one slot at a time, purchase/equip respects exact slot categories.
+const wardrobeState=context.window.NEG_TEST.state();
+wardrobeState.ui.view='bag'; wardrobeState.world.location='market'; wardrobeState.player.stats.coins=500; context.window.NEG_TEST.render();
+const selectHead={dataset:{action:'wardrobe-slot',id:'head'},textContent:'Голова',closest(){return this;}};
+click({target:{closest:()=>selectHead,classList:{contains:()=>false}}});
+const nextHead={dataset:{action:'wardrobe-cycle',slot:'head',dir:'1'},textContent:'Следующий',closest(){return this;}};
+click({target:{closest:()=>nextHead,classList:{contains:()=>false}}});
+assert.equal(wardrobeState.ui.wardrobePreview.itemId,'head-leaf-band','Arrow cycling should preview the next head item only');
+const buyHead={dataset:{action:'buy-clothing',id:'head-leaf-band',slot:'head'},textContent:'Купить повязку',closest(){return this;}};
+click({target:{closest:()=>buyHead,classList:{contains:()=>false}}});
+assert.equal(wardrobeState.player.equipment.head,'head-leaf-band','Purchased headwear should be equipped in the head slot');
+const rejectWrongSlot={dataset:{action:'wardrobe-equip',id:'bottom-cargo',slot:'head'},textContent:'Надеть',closest(){return this;}};
+click({target:{closest:()=>rejectWrongSlot,classList:{contains:()=>false}}});
+assert.equal(wardrobeState.player.equipment.head,'head-leaf-band','A pair of cargo pants cannot be equipped on the head');
+const datePreset={dataset:{action:'wardrobe-preset',id:'date'},textContent:'На свидание',closest(){return this;}};
+click({target:{closest:()=>datePreset,classList:{contains:()=>false}}});
+assert.equal(wardrobeState.player.equipment.top,'top-formal','Date preset should apply its top');
+assert.equal(wardrobeState.player.equipment.bottom,'bottom-formal','Date preset should apply its matching bottom');
+assert.ok(getElement('view-root').innerHTML.includes('wardrobe-avatar-stage'),'The wardrobe should render a layered player preview');
 assert.ok(fs.readFileSync(new URL('../assets/css/style.css',import.meta.url),'utf8').includes('aspect-ratio:9 / 18.5'),'Phone must retain a vertical 9:18.5 aspect ratio');
 
 console.log('OK: start, text actions/dialogue, 28 portraits, triptychs, 22 backgrounds, combat, smartphone, pets, jobs, wardrobe and UI sprites.');

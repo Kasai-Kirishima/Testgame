@@ -143,9 +143,108 @@ const getOrigin = id => ORIGINS.find(origin => origin.id === id) || ORIGINS[0];
 
 return { ORIGINS, LOCATIONS, SEASONS, WEATHER, getLocation, getOrigin };
 },
+"src/data/clothing.js": function(__require) {
+
+const CLOTHING_SLOTS = [
+  {id:'head',label:'Голова',title:'Головные уборы',icon:'◉',hint:'Повязка, заколка или капюшон'},
+  {id:'top',label:'Верх',title:'Верхняя одежда',icon:'♧',hint:'Только один основной верхний предмет'},
+  {id:'outer',label:'Слой',title:'Верхний слой',icon:'◇',hint:'Можно надеть поверх рубашки или формы'},
+  {id:'bottom',label:'Низ',title:'Брюки и хакама',icon:'▤',hint:'Один предмет на слот'},
+  {id:'shoes',label:'Обувь',title:'Обувь',icon:'⌁',hint:'Сандалии, ботинки или кеды'},
+  {id:'accessory',label:'Аксессуар',title:'Аксессуары',icon:'✦',hint:'Шарф, пояс или сумка'}
+];
+
+const CLOTHING = [
+  {id:'head-none',slot:'head',name:'Без головного убора',desc:'Открытая причёска.',price:0,src:'assets/player/layers/head-none.svg',starter:true},
+  {id:'head-leaf-band',slot:'head',name:'Повязка Листа',desc:'Классическая повязка шиноби.',price:18,src:'assets/player/layers/head-leaf-band.svg'},
+  {id:'head-cloth-band',slot:'head',name:'Тканевая повязка',desc:'Мягкая тёмная повязка для тренировок.',price:14,src:'assets/player/layers/head-cloth-band.svg'},
+  {id:'head-flower-pin',slot:'head',name:'Заколка сакуры',desc:'Небольшая цветочная заколка.',price:16,src:'assets/player/layers/head-flower-pin.svg'},
+
+  {id:'head-beret',slot:'head',name:'Берет с эмблемой',desc:'Мягкий берет для прогулки по деревне.',price:22,src:'assets/player/layers/head-beret.svg'},
+  {id:'head-floral-ribbon',slot:'head',name:'Лента с цветком',desc:'Лёгкая лента для праздничного образа.',price:18,src:'assets/player/layers/head-floral-ribbon.svg'},
+
+  {id:'top-basic',slot:'top',name:'Базовая футболка',desc:'Простой удобный слой на каждый день.',price:0,src:'assets/player/layers/top-basic.svg',starter:true},
+  {id:'top-shinobi',slot:'top',name:'Форма шиноби',desc:'Практичная рубашка с защитными вставками.',price:0,src:'assets/player/layers/top-shinobi.svg',starter:true},
+  {id:'top-work',starter:true,slot:'top',name:'Рабочая рубашка',desc:'Аккуратная форма для смены в мастерской.',price:20,src:'assets/player/layers/top-work.svg'},
+  {id:'top-formal',starter:true,slot:'top',name:'Парадная рубашка',desc:'Сдержанный вариант для праздника и встречи.',price:26,src:'assets/player/layers/top-formal.svg'},
+  {id:'top-knit',slot:'top',name:'Тёплый свитер',desc:'Мягкий высокий ворот для прохладного дня.',price:24,starter:true,src:'assets/player/layers/top-knit.svg'},
+  {id:'top-kimono',slot:'top',name:'Верх кимоно',desc:'Традиционный верх с широкими рукавами.',price:34,src:'assets/player/layers/top-kimono.svg'},
+
+  {id:'top-blouse',slot:'top',name:'Блуза с воротником',desc:'Светлая блуза с аккуратной застёжкой.',price:25,src:'assets/player/layers/top-blouse.svg'},
+  {id:'top-academy',slot:'top',name:'Академическая форма',desc:'Строгая рубашка для учёбы и встреч.',price:27,src:'assets/player/layers/top-academy.svg'},
+  {id:'top-hoodie',slot:'top',name:'Худи на молнии',desc:'Мягкое худи для свободного дня.',price:29,src:'assets/player/layers/top-hoodie.svg'},
+  {id:'top-festival',slot:'top',name:'Праздничный верх',desc:'Нарядный верх с цветочным узором.',price:35,src:'assets/player/layers/top-festival.svg'},
+
+  {id:'outer-none',slot:'outer',name:'Без верхнего слоя',desc:'Оставить основной верх открытым.',price:0,src:'assets/player/layers/outer-none.svg',starter:true},
+  {id:'outer-vest',slot:'outer',name:'Жилет шиноби',desc:'Лёгкая защитная экипировка поверх формы.',price:0,src:'assets/player/layers/outer-vest.svg',starter:true},
+  {id:'outer-jacket',slot:'outer',name:'Городская куртка',desc:'Короткая куртка для прогулок.',price:30,starter:true,src:'assets/player/layers/outer-jacket.svg'},
+  {id:'outer-haori',slot:'outer',name:'Тёмное хаори',desc:'Свободный верхний слой с узорной каймой.',price:38,starter:true,src:'assets/player/layers/outer-haori.svg'},
+  {id:'outer-raincoat',slot:'outer',name:'Дождевой плащ',desc:'Длинный плащ для непогоды.',price:40,starter:true,src:'assets/player/layers/outer-raincoat.svg'},
+  {id:'outer-travel',slot:'outer',name:'Дорожный плащ',desc:'Удобный плащ с высоким воротом.',price:42,src:'assets/player/layers/outer-travel.svg'},
+
+  {id:'outer-cardigan',slot:'outer',name:'Кардиган',desc:'Тёплый открытый слой поверх рубашки.',price:31,src:'assets/player/layers/outer-cardigan.svg'},
+  {id:'outer-wintercoat',slot:'outer',name:'Зимнее пальто',desc:'Утеплённое пальто для холодных дней.',price:48,src:'assets/player/layers/outer-wintercoat.svg'},
+  {id:'outer-short-haori',slot:'outer',name:'Короткое хаори',desc:'Лёгкий традиционный верхний слой.',price:39,src:'assets/player/layers/outer-short-haori.svg'},
+
+  {id:'bottom-trousers',slot:'bottom',name:'Повседневные брюки',desc:'Универсальные прямые брюки.',price:0,src:'assets/player/layers/bottom-trousers.svg',starter:true},
+  {id:'bottom-shinobi',slot:'bottom',name:'Брюки шиноби',desc:'Свободные штаны с бинтами на голени.',price:0,src:'assets/player/layers/bottom-shinobi.svg',starter:true},
+  {id:'bottom-cargo',starter:true,slot:'bottom',name:'Карго с карманами',desc:'Практичный вариант для долгих поручений.',price:24,src:'assets/player/layers/bottom-cargo.svg'},
+  {id:'bottom-formal',starter:true,slot:'bottom',name:'Парадные брюки',desc:'Чистый строгий силуэт.',price:28,src:'assets/player/layers/bottom-formal.svg'},
+  {id:'bottom-hakama',slot:'bottom',name:'Хакама',desc:'Широкие традиционные штаны.',price:32,src:'assets/player/layers/bottom-hakama.svg'},
+  {id:'bottom-skirt-long',slot:'bottom',name:'Длинная юбка',desc:'Сдержанный повседневный фасон до щиколотки.',price:27,src:'assets/player/layers/bottom-skirt-long.svg'},
+
+  {id:'bottom-jeans',slot:'bottom',name:'Джинсы',desc:'Прочные джинсы на каждый день.',price:25,src:'assets/player/layers/bottom-jeans.svg'},
+  {id:'bottom-pleated-skirt',slot:'bottom',name:'Плиссированная юбка',desc:'Длинная юбка со складками.',price:29,src:'assets/player/layers/bottom-pleated-skirt.svg'},
+  {id:'bottom-wide-pants',slot:'bottom',name:'Свободные брюки',desc:'Комфортный широкий крой.',price:27,src:'assets/player/layers/bottom-wide-pants.svg'},
+  {id:'bottom-festival-hakama',slot:'bottom',name:'Праздничная хакама',desc:'Традиционный низ с мягкими складками.',price:37,src:'assets/player/layers/bottom-festival-hakama.svg'},
+
+  {id:'shoes-sandals',slot:'shoes',name:'Сандалии шиноби',desc:'Лёгкая обувь для привычных маршрутов.',price:0,src:'assets/player/layers/shoes-sandals.svg',starter:true},
+  {id:'shoes-sneakers',slot:'shoes',name:'Городские кеды',desc:'Удобная обувь для прогулок.',price:0,src:'assets/player/layers/shoes-sneakers.svg',starter:true},
+  {id:'shoes-boots',starter:true,slot:'shoes',name:'Высокие ботинки',desc:'Подходят для прохладной погоды и дороги.',price:22,src:'assets/player/layers/shoes-boots.svg'},
+  {id:'shoes-formal',starter:true,slot:'shoes',name:'Парадная обувь',desc:'Аккуратная обувь для особых случаев.',price:24,src:'assets/player/layers/shoes-formal.svg'},
+
+  {id:'shoes-high-top',slot:'shoes',name:'Высокие кеды',desc:'Высокая посадка и плотная подошва.',price:24,src:'assets/player/layers/shoes-high-top.svg'},
+  {id:'shoes-winter',slot:'shoes',name:'Зимние сапоги',desc:'Тёплая обувь с мягким верхом.',price:32,src:'assets/player/layers/shoes-winter.svg'},
+
+  {id:'accessory-none',slot:'accessory',name:'Без аксессуара',desc:'Оставить образ без дополнительных деталей.',price:0,src:'assets/player/layers/accessory-none.svg',starter:true},
+  {id:'accessory-scarf',slot:'accessory',name:'Бордовый шарф',desc:'Тёплый шарф для прогулок.',price:16,starter:true,src:'assets/player/layers/accessory-scarf.svg'},
+  {id:'accessory-belt',starter:true,slot:'accessory',name:'Пояс с подсумком',desc:'Полезная деталь для путешествий.',price:18,src:'assets/player/layers/accessory-belt.svg'},
+  {id:'accessory-brooch',starter:true,slot:'accessory',name:'Брошь сакуры',desc:'Небольшой цветочный знак.',price:14,src:'assets/player/layers/accessory-brooch.svg'},
+  {id:'accessory-tote',slot:'accessory',name:'Сумка-шоппер',desc:'Вместительная сумка для покупок.',price:19,src:'assets/player/layers/accessory-tote.svg'},
+  {id:'accessory-gloves',slot:'accessory',name:'Перчатки',desc:'Практичные перчатки для прохладной погоды.',price:15,src:'assets/player/layers/accessory-gloves.svg'},
+  {id:'accessory-flower-clip',slot:'accessory',name:'Цветочная заколка',desc:'Небольшой аксессуар для волос.',price:17,src:'assets/player/layers/accessory-flower-clip.svg'},
+  {id:'accessory-shoulderbag',slot:'accessory',name:'Плечевая сумка',desc:'Небольшая сумка для мелочей.',price:20,src:'assets/player/layers/accessory-shoulderbag.svg'}
+];
+
+const CLOTHING_BY_ID = Object.fromEntries(CLOTHING.map(item=>[item.id,item]));
+const STARTER_CLOTHING = CLOTHING.filter(item=>item.starter).map(item=>item.id);
+const DEFAULT_EQUIPMENT = {head:'head-none',top:'top-basic',outer:'outer-none',bottom:'bottom-trousers',shoes:'shoes-sneakers',accessory:'accessory-none'};
+const PRESET_EQUIPMENT = {
+  casual:{...DEFAULT_EQUIPMENT,top:'top-basic',outer:'outer-jacket',bottom:'bottom-cargo',shoes:'shoes-sneakers',accessory:'accessory-none'},
+  date:{...DEFAULT_EQUIPMENT,top:'top-formal',outer:'outer-haori',bottom:'bottom-formal',shoes:'shoes-formal',accessory:'accessory-brooch'},
+  work:{...DEFAULT_EQUIPMENT,top:'top-work',outer:'outer-vest',bottom:'bottom-cargo',shoes:'shoes-boots',accessory:'accessory-belt'},
+  training:{...DEFAULT_EQUIPMENT,top:'top-shinobi',outer:'outer-vest',bottom:'bottom-shinobi',shoes:'shoes-sandals',accessory:'accessory-none'},
+  walk:{...DEFAULT_EQUIPMENT,top:'top-knit',outer:'outer-raincoat',bottom:'bottom-trousers',shoes:'shoes-boots',accessory:'accessory-scarf'}
+};
+const LOOK_TO_PRESET = {casual:'casual',shinobi:'training',festival:'date',travel:'walk',raincoat:'walk',workwear:'work'};
+
+function normalizeEquipment(equipment,look='casual') {
+  const preset=PRESET_EQUIPMENT[LOOK_TO_PRESET[look]||'casual'];
+  const out={...preset};
+  for (const slot of CLOTHING_SLOTS) {
+    const candidate=equipment?.[slot.id];
+    if (candidate && CLOTHING_BY_ID[candidate]?.slot===slot.id) out[slot.id]=candidate;
+  }
+  return out;
+}
+
+return { CLOTHING_SLOTS, CLOTHING, CLOTHING_BY_ID, STARTER_CLOTHING, DEFAULT_EQUIPMENT, PRESET_EQUIPMENT, LOOK_TO_PRESET, normalizeEquipment };
+},
 "src/core/store.js": function(__require) {
+const { STARTER_CLOTHING,normalizeEquipment } = __require("src/data/clothing.js");
 const { ORIGINS } = __require("src/data/world.js");
 const { CHARACTERS } = __require("src/data/characters.js");
+
 
 
 const SAVE_KEY = 'naruto-enot-garem-save-v2';
@@ -162,6 +261,8 @@ function createInitialState(player = {}) {
       originName: origin.name,
       style: player.style || 'balanced',
       look: player.look || 'casual',
+      equipment: normalizeEquipment(player.equipment,player.look||'casual'),
+      ownedClothing: [...new Set([...STARTER_CLOTHING,...(Array.isArray(player.ownedClothing)?player.ownedClothing:[]),...Object.values(normalizeEquipment(player.equipment,player.look||'casual'))])],
       ownedLooks: Array.isArray(player.ownedLooks) ? [...new Set([...player.ownedLooks, player.look || 'casual'])] : [...new Set(['casual','shinobi',player.look || 'casual'])],
       jobId: player.jobId || '',
       workShifts: Number(player.workShifts)||0,
@@ -239,13 +340,13 @@ function normalizeState(input) {
     meetingHistory: input.meetingHistory && typeof input.meetingHistory === 'object' ? input.meetingHistory : {},
     dialogueMeta: input.dialogueMeta && typeof input.dialogueMeta === 'object' ? input.dialogueMeta : {},
     companions: Array.isArray(input.companions) ? input.companions : [],
-    player: {...base.player,...input.player,ownedLooks:Array.isArray(input.player?.ownedLooks)?[...new Set([...input.player.ownedLooks,input.player?.look||base.player.look])]:[...new Set([...base.player.ownedLooks,input.player?.look||base.player.look])],workShifts:Number(input.player?.workShifts)||0,workShiftsTotal:Math.max(0,Number(input.player?.workShiftsTotal)||0),lastWorkDay:Number(input.player?.lastWorkDay)||0,stats:{...base.player.stats,...input.player?.stats,hp:Number(input.player?.stats?.hp??base.player.stats.hp)}},
+    player: {...base.player,...input.player,equipment:normalizeEquipment(input.player?.equipment,input.player?.look||base.player.look),ownedClothing:[...new Set([...STARTER_CLOTHING,...(Array.isArray(input.player?.ownedClothing)?input.player.ownedClothing:[]),...Object.values(normalizeEquipment(input.player?.equipment,input.player?.look||base.player.look))])],ownedLooks:Array.isArray(input.player?.ownedLooks)?[...new Set([...input.player.ownedLooks,input.player?.look||base.player.look])]:[...new Set([...base.player.ownedLooks,input.player?.look||base.player.look])],workShifts:Number(input.player?.workShifts)||0,workShiftsTotal:Math.max(0,Number(input.player?.workShiftsTotal)||0),lastWorkDay:Number(input.player?.lastWorkDay)||0,stats:{...base.player.stats,...input.player?.stats,hp:Number(input.player?.stats?.hp??base.player.stats.hp)}},
     world: {...base.world,...input.world},
     dailyBoard: input.dailyBoard && typeof input.dailyBoard==='object' ? input.dailyBoard : base.dailyBoard,
     dailyBoardHistory: Array.isArray(input.dailyBoardHistory) ? input.dailyBoardHistory.slice(0,14) : [],
     skills: {...base.skills,...(input.skills||{})},
     settings: {...base.settings,...input.settings},
-    ui: {...base.ui,...input.ui,drawerOpen:false,questTab:['active','history'].includes(input.ui?.questTab)?input.ui.questTab:'active',bagTab:['all','food','gift','clothing','material','other'].includes(input.ui?.bagTab)?input.ui.bagTab:'all',profileArtIndex:Math.max(0,Number(input.ui?.profileArtIndex)||0)},
+    ui: {...base.ui,...input.ui,wardrobeSlot:['head','top','outer','bottom','shoes','accessory'].includes(input.ui?.wardrobeSlot)?input.ui.wardrobeSlot:'top',wardrobePreview:input.ui?.wardrobePreview&&typeof input.ui.wardrobePreview==='object'?input.ui.wardrobePreview:null,drawerOpen:false,questTab:['active','history'].includes(input.ui?.questTab)?input.ui.questTab:'active',bagTab:['all','food','gift','clothing','material','other'].includes(input.ui?.bagTab)?input.ui.bagTab:'all',profileArtIndex:Math.max(0,Number(input.ui?.profileArtIndex)||0)},
     bonds: input.bonds && typeof input.bonds === 'object' ? input.bonds : {},
     memories: input.memories && typeof input.memories === 'object' ? input.memories : {},
     dialogues: input.dialogues && typeof input.dialogues === 'object' ? input.dialogues : {},
@@ -3065,6 +3166,68 @@ const getJob = id => JOBS.find(job=>job.id===id) || null;
 
 return { JOBS, getJob };
 },
+"src/core/wardrobe.js": function(__require) {
+const { CLOTHING,CLOTHING_BY_ID,CLOTHING_SLOTS,STARTER_CLOTHING,PRESET_EQUIPMENT,LOOK_TO_PRESET,normalizeEquipment } = __require("src/data/clothing.js");
+
+function cycleWardrobePreview(state,slot,direction=1) {
+  if(!CLOTHING_SLOTS.some(entry=>entry.id===slot)) return {ok:false,message:'Слот одежды не найден.'};
+  const list=CLOTHING.filter(item=>item.slot===slot);
+  if(!list.length) return {ok:false,message:'Для этого слота пока нет вещей.'};
+  const currentId=state.ui.wardrobePreview?.slot===slot?state.ui.wardrobePreview.itemId:state.player.equipment?.[slot];
+  const currentIndex=Math.max(0,list.findIndex(item=>item.id===currentId));
+  const nextIndex=(currentIndex+(Number(direction)<0?-1:1)+list.length)%list.length;
+  state.ui.wardrobeSlot=slot;
+  state.ui.wardrobePreview={slot,itemId:list[nextIndex].id};
+  return {ok:true,item:list[nextIndex]};
+}
+
+function equipClothing(state,itemId,slot) {
+  const item=CLOTHING_BY_ID[itemId];
+  if(!item || item.slot!==slot || !CLOTHING_SLOTS.some(entry=>entry.id===slot)) return {ok:false,message:'Эта вещь не подходит для выбранного слота.'};
+  if(!['home','market'].includes(state.world.location)) return {ok:false,message:'Переодеться можно дома или в магазине.'};
+  state.player.ownedClothing ||= [...STARTER_CLOTHING];
+  if(!state.player.ownedClothing.includes(itemId)) return {ok:false,message:'Сначала купи эту вещь на рынке.'};
+  state.player.equipment=normalizeEquipment(state.player.equipment,state.player.look);
+  state.player.equipment[slot]=itemId;
+  state.player.activeWardrobePreset='custom';
+  state.ui.wardrobeSlot=slot;
+  state.ui.wardrobePreview={slot,itemId};
+  return {ok:true,item};
+}
+
+function purchaseClothing(state,itemId,slot) {
+  const item=CLOTHING_BY_ID[itemId];
+  if(!item || item.slot!==slot || !CLOTHING_SLOTS.some(entry=>entry.id===slot)) return {ok:false,message:'Нельзя поместить эту вещь в выбранный слот.'};
+  if(state.world.location!=='market') return {ok:false,message:'Одежду можно купить только на рынке.'};
+  state.player.ownedClothing ||= [...STARTER_CLOTHING];
+  if(state.player.ownedClothing.includes(itemId)) return {ok:false,message:'Эта вещь уже есть в гардеробе.'};
+  if((state.player.stats.coins||0)<item.price) return {ok:false,message:'Не хватает рё для покупки.'};
+  state.player.stats.coins-=item.price;
+  state.player.ownedClothing.push(itemId);
+  state.player.equipment=normalizeEquipment(state.player.equipment,state.player.look);
+  state.player.equipment[slot]=itemId;
+  state.player.activeWardrobePreset='custom';
+  state.ui.wardrobeSlot=slot;
+  state.ui.wardrobePreview={slot,itemId};
+  return {ok:true,item,price:item.price};
+}
+
+function applyWardrobePreset(state,presetId) {
+  const preset=PRESET_EQUIPMENT[presetId];
+  if(!preset) return {ok:false,message:'Комплект не найден.'};
+  if(!['home','market'].includes(state.world.location)) return {ok:false,message:'Комплект можно надеть дома или в магазине.'};
+  state.player.ownedClothing ||= [...STARTER_CLOTHING];
+  const missing=Object.values(preset).filter(itemId=>!state.player.ownedClothing.includes(itemId));
+  if(missing.length) return {ok:false,message:'В комплекте есть вещи, которых ещё нет в гардеробе. Купи их на рынке.'};
+  state.player.equipment={...preset};
+  state.player.activeWardrobePreset=presetId;
+  state.ui.wardrobePreview=null;
+  state.player.look={date:'festival',work:'workwear',training:'shinobi',walk:'travel',casual:'casual'}[presetId]||'casual';
+  return {ok:true,presetId};
+}
+
+return { cycleWardrobePreview, equipClothing, purchaseClothing, applyWardrobePreset };
+},
 "src/ui/render.js": function(__require) {
 const { CHARACTERS,getCharacter,getUnlockedCharacterArts,initials } = __require("src/data/characters.js");
 const { LOCATIONS,ORIGINS,getLocation,WEATHER,SEASONS } = __require("src/data/world.js");
@@ -3077,6 +3240,8 @@ const { CONVERSATION_ACTIONS,CONVERSATION_ACTION_GROUPS } = __require("src/data/
 const { ensureDailyBoard,SKILL_META,getSkillLevel,RECIPES,canCraft } = __require("src/core/progression.js");
 const { ACHIEVEMENTS,getAchievementProgress } = __require("src/core/achievements.js");
 const { MAGAZINE_ISSUES } = __require("src/data/secret-magazine.js");
+const { CLOTHING,CLOTHING_BY_ID,CLOTHING_SLOTS,LOOK_TO_PRESET,normalizeEquipment } = __require("src/data/clothing.js");
+
 
 
 
@@ -3099,26 +3264,25 @@ function avatar(character,large=false) {
   return `<div class="person-avatar ${large?'large':''}" style="--av1:${character.colors[0]};--av2:${character.colors[1]}">${portrait?`<img src="${portrait}" alt="" loading="lazy"><span class="avatar-fallback">${character.icon}</span>`:character.icon}</div>`;
 }
 
-function getPlayerOutfitSrc(player={}) {
-  const gender=player.gender||'male';
-  const look=player.look||'casual';
-  const male={casual:'male-casual',shinobi:'male-shinobi',festival:'male-formal',travel:'male-travel',raincoat:'male-raincoat',workwear:'male-work'};
-  const female={casual:'female-travel',shinobi:'female-shinobi',festival:'female-festival',travel:'female-travel',raincoat:'female-travel',workwear:'female-shinobi'};
-  const chosen=(gender==='female'?female:male)[look] || (gender==='female'?'female-travel':'male-casual');
-  const exists=['male-casual','male-formal','male-work','male-shinobi','male-travel','male-raincoat','female-festival','female-shinobi','female-travel'].includes(chosen);
-  return exists?`assets/player/outfits/${chosen}.png`:'';
+function renderPlayerAvatarStack(player={}) {
+  const equipment=normalizeEquipment(player.equipment,player.look);
+  const hair=['short','medium','long','tied','wild'].includes(player.hair)?player.hair:'medium';
+  const base=player.gender==='female'?'base-body-female.svg':'base-body.svg';
+  const order=['bottom','shoes','top','outer','accessory','head'];
+  return `<div class="player-avatar-layer-stack"><img src="assets/player/layers/${base}" alt=""><img src="assets/player/layers/hair-${hair}.svg" alt="">${order.map(slot=>{const item=CLOTHING_BY_ID[equipment[slot]];return item?`<img src="${item.src}" alt="">`:''}).join('')}</div>`;
 }
+
+function renderLayeredPlayer(player={},equipment={},className='wardrobe-avatar-stage') {
+  const normalized=normalizeEquipment(equipment,player.look);
+  const hair=['short','medium','long','tied','wild'].includes(player.hair)?player.hair:'medium';
+  const base=player.gender==='female'?'base-body-female.svg':'base-body.svg';
+  const order=['bottom','shoes','top','outer','accessory','head'];
+  return `<div class="${className}" aria-label="Предпросмотр выбранной одежды"><img class="wardrobe-avatar-base" src="assets/player/layers/${base}" alt="Основа персонажа"><img class="wardrobe-avatar-layer layer-hair" src="assets/player/layers/hair-${hair}.svg" alt="Причёска персонажа">${order.map(slot=>{const item=CLOTHING_BY_ID[normalized[slot]];return item?`<img class="wardrobe-avatar-layer layer-${slot}" data-slot="${slot}" src="${item.src}" alt="${escapeHTML(item.name)}">`:''}).join('')}</div>`;
+}
+
 function getPetImage(pet={}) {
   return pet.image || PETS.find(item=>item.id===pet.id)?.image || '';
 }
-function getPlayerAvatarSrc(player={}) {
-  const gender=player.gender||'male'; const look=player.look||'casual';
-  const male={casual:'male-casual',shinobi:'male-shinobi',festival:'male-formal',travel:'male-travel',raincoat:'male-raincoat',workwear:'male-work'};
-  const female={casual:'female-travel',shinobi:'female-shinobi',festival:'female-festival',travel:'female-travel',raincoat:'female-travel',workwear:'female-shinobi'};
-  const chosen=(gender==='female'?female:male)[look] || (gender==='female'?'female-travel':'male-casual');
-  return `assets/player/avatars/${chosen}.png`;
-}
-
 function renderWorld(state) {
   const place = getLocation(state.world.location);
   const weather = getWeather(state);
@@ -3384,24 +3548,37 @@ function renderBag(state) {
   const selected=filtered.find(item=>item.id===state.ui.selectedItemId)||filtered[0]||null;
   const iconFor=item=>({tea:'assets/ui/tea.svg',flower:'assets/ui/generated/gift.png',paper:'assets/ui/generated/scroll-case.png',herb:'assets/ui/herb.svg',bento:'assets/ui/generated/ramen-bowl.png','pet-snack':'assets/ui/generated/gift-box.png','field-kit':'assets/ui/pouch.svg','herbal-tea':'assets/ui/tea.svg','pressed-bouquet':'assets/ui/generated/gift.png'}[item.id]||'assets/ui/pouch.svg');
   const owned=state.player.ownedLooks||['casual','shinobi'];
+  const ownedClothing=new Set(state.player.ownedClothing||[]);
+  const equipment=normalizeEquipment(state.player.equipment,state.player.look);
   const canChange=['home','market'].includes(state.world.location);
-  const selectedLook=looks.find(([id])=>id===state.player.look)||looks[0];
-  const selectedArt=selectedLook?.[3]?`assets/player/outfits/${selectedLook[3]}.png`:'';
+  const activeSlot=CLOTHING_SLOTS.some(slot=>slot.id===state.ui.wardrobeSlot)?state.ui.wardrobeSlot:'top';
+  const slotInfo=CLOTHING_SLOTS.find(slot=>slot.id===activeSlot)||CLOTHING_SLOTS[1];
+  const slotItems=CLOTHING.filter(item=>item.slot===activeSlot);
+  const previewId=state.ui.wardrobePreview?.slot===activeSlot&&CLOTHING_BY_ID[state.ui.wardrobePreview.itemId]?.slot===activeSlot?state.ui.wardrobePreview.itemId:equipment[activeSlot];
+  const previewItem=CLOTHING_BY_ID[previewId]||slotItems[0];
+  const previewIndex=Math.max(0,slotItems.findIndex(item=>item.id===previewItem.id));
+  const previewEquipment={...equipment,[activeSlot]:previewItem.id};
+  const slotTabs=CLOTHING_SLOTS.map(slot=>`<button class="wardrobe-slot-tab ${activeSlot===slot.id?'active':''}" data-action="wardrobe-slot" data-id="${slot.id}"><span>${slot.icon}</span><b>${slot.label}</b><small>${escapeHTML(CLOTHING_BY_ID[equipment[slot.id]]?.name||'Не выбрано')}</small></button>`).join('');
+  const previewOwned=ownedClothing.has(previewItem.id);
+  const previewButton=previewOwned?`<button class="btn btn-primary" data-action="wardrobe-equip" data-id="${previewItem.id}" data-slot="${activeSlot}" ${!canChange?'disabled':''}>${equipment[activeSlot]===previewItem.id?'Уже надето':'Надеть'}</button>`:state.world.location==='market'?`<button class="btn btn-primary" data-action="buy-clothing" data-id="${previewItem.id}" data-slot="${activeSlot}">Купить · ${previewItem.price} рё</button>`:`<button class="btn btn-primary" disabled>Купить можно на рынке</button>`;
+  const wardrobeDesigner=`<section class="wardrobe-designer panel-card"><div class="card-head"><div><h3>Собери образ по частям</h3><small>КАК В СИМУЛЯТОРАХ ЖИЗНИ · СЛОИ НЕ КОНФЛИКТУЮТ</small></div><span class="wardrobe-place-tag">${canChange?'МОЖНО ПЕРЕОДЕТЬСЯ':'ПРЕДПРОСМОТР'}</span></div>
+      <div class="wardrobe-designer-layout"><div class="wardrobe-preview-column">${renderLayeredPlayer(state.player,previewEquipment)}<div class="wardrobe-preview-caption"><b>${escapeHTML(state.player.name)}</b><small>Предпросмотр: ${escapeHTML(previewItem.name)}</small></div></div>
+      <div class="wardrobe-controls"><div class="wardrobe-slot-tabs">${slotTabs}</div><article class="wardrobe-item-picker"><div class="wardrobe-item-visual"><img src="assets/player/layers/thumbs/${previewItem.id}.svg" alt="${escapeHTML(previewItem.name)}"></div><div class="wardrobe-item-copy"><small>${escapeHTML(slotInfo.title.toUpperCase())} · ${previewIndex+1}/${slotItems.length}</small><h4>${escapeHTML(previewItem.name)}</h4><p>${escapeHTML(previewItem.desc)}</p><span class="wardrobe-fit-label">${previewOwned?'В гардеробе':`Цена: ${previewItem.price} рё`}</span></div><div class="wardrobe-arrow-row"><button class="wardrobe-arrow" data-action="wardrobe-cycle" data-slot="${activeSlot}" data-dir="-1" aria-label="Предыдущий предмет">‹</button><button class="wardrobe-arrow" data-action="wardrobe-cycle" data-slot="${activeSlot}" data-dir="1" aria-label="Следующий предмет">›</button></div><div class="wardrobe-picker-actions">${previewButton}<button class="btn btn-ghost" data-action="wardrobe-reset-preview">Сбросить просмотр</button></div></article><p class="wardrobe-rule-note"><b>Правила слоёв:</b> один предмет на каждый слот. Футболка не заменяет брюки, обувь выбирается отдельно, а куртка или жилет надевается поверх верха. ${!canChange?'Для сохранения образа вернись домой или зайди в магазин одежды.':''}</p></div></div>
+      <div class="wardrobe-equipped-row">${CLOTHING_SLOTS.map(slot=>`<span><small>${slot.label}</small><b>${escapeHTML(CLOTHING_BY_ID[equipment[slot.id]]?.name||'—')}</b></span>`).join('')}</div></section>`;
   const outfitCards=looks.map(([id,name,desc,art])=>{
     const isOwned=owned.includes(id); const price=prices[id]||0;
-    return `<article class="outfit-option ${state.player.look===id?'selected':''} ${isOwned?'owned':'locked'}"><div class="outfit-art-wrap">${art?`<img src="assets/player/outfits/${art}.png" alt="${escapeHTML(name)}" loading="lazy">`:'<span class="outfit-placeholder">👘</span>'}</div><b>${escapeHTML(name)}</b><small>${escapeHTML(desc)}</small>${isOwned?`<button class="mini-btn" data-action="outfit" data-id="${id}" ${!canChange?'disabled':''}>${state.player.look===id?'Надето':canChange?'Переодеться':'Доступно дома'}</button>`:`<button class="mini-btn" data-action="buy-outfit" data-id="${id}" ${state.world.location!=='market'?'disabled':''}>Купить · ${price} рё</button>`}</article>`;
+    return `<article class="outfit-option ${(state.player.activeWardrobePreset||LOOK_TO_PRESET[state.player.look]||'casual')===LOOK_TO_PRESET[id]?'selected':''} ${isOwned?'owned':'locked'}"><div class="outfit-art-wrap">${art?`<img src="assets/player/outfits/${art}.png" alt="${escapeHTML(name)}" loading="lazy">`:'<span class="outfit-placeholder">👘</span>'}</div><b>${escapeHTML(name)}</b><small>${escapeHTML(desc)}</small>${isOwned?`<button class="mini-btn" data-action="outfit" data-id="${id}" ${!canChange?'disabled':''}>${(state.player.activeWardrobePreset||LOOK_TO_PRESET[state.player.look]||'casual')===LOOK_TO_PRESET[id]?'Комплект надет':canChange?'Применить комплект':'Доступно дома'}</button>`:`<button class="mini-btn" data-action="buy-outfit" data-id="${id}" ${state.world.location!=='market'?'disabled':''}>Купить · ${price} рё</button>`}</article>`;
   }).join('');
-  const preset=(label,id,emoji)=>`<button class="wardrobe-preset ${state.player.look===id?'active':''}" data-action="outfit" data-id="${id}" ${!owned.includes(id)||!canChange?'disabled':''}><span>${emoji}</span><b>${label}</b><small>${owned.includes(id)?(state.player.look===id?'Сейчас надето':'Надеть комплект'):'Нужно купить на рынке'}</small></button>`;
   return `${heading('Инвентарь','Предметы, одежда и мастерская. Выбирай вещи и собирай подходящий комплект для работы, прогулки, тренировки или встречи.')}
     <section class="bag-heading"><div><small>🌸 ЛИЧНЫЕ ВЕЩИ</small><h3>Инвентарь</h3><p>${state.inventory.reduce((sum,item)=>sum+item.qty,0)} предметов в сумке</p></div></section>
     <div class="bag-tabs">${kinds.map(([id,label])=>`<button data-action="bag-filter" data-id="${id}" class="${filter===id?'active':''}">${label}</button>`).join('')}</div>
     <section class="panel-card"><div class="inventory-grid">${filtered.length?filtered.map(item=>`<article class="item-card ${selected?.id===item.id?'selected':''}"><button class="item-select" data-action="select-item" data-id="${item.id}"><img class="item-art" src="${iconFor(item)}" alt="" loading="lazy"><span><strong>${escapeHTML(item.name)}</strong><small>${item.kind==='gift'?'Подарок':item.kind==='food'?'Еда':item.kind==='clothing'?'Одежда':item.kind==='pet'?'Для питомцев':item.kind==='material'?'Материал':'Прочее'}</small></span><b class="quantity">×${item.qty}</b></button><div class="item-tools">${item.kind==='gift'?`<button class="mini-btn" data-action="choose-gift" data-id="${item.id}">🎁 Подарить</button>`:''}${item.kind==='food'&&item.id!=='herbal-tea'?`<button class="mini-btn" data-action="use-food" data-id="${item.id}">Использовать</button>`:''}${item.kind==='pet'?`<button class="mini-btn" data-action="pet-item" data-id="${item.id}">Использовать</button>`:''}${item.id==='field-kit'||item.id==='herbal-tea'?`<button class="mini-btn" data-action="use-crafted-item" data-id="${item.id}">Применить</button>`:''}</div></article>`).join(''):'<div class="empty-state">В этой категории пока пусто.</div>'}</div>
       ${selected?`<section class="item-detail-panel"><div class="item-detail-art"><img src="${iconFor(selected)}" alt=""></div><div class="item-detail-copy"><small>ВЫБРАННЫЙ ПРЕДМЕТ</small><h3>${escapeHTML(selected.name)}</h3><p>${escapeHTML(selected.desc||'Описание пока неизвестно.')}</p><div class="item-detail-meta"><span>Категория: ${escapeHTML(selected.kind)}</span><b>Количество: ${selected.qty}</b></div><div class="item-detail-actions">${selected.kind==='gift'?`<button class="btn btn-primary" data-action="choose-gift" data-id="${selected.id}">Подарить</button>`:''}${selected.kind==='food'&&selected.id!=='herbal-tea'?`<button class="btn btn-primary" data-action="use-food" data-id="${selected.id}">Использовать</button>`:''}${selected.kind==='pet'?`<button class="btn btn-primary" data-action="pet-item" data-id="${selected.id}">Использовать для питомца</button>`:''}${selected.id==='field-kit'||selected.id==='herbal-tea'?`<button class="btn btn-primary" data-action="use-crafted-item" data-id="${selected.id}">Применить</button>`:''}</div></div></section>`:''}
     </section>
-    <section class="panel-card wardrobe-panel"><div class="card-head"><div><h3>Гардероб</h3><small>СОБИРАЙ ОБРАЗ ПОД СВОИ ПЛАНЫ</small></div><small>${state.world.location==='home'?'ДОМАШНИЙ ШКАФ':state.world.location==='market'?'МАГАЗИН ОДЕЖДЫ':'ПЕРЕОДЕВАНИЕ ДОМА ИЛИ В МАГАЗИНЕ'}</small></div>
-      <div class="wardrobe-current"><div class="wardrobe-current-art">${selectedArt?`<img src="${selectedArt}" alt="Текущий образ">`:'<span>👤</span>'}</div><div><small>ТЕКУЩИЙ ОБРАЗ</small><h3>${escapeHTML(selectedLook[1])}</h3><p>${escapeHTML(selectedLook[2])}</p><div class="wardrobe-current-tags"><span>Свидание · ${state.player.look==='festival'?'подходит':'можно выбрать кимоно'}</span><span>Работа · ${state.player.look==='workwear'?'подходит':'есть рабочая форма'}</span></div></div></div>
-      <div class="wardrobe-presets">${preset('На свидание','festival','🌸')}${preset('На работу','workwear','🧰')}${preset('На тренировку','shinobi','🥋')}${preset('На прогулку','casual','🌿')}</div>
-      <div class="outfit-grid">${outfitCards}</div><p class="chat-hint">Новые комплекты продаются на рынке. Переодеться можно дома или в магазине одежды; выбор сохраняется в сохранении игры.</p></section>
+    ${wardrobeDesigner}
+    <section class="panel-card wardrobe-panel"><div class="card-head"><div><h3>Быстрые комплекты</h3><small>ГОТОВЫЕ СОЧЕТАНИЯ ИЗ ОТКРЫТЫХ ВЕЩЕЙ</small></div><small>ПРЕСЕТЫ</small></div>
+      <div class="wardrobe-presets">${['date','work','training','walk'].map((id)=>{const names={date:['На свидание','🌸'],work:['На работу','🧰'],training:['На тренировку','🥋'],walk:['На прогулку','🌿']};return `<button class="wardrobe-preset ${state.player.activeWardrobePreset===id?'active':''}" data-action="wardrobe-preset" data-id="${id}"><span>${names[id][1]}</span><b>${names[id][0]}</b><small>Применить сочетание</small></button>`}).join('')}</div>
+      <details class="ready-outfit-details"><summary>Готовые комплекты целиком <small>Старые образы из гардероба</small></summary><div class="outfit-grid">${outfitCards}</div></details><p class="chat-hint">Каждый слот независим: верх, внешний слой, низ, обувь, головной убор и аксессуар. Предметы для примерки можно выбирать стрелками; покупка доступна на рынке.</p></section>
     <section class="panel-card craft-panel"><div class="card-head"><h3>Мастерская</h3><small>${state.world.location==='home'?'ДОМАШНИЙ РАБОЧИЙ СТОЛ':'ДОСТУПНО ТОЛЬКО ДОМА'}</small></div><p class="chat-hint">Комбинируй найденные материалы. Рецепты открыты сразу, но требуют нужных ресурсов.</p><div class="craft-grid">${RECIPES.map(recipe=>`<article class="craft-recipe"><div class="craft-recipe-icon"><img src="${recipe.id==='field-kit'?'assets/ui/pouch.svg':recipe.id==='herbal-tea'?'assets/ui/tea.svg':'assets/ui/generated/gift.png'}" alt=""></div><b>${escapeHTML(recipe.name)}</b><p>${escapeHTML(recipe.desc)}</p><small>Нужно: ${Object.entries(recipe.ingredients).map(([id,qty])=>`${qty}× ${id==='herb'?'трава':id==='paper'?'бумага':id==='tea'?'чай':'цветы'}`).join(' · ')}</small><button class="mini-btn" data-action="craft-item" data-id="${recipe.id}" ${canCraft(state,recipe.id)?'':'disabled'}>Изготовить</button></article>`).join('')}</div></section>
     ${state.world.location==='home'?`<section class="home-storage-grid"><article><b><img class="storage-heading-icon" src="assets/ui/generated/ramen-bowl.png" alt=""> Холодильник</b><p>Запасы еды дома: ${state.inventory.filter(x=>x.kind==='food').reduce((a,x)=>a+x.qty,0)}</p><button class="mini-btn" data-action="home-storage" data-id="fridge">Открыть</button></article><article><b><img class="storage-heading-icon" src="assets/ui/generated/gift-box.png" alt=""> Шкаф</b><p>Купленные наряды: ${(state.player.ownedLooks||[]).length}</p><button class="mini-btn" data-action="home-storage" data-id="wardrobe">Открыть</button></article></section>`:''}`;
 }
@@ -3516,8 +3693,7 @@ function renderStatus(state) {
   document.getElementById('player-name-label').textContent = state.player.name;
   document.getElementById('player-origin-label').textContent = `${state.player.originName}${state.player.clan && state.player.clan!=='none' ? ` · ${state.player.clan}` : ''}`;
   const playerAvatar=document.getElementById('player-avatar');
-  const playerAvatarSrc=getPlayerAvatarSrc(state.player);
-  if(playerAvatar){playerAvatar.innerHTML=`<img src="${playerAvatarSrc}" alt="Образ ${escapeHTML(state.player.name)}">`;playerAvatar.classList.add('has-player-art');}
+  if(playerAvatar){playerAvatar.innerHTML=renderPlayerAvatarStack(state.player);playerAvatar.classList.add('has-player-art');}
   document.getElementById('player-stats').innerHTML = statLine('Выносливость',stats.stamina)+statLine('Чакра',stats.chakra)+statLine('Внимание',stats.focus)+`<div class="stat-row"><span>Репутация</span><b>${stats.renown}</b></div><div class="stat-row"><span>Рё</span><b>¥${stats.coins}</b></div>`;
   const place = getLocation(state.world.location);
   document.getElementById('current-place').innerHTML = `<span class="pin"><img src="assets/ui/cropped/location.png" alt="">${place.icon}</span><b>${place.name}</b><small>${place.area}</small>`;
@@ -3568,7 +3744,11 @@ const { evaluateAchievements } = __require("src/core/achievements.js");
 const { getMagazineIssue,getMagazinePage } = __require("src/data/secret-magazine.js");
 const { getPet } = __require("src/data/pets.js");
 const { getJob } = __require("src/data/jobs.js");
+const { CLOTHING,CLOTHING_BY_ID,CLOTHING_SLOTS,STARTER_CLOTHING,PRESET_EQUIPMENT,LOOK_TO_PRESET } = __require("src/data/clothing.js");
+const { cycleWardrobePreview,equipClothing,purchaseClothing,applyWardrobePreset } = __require("src/core/wardrobe.js");
 const { renderView,renderStatus,populateOrigins,updateOriginNote,renderSettings,escapeHTML } = __require("src/ui/render.js");
+
+
 
 
 
@@ -3810,8 +3990,10 @@ function openHomeStorage(kind='fridge') {
   if(state.world.location!=='home'){toast('Домашний схрон доступен только у тебя дома.');return;}
   state.storage ||= {fridge:[]}; state.storage.fridge ||= [];
   if(kind==='wardrobe') {
-    const looks=[['casual','Повседневная одежда',state.player.gender==='female'?'female-travel':'male-casual'],['shinobi','Форма шиноби',state.player.gender==='female'?'female-shinobi':'male-shinobi'],['festival','Праздничный наряд',state.player.gender==='female'?'female-festival':'male-formal'],['travel','Дорожный плащ',state.player.gender==='female'?'female-travel':'male-travel'],['raincoat','Дождевой плащ',state.player.gender==='female'?'female-travel':'male-raincoat'],['workwear','Рабочая форма',state.player.gender==='female'?'female-shinobi':'male-work']];
-    elements.modal.innerHTML=`<div class="modal-backdrop"><section class="modal-card storage-modal"><div class="modal-head"><div><div class="eyebrow">ДОМАШНИЙ СХРОН</div><h3>Шкаф с одеждой</h3></div><button class="close-button" data-action="close-modal">×</button></div><div class="storage-list">${looks.filter(([id])=>(state.player.ownedLooks||[]).includes(id)).map(([id,name,art])=>`<div class="storage-row wardrobe-storage-row"><img src="assets/player/outfits/${art}.png" alt=""><b>${name}</b><button class="mini-btn" data-action="outfit" data-id="${id}">${state.player.look===id?'Надето':'Переодеться'}</button></div>`).join('')||'<p class="empty-state">В шкафу пока пусто.</p>'}</div><p class="chat-hint">Одежду можно купить на рынке и хранить в шкафу. Переодевание доступно дома или в магазине.</p></section></div>`;
+    const equipment=state.player.equipment||{};
+    const equipped=CLOTHING_SLOTS.map(slot=>`<div class="storage-row"><span>${slot.icon}</span><b>${slot.label}: ${CLOTHING_BY_ID[equipment[slot.id]]?.name||'—'}</b></div>`).join('');
+    const looks=[['casual','Повседневный комплект','male-casual'],['shinobi','Форма шиноби','male-shinobi'],['festival','Праздничное кимоно','male-formal'],['travel','Дорожный комплект','male-travel'],['raincoat','Дождевой комплект','male-raincoat'],['workwear','Рабочая форма','male-work']];
+    elements.modal.innerHTML=`<div class="modal-backdrop"><section class="modal-card storage-modal"><div class="modal-head"><div><div class="eyebrow">ДОМАШНИЙ СХРОН</div><h3>Шкаф с одеждой</h3><small>Шесть независимых слотов — вещи можно сочетать как угодно.</small></div><button class="close-button" data-action="close-modal">×</button></div><div class="storage-list">${equipped}</div><button class="btn btn-primary" data-action="open-wardrobe">Открыть гардероб и выбрать вещи</button><details class="ready-outfit-details"><summary>Готовые комплекты</summary><div class="storage-list">${looks.filter(([id])=>(state.player.ownedLooks||[]).includes(id)).map(([id,name,art])=>`<div class="storage-row wardrobe-storage-row"><img src="assets/player/outfits/${state.player.gender==='female'?(id==='festival'?'female-festival':id==='shinobi'?'female-shinobi':'female-travel'):art}.png" alt=""><b>${name}</b><button class="mini-btn" data-action="outfit" data-id="${id}">${state.player.look===id?'Надето':'Переодеться'}</button></div>`).join('')||'<p class="empty-state">Готовых комплектов пока нет.</p>'}</div></details><p class="chat-hint">В шкафу можно менять отдельные вещи и сохранять разные сочетания. Старые готовые комплекты тоже остались доступны.</p></section></div>`;
     return;
   }
   const food=state.inventory.filter(item=>item.kind==='food'&&item.qty>0);
@@ -4431,9 +4613,16 @@ document.addEventListener('click',event=>{
     case 'quest-tab': state.ui.questTab=id==='history'?'history':'active'; render(); break;
     case 'bag-filter': state.ui.bagTab=['all','food','gift','clothing','pet','material','other'].includes(id)?id:'all'; state.ui.selectedItemId=''; render(); break;
     case 'select-item': state.ui.selectedItemId=id; render(); break;
+    case 'wardrobe-slot': { if(!CLOTHING_SLOTS.some(slot=>slot.id===id))break; state.ui.wardrobeSlot=id; state.ui.wardrobePreview={slot:id,itemId:state.player.equipment?.[id]||CLOTHING.find(item=>item.slot===id)?.id}; render(); break; }
+    case 'wardrobe-cycle': { const result=cycleWardrobePreview(state,button.dataset.slot,button.dataset.dir); if(!result.ok){toast(result.message);break;} render(); break; }
+    case 'wardrobe-reset-preview': state.ui.wardrobePreview=null; render(); break;
+    case 'wardrobe-equip': { const result=equipClothing(state,id,button.dataset.slot); if(!result.ok){toast(result.message);break;} addFeed(state,`Надет предмет одежды: ${result.item.name}.`); render(); persist(); toast(`Надето: ${result.item.name}.`); break; }
+    case 'buy-clothing': { const result=purchaseClothing(state,id,button.dataset.slot); if(!result.ok){toast(result.message);break;} addFeed(state,`Куплено и надето: ${result.item.name}.`); render(); persist(); toast(`Куплено: ${result.item.name}.`); break; }
+    case 'wardrobe-preset': { const result=applyWardrobePreset(state,id); if(!result.ok){toast(result.message);break;} addFeed(state,`Применён комплект: ${id}.`); render(); persist(); toast('Комплект полностью надет.'); break; }
     case 'toggle-map-legend': state.ui.mapLegend=!state.ui.mapLegend; render(); break;
     case 'language-prev': case 'language-next': if(state) state.settings.languageIndex=0; toast('Пока доступен только русский язык.'); break;
     case 'home-storage': openHomeStorage(id); break;
+    case 'open-wardrobe': elements.modal.innerHTML=''; state.ui.view='bag'; render(); break;
     case 'storage-put': { const item=state.inventory.find(entry=>entry.id===id&&entry.kind==='food'&&entry.qty>0); if(!item){toast('Подходящий продукт не найден.');break;} state.storage ||= {fridge:[]}; state.storage.fridge ||= []; if(removeItem(state,id,1)){const stored=state.storage.fridge.find(entry=>entry.id===id);if(stored)stored.qty++;else state.storage.fridge.push({...item,qty:1});openHomeStorage('fridge');persist();} break; }
     case 'storage-take': { state.storage ||= {fridge:[]}; const item=state.storage.fridge.find(entry=>entry.id===id&&entry.qty>0); if(!item)break; addItem(state,{...item,qty:1}); item.qty--; if(item.qty<=0)state.storage.fridge=state.storage.fridge.filter(entry=>entry.qty>0); openHomeStorage('fridge');persist();break; }
     case 'phone-app': state.phone.app=['home','konohagram','line','shinobix','scrolltube'].includes(id)?id:'home'; render(); break;
@@ -4526,7 +4715,9 @@ document.addEventListener('click',event=>{
       const owned=state.player.ownedLooks||['casual','shinobi'];
       if(!['home','market'].includes(state.world.location)){toast('Переодеться можно дома или в магазине одежды.');break;}
       if(!owned.includes(id)){toast('Сначала купи этот наряд на рынке.');break;}
-      state.player.look=id; addFeed(state,`Ты переоделся: ${button.textContent.trim()}.`); render(); toast('Одежда изменена.'); break;
+      const result=applyWardrobePreset(state,LOOK_TO_PRESET[id]||'casual');
+      if(!result.ok){toast(result.message);break;}
+      state.player.look=id; addFeed(state,`Ты переоделся в готовый комплект: ${button.textContent.trim()}.`); render(); persist(); toast('Комплект надет.'); break;
     }
     case 'buy-outfit': {
       const prices={festival:48,travel:36,raincoat:30,workwear:42}; const price=prices[id];
@@ -4535,7 +4726,7 @@ document.addEventListener('click',event=>{
       state.player.ownedLooks ||= ['casual','shinobi'];
       if(state.player.ownedLooks.includes(id)){toast('Этот наряд уже куплен.');break;}
       if(state.player.stats.coins<price){toast('Не хватает рё.');break;}
-      state.player.stats.coins-=price; state.player.ownedLooks.push(id); addFeed(state,`На рынке куплен новый наряд: ${id}.`); render(); toast('Наряд добавлен в гардероб.'); break;
+      state.player.stats.coins-=price; state.player.ownedLooks.push(id); const preset=PRESET_EQUIPMENT[LOOK_TO_PRESET[id]||'casual']; state.player.ownedClothing ||= [...STARTER_CLOTHING]; for(const clothingId of Object.values(preset)) if(!state.player.ownedClothing.includes(clothingId)) state.player.ownedClothing.push(clothingId); addFeed(state,`На рынке куплен готовый комплект: ${id}.`); render(); persist(); toast('Комплект добавлен в гардероб.'); break;
     }
     case 'visit-job': if(travelTo(state,id)){state.ui.view='work';render();} break;
     case 'apply-job': {const job=getJob(id);if(!job)break;if(state.world.location!==job.place){toast('Нужно прийти на место работы.');break;}state.player.jobId=id;render();toast(`Ты договорился о работе: ${job.name}.`);break;}
