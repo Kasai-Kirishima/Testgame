@@ -807,3 +807,115 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 
 .player-avatar-layer-stack{position:absolute;inset:0;overflow:hidden;border-radius:inherit;background:linear-gradient(145deg,#e9b6d4,#6d4b7d)}.player-avatar-layer-stack img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 14%;padding:0;display:block;filter:none!important;pointer-events:none}
 .avatar.has-player-art .player-avatar-layer-stack img{width:100%;height:100%;object-fit:cover;object-position:center 14%;padding:0;filter:none!important}
+
+/* v1.5.5 — refreshed title screen, creator atelier and character relationship routes. */
+.title-menu-panel{width:min(430px,92vw);padding:clamp(26px,4vw,48px);padding-bottom:88px;background:linear-gradient(155deg,rgba(25,13,36,.91),rgba(15,8,24,.86)),url('../ui/generated/panel-dark.png') center/cover;border-right:1px solid rgba(247,188,225,.34);box-shadow:22px 0 75px rgba(0,0,0,.42);backdrop-filter:blur(16px)}
+.title-menu-head{display:grid;grid-template-columns:58px minmax(0,1fr);gap:14px;align-items:center;margin:0 0 18px}
+.title-menu-crest{width:58px;height:58px;display:grid;place-items:center;border:1px solid rgba(245,190,223,.35);border-radius:18px;background:radial-gradient(circle at 35% 25%,rgba(255,224,242,.19),rgba(110,63,117,.16));box-shadow:inset 0 1px rgba(255,255,255,.12),0 10px 24px rgba(0,0,0,.22)}
+.title-menu-crest img{width:39px;height:39px;object-fit:contain;filter:drop-shadow(0 3px 6px rgba(0,0,0,.35))}
+.title-menu-head small{display:block;color:#e9a9d0;font-size:8px;font-weight:900;letter-spacing:.16em;margin-bottom:5px}
+.title-menu-head strong{display:block;font:800 clamp(22px,2.4vw,29px)/1.05 'Playfair Display',Georgia,serif;color:#fff2fa;letter-spacing:.015em}
+.title-menu-head p{margin:6px 0 0;color:#cdbbd2;font-size:9px;line-height:1.5;max-width:270px}
+.title-menu-divider{display:flex;align-items:center;gap:10px;color:#e9a7d0;margin:4px 0 17px;font-size:12px}
+.title-menu-divider i{height:1px;flex:1;background:linear-gradient(90deg,rgba(239,166,211,.55),rgba(239,166,211,.04))}
+.title-menu-divider span:last-child{opacity:.48}
+.title-menu-feature{display:grid;gap:5px;padding:12px 13px;margin:0 0 16px;border:1px solid rgba(230,169,215,.17);border-radius:12px;background:linear-gradient(110deg,rgba(157,91,145,.18),rgba(28,17,39,.36))}
+.title-menu-feature span{font-size:7px;color:#e5a8d0;font-weight:900;letter-spacing:.16em}
+.title-menu-feature b{font:700 13px 'Playfair Display',Georgia,serif;color:#faeaf5}
+.title-menu-panel .title-actions{gap:9px}
+.title-menu-button{height:49px;grid-template-columns:34px minmax(0,1fr) 18px;border-radius:11px;padding:0 14px;background:linear-gradient(100deg,rgba(89,48,94,.68),rgba(27,16,40,.88));border-color:rgba(233,163,213,.29);box-shadow:inset 0 1px rgba(255,255,255,.045),0 5px 17px rgba(0,0,0,.14);font-size:12px}
+.title-menu-button>span{width:30px;height:30px;border-radius:9px;background:rgba(247,206,231,.11)}
+.title-menu-button>span img{width:22px;height:22px}
+.title-menu-button>i{font-size:15px;color:#e8a6d0}
+.title-menu-button:hover{transform:translateX(5px);border-color:rgba(255,198,230,.8);background:linear-gradient(100deg,rgba(133,71,129,.76),rgba(46,25,62,.94));box-shadow:0 8px 25px rgba(0,0,0,.23)}
+.title-menu-button:focus-visible,.creator-fields button:focus-visible,.relationship-panel button:focus-visible{outline:2px solid #ffd2ea;outline-offset:3px}
+.title-menu-panel .title-foot{gap:9px;font-size:7px;letter-spacing:.08em;color:rgba(244,218,239,.58)}
+.title-project-mark{top:26px;right:clamp(22px,4vw,66px);padding:10px 14px;border:1px solid rgba(242,185,220,.21);border-radius:12px;background:rgba(21,10,30,.36);backdrop-filter:blur(8px)}
+.title-project-mark span{font-size:clamp(13px,1.35vw,20px)}
+.title-project-mark b{font-size:1.05em;letter-spacing:.16em}
+.title-project-mark small{font-size:7px;letter-spacing:.24em}
+
+#creation-screen{padding:clamp(12px,2.8vw,36px);background:radial-gradient(ellipse at 12% 10%,rgba(143,77,131,.3),transparent 39%),radial-gradient(ellipse at 90% 90%,rgba(87,59,126,.2),transparent 44%),#100916;align-items:start}
+.creation-card{width:min(1320px,100%);padding:clamp(18px,2.8vw,34px);border-radius:22px;border:1px solid rgba(239,177,218,.24);background:linear-gradient(145deg,rgba(36,22,49,.98),rgba(17,11,27,.99));box-shadow:0 28px 88px rgba(0,0,0,.52);position:relative;overflow:hidden}
+.creation-card:before{content:"";position:absolute;inset:10px;border:1px solid rgba(233,180,216,.075);border-radius:15px;pointer-events:none}
+.creator-heading{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:20px;padding:2px 4px 17px;border-bottom:1px solid rgba(232,170,215,.18)}
+.creator-heading h2{font-size:clamp(27px,3.3vw,42px);margin:8px 0 5px;color:#fff0fa}
+.creator-heading .muted{margin:0;max-width:650px;font-size:11px}
+.creator-step-pill{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid rgba(241,175,216,.24);border-radius:99px;background:rgba(164,90,148,.14);color:#f0b5d8;font-size:11px;font-weight:900}
+.creator-step-pill span{font-size:7px;letter-spacing:.13em;color:#c5a8ca}
+.creator-layout{position:relative;z-index:1;display:grid;grid-template-columns:minmax(220px,.72fr) minmax(0,1.6fr);gap:clamp(16px,2.2vw,28px);align-items:start}
+.creator-preview-column{position:sticky;top:14px;min-width:0;display:grid;justify-items:center;gap:10px;padding:14px;border:1px solid rgba(238,177,219,.23);border-radius:17px;background:radial-gradient(ellipse at 50% 30%,rgba(198,122,182,.23),rgba(25,14,36,.36) 65%),url('../backgrounds/twilight-pavilion.webp') center/cover;box-shadow:inset 0 1px rgba(255,255,255,.07),0 12px 34px rgba(0,0,0,.2)}
+.creator-preview-column:before{content:"";position:absolute;inset:14px;border:1px solid rgba(246,205,228,.1);border-radius:12px;pointer-events:none}
+.creator-preview-top{position:relative;z-index:1;display:flex;justify-content:space-between;gap:8px;align-items:center;width:100%;color:#efb4d8;font-size:7px;font-weight:900;letter-spacing:.13em}
+.creator-preview-top b{font-size:7px;color:#c6b0ce;letter-spacing:.08em}
+.creator-preview-stage{position:relative;z-index:1;width:100%;height:clamp(300px,42vw,460px);display:grid;place-items:end center;overflow:hidden;border:1px solid rgba(239,178,218,.16);border-radius:13px;background:radial-gradient(ellipse at 50% 44%,rgba(224,168,216,.22),rgba(24,13,35,.05) 68%)}
+.creator-preview-stage .wardrobe-avatar-stage{width:100%;height:100%;max-width:300px}
+.creator-preview-caption{position:relative;z-index:1;width:100%;display:grid;gap:4px;text-align:center;padding:10px 8px 11px;border:1px solid rgba(235,180,218,.15);border-radius:11px;background:rgba(17,9,26,.68)}
+.creator-preview-caption small{font-size:7px;font-weight:900;letter-spacing:.16em;color:#d89bc5}
+.creator-preview-caption b{font:800 20px 'Playfair Display',Georgia,serif;color:#fff0f9;overflow-wrap:anywhere}
+.creator-preview-caption span{font-size:9px;color:#f0b6d8;font-weight:800}
+.creator-preview-caption i{font-size:8px;color:#bdaac9;font-style:normal}
+.creator-preview-note{position:relative;z-index:1;display:grid;grid-template-columns:20px 1fr;gap:8px;align-items:start;color:#cbb8d2;font-size:8px;line-height:1.55}
+.creator-preview-note span{color:#f1b4d8;font-size:17px;text-align:center}
+.creator-preview-note p{margin:0}
+.creator-preview-footer{position:relative;z-index:1;width:100%;display:flex;justify-content:space-between;align-items:center;color:rgba(233,200,226,.47);font-size:7px;letter-spacing:.08em}
+.creator-preview-footer b{color:#e9a9d2;font-size:15px}
+.creator-fields{min-width:0;padding:3px 1px 0}
+.creator-fields #creation-form{display:block}
+.creator-fields .field-label{margin:12px 0 7px;font-size:9px;letter-spacing:.035em;color:#e8b9d9}
+.creator-fields .name-row{gap:8px}
+.creator-fields .name-row .btn{min-height:43px;font-size:9px}
+.creator-fields input,.creator-fields select{min-height:43px;padding:10px 12px;border-radius:9px;font-size:11px;background:rgba(20,12,30,.96);border-color:rgba(231,164,213,.22)}
+.creator-fields .btn-soft{margin-top:11px}
+.creator-fields .random-full-button{min-height:38px}
+.creator-fields .form-grid{gap:3px 13px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.creator-fields .origin-note{margin:15px 0;background:rgba(183,125,177,.09);border-left-color:#d998c5;font-size:10px}
+.creator-fields .btn-primary{min-height:49px;font-size:11px}
+.creator-fields .back-link{margin-top:9px;font-size:9px}
+
+.relationship-panel{border:1px solid rgba(236,170,214,.29);background:linear-gradient(145deg,rgba(65,35,68,.62),rgba(27,17,39,.96));box-shadow:0 12px 30px rgba(0,0,0,.17)}
+.relationship-panel .card-head{align-items:center;gap:12px;flex-wrap:wrap}
+.relationship-kicker{display:block;margin-bottom:4px;color:#e4a6ce;font-size:7px;font-weight:900;letter-spacing:.17em}
+.relationship-status{padding:7px 10px;border:1px solid rgba(232,165,210,.26);border-radius:99px;background:rgba(188,113,172,.13);font-size:8px;color:#f4c6e1;font-weight:900}
+.relationship-mood{display:grid;gap:6px;margin:12px 0}
+.relationship-mood>div{display:flex;justify-content:space-between;gap:12px;color:#d6c4d9;font-size:9px}
+.relationship-mood b{color:#f1b6d7}
+.relationship-mood>i{height:7px;border-radius:9px;background:rgba(255,255,255,.08);overflow:hidden}
+.relationship-mood>i u{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,#a66fbb,#efacd2);text-decoration:none}
+.relationship-copy{margin:8px 0 13px;color:#c5b3cc;font-size:9px;line-height:1.55}
+.relationship-date-head{display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin:12px 0 8px}
+.relationship-date-head b{color:#f4d9eb;font-size:10px}
+.relationship-date-head small,.relationship-requirements{color:#bdaac8;font-size:8px}
+.relationship-date-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.relationship-date-option{min-width:0;display:grid;justify-items:start;gap:4px;padding:9px;border:1px solid rgba(232,164,212,.2);border-radius:10px;background:rgba(18,10,29,.55);color:#f2d8eb;text-align:left}
+.relationship-date-option span{font-size:17px}
+.relationship-date-option b{font-size:8px;line-height:1.25}
+.relationship-date-option small{font-size:7px;color:#bea9c9}
+.relationship-date-option:hover:not(:disabled){border-color:rgba(244,189,224,.65);background:rgba(126,74,126,.25);transform:translateY(-1px)}
+.relationship-date-option:disabled{opacity:.38;cursor:not-allowed}
+.relationship-invite{margin:12px 0;padding:11px;border:1px solid rgba(235,168,213,.3);border-radius:11px;background:rgba(164,92,147,.14)}
+.relationship-invite>small{color:#e8aad1;font-size:7px;font-weight:900;letter-spacing:.13em}
+.relationship-invite p{color:#f5e4f1;font-size:10px;line-height:1.5;margin:7px 0 10px}
+.relationship-invite-actions{display:flex;gap:8px;flex-wrap:wrap}
+.relationship-invite-actions .btn{min-height:34px;font-size:8px}
+.relationship-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding-top:11px;border-top:1px solid rgba(231,173,216,.14)}
+.relationship-footer>span{font-size:8px;color:#c8b6d0}
+.relationship-footer>span b{color:#f3c0df}
+.relationship-footer .btn{min-height:36px;font-size:8px}
+.relationship-footer .btn:disabled{opacity:.38;cursor:not-allowed}
+.relationship-requirements{display:block;margin-top:7px;line-height:1.5}
+
+@media(max-width:850px){.creator-layout{grid-template-columns:minmax(175px,.62fr) minmax(0,1.4fr);gap:12px}.creator-preview-column{padding:10px}.creator-preview-stage{height:340px}.creator-fields .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.title-menu-panel{width:min(385px,90vw)}}
+@media(max-width:620px){
+  .title-screen{align-items:stretch;justify-content:flex-start}
+  .title-bg{background-image:linear-gradient(0deg,rgba(10,5,17,.9),rgba(10,5,17,.34) 70%,rgba(10,5,17,.13)),url('../backgrounds/konoha-main-title.png');background-position:58% center}
+  .title-project-mark{top:13px;right:13px;padding:7px 9px;background:rgba(16,8,24,.48)}
+  .title-project-mark span{font-size:12px}.title-project-mark b{font-size:11px}.title-project-mark small{font-size:6px}
+  .title-menu-panel{width:100%;min-height:100svh;align-self:stretch;justify-content:flex-end;padding:110px 19px 76px;background:linear-gradient(0deg,rgba(18,9,28,.97),rgba(18,9,28,.84) 71%,rgba(18,9,28,.18));border:0;box-shadow:none;backdrop-filter:blur(6px)}
+  .title-menu-head{grid-template-columns:44px 1fr;gap:10px;margin-bottom:10px}.title-menu-crest{width:44px;height:44px;border-radius:13px}.title-menu-crest img{width:30px;height:30px}.title-menu-head strong{font-size:22px}.title-menu-head p{font-size:8px}
+  .title-menu-divider{margin:1px 0 9px}.title-menu-feature{padding:9px 11px;margin-bottom:10px}.title-menu-button{height:44px}.title-menu-panel .title-actions{gap:7px}.title-menu-panel .title-foot{left:20px;right:20px;bottom:17px;justify-content:center}
+  #creation-screen{padding:9px;display:block}.creation-card{padding:15px 12px;border-radius:16px}.creation-card:before{inset:6px;border-radius:11px}.creator-heading{gap:9px;margin-bottom:12px;padding-bottom:12px}.creator-heading h2{font-size:25px}.creator-heading .muted{font-size:9px}.creator-step-pill{padding:7px 8px;font-size:9px}.creator-step-pill span{display:none}
+  .creator-layout{grid-template-columns:1fr;gap:13px}.creator-preview-column{position:relative;top:auto;grid-template-columns:minmax(120px,.8fr) minmax(0,1fr);gap:8px;padding:10px;align-items:center}.creator-preview-top{grid-column:1/-1}.creator-preview-stage{grid-row:2 / span 3;height:235px}.creator-preview-stage .wardrobe-avatar-stage{max-width:190px}.creator-preview-caption{padding:8px 5px}.creator-preview-caption b{font-size:16px}.creator-preview-note{grid-column:2;font-size:7px}.creator-preview-footer{grid-column:1/-1}.creator-fields .form-grid{grid-template-columns:1fr 1fr;gap:0 9px}.creator-fields .field-label{margin-top:10px}.creator-fields input,.creator-fields select{min-height:40px;font-size:10px;padding:9px}.creator-fields .name-row{grid-template-columns:1fr}.creator-fields .name-row .btn{width:100%}.creator-fields .random-full-button{margin-top:8px}
+  .relationship-date-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.relationship-date-head{display:grid}.relationship-footer{align-items:stretch}.relationship-footer .btn{width:100%}
+}
+@media(max-width:390px){.creator-fields .form-grid{grid-template-columns:1fr}.creator-preview-column{grid-template-columns:105px 1fr}.creator-preview-stage{height:210px}}

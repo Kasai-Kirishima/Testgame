@@ -2,6 +2,7 @@ import {WEATHER,SEASONS,LOCATIONS,getLocation} from '../data/world.js';
 import {getBond,updateBond,addFeed,addItem,removeItem} from './store.js';
 import {CHARACTERS} from '../data/characters.js';
 import {ensureDailyBoard,recordDailyProgress,gainSkillXP} from './progression.js';
+import {maybeQueueRelationshipInitiative} from './relationships.js';
 
 export function clockLabel(minute) {
   const h = Math.floor(minute / 60) % 24;
@@ -70,6 +71,7 @@ function settleAssignments(state,day) {
 
 export function advanceTime(state,minutes) {
   const oldDay = state.world.day;
+  const oldMinute = state.world.minute;
   const safeMinutes=Math.max(0,Number.isFinite(Number(minutes))?Number(minutes):0);
   const currentMinute=Math.max(0,Number.isFinite(Number(state.world.minute))?Number(state.world.minute):0);
   let total = currentMinute + safeMinutes;
@@ -95,6 +97,7 @@ export function advanceTime(state,minutes) {
     state.world.weather = pool[Math.floor(Math.random() * pool.length)].id;
   }
   updateNpcPositions(state,false);
+  maybeQueueRelationshipInitiative(state,oldDay,oldMinute);
   return state;
 }
 

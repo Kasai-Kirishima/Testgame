@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.5.5
+- Rebuilt the title screen with a new Konoha-branded menu panel, updated typography, decorative crest, feature strip, and responsive mobile layout.
+- Reworked character creation into a two-column character atelier with a layered full-body live preview that updates immediately when gender, hairstyle, outfit, name or clan changes.
+- Added adult-only, non-sexual romance routes for a female player character: individualized date preferences, distinct responses, mood tracking, energy costs, relationship milestones, confession requirements and NPC-initiated invitations.
+- Romantic routes are friendship- and consent-led; accepting or declining an invitation is tracked without coercive penalties. Existing saves migrate with an empty relationship state.
+- Kept all prior wardrobe, portrait, world, dialogue, gallery and progression assets intact. Updated cache-busting keys and expanded regression coverage.
+
 ## v1.5.4
 - Expanded the layered player wardrobe from 31 to 49 separate SVG clothing pieces across six strict slots: headwear, top, outer layer, bottoms, shoes and accessories.
 - Added more everyday, work, academy, festival, cold-weather and date-ready clothing, including blouses, hoodies, formal academy tops, cardigans, winter coats, short haori, jeans, wide trousers, a long pleated skirt, high-top shoes and accessories.

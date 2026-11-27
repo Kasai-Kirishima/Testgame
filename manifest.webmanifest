@@ -1,6 +1,7 @@
 {
   "name": "Naruto Enot Garem — Коноха зовёт",
   "short_name": "Коноха",
+  "version": "1.5.5",
   "description": "Фанатская социальная визуальная новелла в мире Конохи.",
   "lang": "ru",
   "start_url": "./",

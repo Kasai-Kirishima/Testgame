@@ -30,13 +30,13 @@ for (const match of css.matchAll(/url\(['"]?([^'"\)]+)['"]?\)/g)) {
 const render = fs.readFileSync(path.join(root, 'src/ui/render.js'), 'utf8');
 assert.match(render, /getUnlockedCharacterArts\(state,character\)/, 'Gallery should show every art variant unlocked by progression');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-assert.match(html, /style\.css\?v=1\.5\.4/);
-assert.match(html, /standalone\.js\?v=1\.5\.4/);
+assert.match(html, /style\.css\?v=1\.5\.5/);
+assert.match(html, /standalone\.js\?v=1\.5\.5/);
 assert.ok(exists('assets/backgrounds/konoha-dawn.webp'));
 assert.ok(exists('assets/backgrounds/archive-glow.webp'));
 assert.ok(exists('assets/backgrounds/twilight-pavilion.webp'));
 assert.ok(exists('assets/backgrounds/rain-training.webp'));
 assert.ok(exists('assets/ui/enot-mascot.webp'));
 for (const tone of ['gold','silver','blue','pink','red']) assert.ok(exists(`assets/ui/achievement/medal-${tone}.webp`));
-assert.match(html,/VERSION 1\.5\.4/);
+assert.match(html,/VERSION 1\.5\.5/);
 console.log(`Visual asset audit passed: ${world.length} location variants, ${CHARACTERS.length} character art references, ${Object.keys(sceneManifest.backgrounds).length} scene manifest backgrounds, local CSS URLs and gallery unlock rendering.`);

@@ -286,6 +286,7 @@ function createInitialState(player = {}) {
     dailyBoardHistory: [],
     skills: {chakra:{xp:0,level:1},fieldcraft:{xp:0,level:1},support:{xp:0,level:1},knowledge:{xp:0,level:1},social:{xp:0,level:1},craft:{xp:0,level:1}},
     bonds: {},
+    relationships: {},
     metCharacters: [],
     gallerySeen: {},
     achievements: {unlocked:[],points:0},
@@ -348,6 +349,7 @@ function normalizeState(input) {
     settings: {...base.settings,...input.settings},
     ui: {...base.ui,...input.ui,wardrobeSlot:['head','top','outer','bottom','shoes','accessory'].includes(input.ui?.wardrobeSlot)?input.ui.wardrobeSlot:'top',wardrobePreview:input.ui?.wardrobePreview&&typeof input.ui.wardrobePreview==='object'?input.ui.wardrobePreview:null,drawerOpen:false,questTab:['active','history'].includes(input.ui?.questTab)?input.ui.questTab:'active',bagTab:['all','food','gift','clothing','material','other'].includes(input.ui?.bagTab)?input.ui.bagTab:'all',profileArtIndex:Math.max(0,Number(input.ui?.profileArtIndex)||0)},
     bonds: input.bonds && typeof input.bonds === 'object' ? input.bonds : {},
+    relationships: input.relationships && typeof input.relationships === 'object' ? input.relationships : {},
     memories: input.memories && typeof input.memories === 'object' ? input.memories : {},
     dialogues: input.dialogues && typeof input.dialogues === 'object' ? input.dialogues : {},
     inventory: Array.isArray(input.inventory) ? input.inventory : base.inventory,
@@ -554,11 +556,146 @@ function useCraftedItem(state,itemId) {
 
 return { SKILL_META, createDailyBoard, ensureDailyBoard, recordDailyProgress, getSkillLevel, gainSkillXP, RECIPES, canCraft, craftItem, useCraftedItem };
 },
+"src/core/relationships.js": function(__require) {
+const { CHARACTERS,getCharacter } = __require("src/data/characters.js");
+const { getBond,updateBond,addFeed } = __require("src/core/store.js");
+
+
+// Adult-only, non-sexual romance routes. Younger/age-ambiguous characters stay friendship-only.
+const ROMANCE_PROFILES = {
+  anko: {preference:['training','music'], dislikes:['quiet'], initiation:'Спарринг на закате? После можно зайти за данго. Не откажешься от компании?', invite:'Анко усмехается: «Неплохо придумано. Давай, но без скучных разговоров!»', mood:'Азартное настроение'},
+  ayame: {preference:['tea','cooking','walk'], dislikes:['training'], initiation:'Я закрываю лавку чуть раньше. Может, прогуляемся и поговорим без спешки?', invite:'Аяме тепло улыбается: «С удовольствием. Я как раз хотела немного проветриться».', mood:'Тёплое настроение'},
+  ino: {preference:['flowers','festival','walk'], dislikes:['training'], initiation:'Я присмотрела одну красивую аллею. Составишь мне компанию?', invite:'Ино довольно улыбается: «Вот это уже похоже на хороший план!»', mood:'Общительное настроение'},
+  konan: {preference:['origami','tea','quiet'], dislikes:['festival'], initiation:'Я собираюсь в тихий павильон. Если тебе тоже хочется спокойствия, приходи.', invite:'Конан слегка кивает: «Хорошо. Думаю, нам будет о чём поговорить».', mood:'Спокойное настроение'},
+  kurenai: {preference:['garden','books','tea'], dislikes:['training'], initiation:'В саду сегодня особенно красиво. Не хочешь пройтись вместе?', invite:'Куренай мягко улыбается: «Тогда пойдём. Такая прогулка пойдёт нам на пользу».', mood:'Умиротворённое настроение'},
+  kurotsuchi: {preference:['training','strategy','walk'], dislikes:['quiet'], initiation:'Есть идея устроить небольшое испытание. Проверим, кто лучше соображает?', invite:'Куроцучи улыбается уголком губ: «Наконец-то что-то интересное».', mood:'Боевой настрой'},
+  mabui: {preference:['tea','books','quiet'], dislikes:['festival'], initiation:'У меня появился свободный час. Предлагаю чай и спокойный разговор.', invite:'Мабуи отвечает сдержанной улыбкой: «Такой план мне подходит».', mood:'Собранное настроение'},
+  mei: {preference:['tea','festival','art'], dislikes:['training'], initiation:'Сегодня в деревне небольшой вечерний фестиваль. Составишь мне компанию?', invite:'Мэй весело смеётся: «Прекрасно. Обещаю, вечер будет интересным».', mood:'Игривое настроение'},
+  mikoto: {preference:['cooking','garden','tea'], dislikes:['training'], initiation:'Я приготовила чай и кое-что к нему. Заглянешь ненадолго?', invite:'Микото приветливо кивает: «Я рада, что ты пришла. Устраивайся поудобнее».', mood:'Домашнее настроение'},
+  sakura: {preference:['training','books','tea'], dislikes:['festival'], initiation:'Я закончила дела в госпитале. Может, немного прогуляемся?', invite:'Сакура улыбается: «Договорились. Сегодня можно никуда не торопиться».', mood:'Энергичное настроение'},
+  samui: {preference:['quiet','strategy','walk'], dislikes:['festival'], initiation:'Я собираюсь пройтись по тихой части деревни. Можешь присоединиться.', invite:'Самуи спокойно кивает: «Хорошо. Тишина иногда полезна».', mood:'Сдержанное настроение'},
+  temari: {preference:['strategy','tea','walk'], dislikes:['cooking'], initiation:'Мне нужно проветрить голову после переговоров. Пройдёмся?', invite:'Темари одобрительно кивает: «Отлично. Заодно обсудим пару вещей».', mood:'Решительное настроение'},
+  tenten: {preference:['market','craft','walk'], dislikes:['quiet'], initiation:'На рынке привезли новые инструменты. Хочешь посмотреть вместе?', invite:'Тентен оживляется: «Отлично! Мне как раз нужен второй взгляд».', mood:'Любознательное настроение'},
+  tsunade: {preference:['tea','strategy','walk'], dislikes:['festival'], initiation:'У меня редкий свободный вечер. Прогуляемся, пока никто не принёс новые бумаги?', invite:'Цунаде усмехается: «Ладно, но никаких разговоров о работе».', mood:'Редко свободное настроение'},
+  shizune: {preference:['tea','garden','pets'], dislikes:['training'], initiation:'Я собиралась немного отдохнуть после смены. Не хочешь пройтись со мной?', invite:'Шизуне с облегчением улыбается: «Спасибо. Мне будет приятно».', mood:'Заботливое настроение'},
+  karin: {preference:['books','strategy','tea'], dislikes:['festival'], initiation:'Я нашла интересные записи. Можем обсудить их за чаем.', invite:'Карин поправляет очки: «Ладно, но записи действительно интересные!»', mood:'Внимательное настроение'}
+};
+
+const DATE_ACTIVITIES = [
+  {id:'walk',label:'Прогулка',icon:'🌿',cost:5},
+  {id:'tea',label:'Чайная',icon:'🍵',cost:6},
+  {id:'flowers',label:'Цветочная лавка',icon:'🌸',cost:8},
+  {id:'training',label:'Тренировка',icon:'🥋',cost:9},
+  {id:'festival',label:'Фестиваль',icon:'🏮',cost:10},
+  {id:'books',label:'Библиотека',icon:'📚',cost:5},
+  {id:'garden',label:'Сад',icon:'🌷',cost:5},
+  {id:'strategy',label:'Шахматы и стратегии',icon:'♟️',cost:6},
+  {id:'music',label:'Музыка',icon:'🎵',cost:7},
+  {id:'cooking',label:'Готовка',icon:'🍱',cost:8},
+  {id:'origami',label:'Оригами',icon:'🪽',cost:5},
+  {id:'market',label:'Рынок',icon:'🛍️',cost:7},
+  {id:'craft',label:'Мастерская',icon:'⚒️',cost:8},
+  {id:'art',label:'Галерея искусства',icon:'🎨',cost:6},
+  {id:'quiet',label:'Тихий павильон',icon:'🌙',cost:4},
+  {id:'pets',label:'Питомцы',icon:'🐾',cost:5}
+];
+
+function canRomance(state,characterId) {
+  return Boolean(state?.player?.gender==='female' && Number(state?.player?.age)>=18 && ROMANCE_PROFILES[characterId] && getCharacter(characterId));
+}
+
+function getRelationship(state,characterId) {
+  state.relationships ||= {};
+  const current=state.relationships[characterId]||{};
+  return state.relationships[characterId]={status:'none',mood:55,dates:0,lastInitiativeDay:0,pending:null,...current};
+}
+
+function clamp(value,min=0,max=100) { return Math.max(min,Math.min(max,Number(value)||0)); }
+
+function completeRomanticDate(state,characterId,activityId) {
+  const character=getCharacter(characterId), profile=ROMANCE_PROFILES[characterId];
+  if(!character || !canRomance(state,characterId)) return {ok:false,message:'Этот маршрут доступен только для взрослой версии персонажа и героини 18+ в истории.'};
+  const bond=getBond(state,characterId), relation=getRelationship(state,characterId);
+  const activity=DATE_ACTIVITIES.find(item=>item.id===activityId);
+  if(!activity) return {ok:false,message:'Такого варианта встречи нет.'};
+  if((bond.friendship||0)<15 || (bond.trust||0)<10) return {ok:false,message:`${character.name} пока недостаточно тебя знает. Сначала укрепи дружбу и доверие.`};
+  if((state.player.stats.stamina||0)<activity.cost) return {ok:false,message:'Ты слишком устала. Отдохни перед встречей.'};
+  const likes=profile.preference.includes(activityId);
+  const dislikes=profile.dislikes.includes(activityId);
+  const delta=likes?{friendship:7,trust:5,respect:2}:dislikes?{friendship:-2,trust:-1,irritation:2}:{friendship:3,trust:3,respect:1};
+  updateBond(state,characterId,delta,{countMeeting:false});
+  relation.dates+=1;
+  relation.mood=clamp(relation.mood+(likes?10:dislikes?-7:4));
+  relation.lastActivity=activityId;
+  relation.lastDateDay=state.world.day;
+  state.player.stats.stamina=clamp(state.player.stats.stamina-activity.cost);
+  const message=likes
+    ? `${character.name} явно наслаждается встречей. Вы нашли общую тему, и разговор идёт легко.`
+    : dislikes
+      ? `${character.name} старается поддержать разговор, но выбранный план оказался не совсем её. В следующий раз лучше учесть её интересы.`
+      : `${character.name} благодарит за встречу. Вы хорошо провели время и стали немного ближе.`;
+  addFeed(state,`Встреча с ${character.name}: ${message}`);
+  return {ok:true,message,liked:likes,disliked:dislikes};
+}
+
+function confessFeelings(state,characterId) {
+  const character=getCharacter(characterId), relation=getRelationship(state,characterId), bond=getBond(state,characterId);
+  if(!character || !canRomance(state,characterId)) return {ok:false,message:'Этот романтический маршрут сейчас недоступен.'};
+  if(relation.status==='dating') return {ok:true,message:`Вы с ${character.name} уже договорились быть вместе. Береги доверие и продолжай узнавать её.`};
+  if((bond.friendship||0)<70 || (bond.trust||0)<55 || relation.dates<2) return {ok:false,message:`${character.name} пока не готова к такому разговору. Нужны дружба 70+, доверие 55+ и хотя бы две совместные встречи.`};
+  relation.status='dating';
+  relation.mood=clamp(relation.mood+12);
+  updateBond(state,characterId,{friendship:5,trust:7,respect:2},{countMeeting:false});
+  const message=`${character.name} внимательно выслушивает тебя, а затем отвечает взаимностью. Вы решили попробовать строить отношения, не торопясь и уважая границы друг друга.`;
+  addFeed(state,message);
+  return {ok:true,message};
+}
+
+function resolveInitiative(state,characterId,accept) {
+  const character=getCharacter(characterId), relation=getRelationship(state,characterId), bond=getBond(state,characterId), pending=relation.pending;
+  if(!character || !pending || !canRomance(state,characterId)) return {ok:false,message:'Приглашение уже неактуально.'};
+  relation.pending=null;
+  if(accept) {
+    state.player.stats.stamina=clamp(state.player.stats.stamina-6);
+    relation.mood=clamp(relation.mood+9);
+    relation.dates+=1;
+    updateBond(state,characterId,{friendship:5,trust:5,respect:1},{countMeeting:false});
+    const message=`Ты приняла приглашение ${character.name}. ${pending.activityText||'Вы провели время вместе и спокойно поговорили.'}`;
+    addFeed(state,message);
+    return {ok:true,message,accepted:true};
+  }
+  relation.mood=clamp(relation.mood-2);
+  addFeed(state,`Ты вежливо перенесла встречу с ${character.name}. Она отнеслась к этому с пониманием.`);
+  return {ok:true,message:`Ты вежливо отказалась от встречи с ${character.name}. Она ответила: «Ничего страшного, может быть, в другой раз».`,accepted:false};
+}
+
+function maybeQueueRelationshipInitiative(state,oldDay,oldMinute) {
+  if(state?.player?.gender!=='female' || Number(state?.player?.age)<18) return null;
+  const crossedEvening=oldDay===state.world.day && oldMinute<18*60 && state.world.minute>=18*60;
+  if(!crossedEvening) return null;
+  const candidates=CHARACTERS.filter(character=>{
+    if(!canRomance(state,character.id)) return false;
+    const bond=getBond(state,character.id), relation=getRelationship(state,character.id);
+    return (bond.friendship||0)>=58 && (bond.trust||0)>=42 && relation.lastInitiativeDay!==state.world.day && !relation.pending;
+  });
+  if(!candidates.length || Math.random()>.42) return null;
+  const character=candidates[(state.world.day+state.world.actions)%candidates.length];
+  const profile=ROMANCE_PROFILES[character.id], relation=getRelationship(state,character.id);
+  relation.lastInitiativeDay=state.world.day;
+  relation.pending={day:state.world.day,title:`Приглашение от ${character.name}`,text:profile.initiation,activityText:profile.initiation,activityId:profile.preference[0]};
+  addFeed(state,`${character.name} сама предложила провести время вместе. Открой её досье, чтобы ответить.`);
+  return character.id;
+}
+
+return { ROMANCE_PROFILES, DATE_ACTIVITIES, canRomance, getRelationship, completeRomanticDate, confessFeelings, resolveInitiative, maybeQueueRelationshipInitiative };
+},
 "src/core/life.js": function(__require) {
 const { WEATHER,SEASONS,LOCATIONS,getLocation } = __require("src/data/world.js");
 const { getBond,updateBond,addFeed,addItem,removeItem } = __require("src/core/store.js");
 const { CHARACTERS } = __require("src/data/characters.js");
 const { ensureDailyBoard,recordDailyProgress,gainSkillXP } = __require("src/core/progression.js");
+const { maybeQueueRelationshipInitiative } = __require("src/core/relationships.js");
+
 
 
 
@@ -630,6 +767,7 @@ function settleAssignments(state,day) {
 
 function advanceTime(state,minutes) {
   const oldDay = state.world.day;
+  const oldMinute = state.world.minute;
   const safeMinutes=Math.max(0,Number.isFinite(Number(minutes))?Number(minutes):0);
   const currentMinute=Math.max(0,Number.isFinite(Number(state.world.minute))?Number(state.world.minute):0);
   let total = currentMinute + safeMinutes;
@@ -655,6 +793,7 @@ function advanceTime(state,minutes) {
     state.world.weather = pool[Math.floor(Math.random() * pool.length)].id;
   }
   updateNpcPositions(state,false);
+  maybeQueueRelationshipInitiative(state,oldDay,oldMinute);
   return state;
 }
 
@@ -3241,6 +3380,8 @@ const { ensureDailyBoard,SKILL_META,getSkillLevel,RECIPES,canCraft } = __require
 const { ACHIEVEMENTS,getAchievementProgress } = __require("src/core/achievements.js");
 const { MAGAZINE_ISSUES } = __require("src/data/secret-magazine.js");
 const { CLOTHING,CLOTHING_BY_ID,CLOTHING_SLOTS,LOOK_TO_PRESET,normalizeEquipment } = __require("src/data/clothing.js");
+const { canRomance,getRelationship,DATE_ACTIVITIES,ROMANCE_PROFILES } = __require("src/core/relationships.js");
+
 
 
 
@@ -3389,7 +3530,7 @@ function renderPersonCard(state,character) {
   const value = Math.max(bond.friendship,bond.trust,bond.respect);
   const portrait = character.art?.[0]?.src || '';
   const statusClass=value>=75?'bond-close':value>=40?'bond-warm':value<=8?'bond-new':'bond-neutral';
-  return `<button class="person-card ref-person-card ${statusClass}" data-action="open-person" data-id="${character.id}"><span class="ref-card-portrait"><img src="${portrait}" alt="${escapeHTML(character.name)}" loading="lazy"><i>${escapeHTML(character.role)}</i></span><span class="ref-card-copy"><strong>${escapeHTML(character.name)}</strong><small>${escapeHTML(character.personality)}</small><span class="bond-line"><span>${escapeHTML(bond.stage||'Знакомая')}</span><b>${value}/100</b></span><span class="bond-track"><i style="width:${value}%"></i></span></span></button>`;
+  return `<button class="person-card ref-person-card ${statusClass}" data-action="open-person" data-id="${character.id}"><span class="ref-card-portrait"><img src="${portrait}" alt="${escapeHTML(character.name)}" loading="lazy"><i>${escapeHTML(character.role)}</i></span><span class="ref-card-copy"><strong>${escapeHTML(character.name)}${state.relationships?.[character.id]?.status==='dating'?' · ♥':''}</strong><small>${escapeHTML(character.personality)}</small><span class="bond-line"><span>${escapeHTML(bond.stage||'Знакомая')}</span><b>${value}/100</b></span><span class="bond-track"><i style="width:${value}%"></i></span></span></button>`;
 }
 
 function renderPeople(state) {
@@ -3401,6 +3542,26 @@ function renderPeople(state) {
     ${available.length?`<div class="people-grid">${available.map(item=>renderPersonCard(state,item)).join('')}</div>`:`<section class="panel-card empty-heroes"><div class="empty-heroes-mark">🌸</div><h3>Пока нет знакомых героев</h3><p>Посещай места Конохи, замечай людей на сцене и начинай разговор. После первой личной беседы героиня появится здесь.</p><button class="btn btn-primary" data-view="world">Вернуться в RP</button></section>`}
     ${!secretOpen?`<button class="person-card secret-card" data-action="secret-hint"><div class="person-top"><div class="person-avatar secret-avatar">?</div><div><strong>Неизвестный гость</strong><small>Секретная встреча</small></div></div><p class="person-desc">В старом лесу иногда видят незнакомого путешественника. Следы чаще появляются зимой.</p><div class="bond-line"><span>Загадка</span><b>???</b></div></button>`:''}`;
 }
+function renderRelationshipPanel(state,character,bond) {
+  if(!canRomance(state,character.id)) return '';
+  const relation=getRelationship(state,character.id);
+  const ready=(bond.friendship||0)>=15 && (bond.trust||0)>=10;
+  const confessionReady=(bond.friendship||0)>=70 && (bond.trust||0)>=55 && relation.dates>=2;
+  const status=relation.status==='dating'?'Вы вместе':relation.dates>0?'Постепенно сближаетесь':'Пока друзья';
+  const preferred=ROMANCE_PROFILES[character.id].preference;
+  const prefNames=preferred.map(id=>DATE_ACTIVITIES.find(item=>item.id===id)?.label).filter(Boolean).join(', ');
+  const pending=relation.pending?`<div class="relationship-invite"><small>ЕЁ ПРИГЛАШЕНИЕ · ДЕНЬ ${relation.pending.day}</small><p>${escapeHTML(relation.pending.text)}</p><div class="relationship-invite-actions"><button class="btn btn-primary" data-action="romantic-initiative" data-id="${character.id}" data-type="accept">Принять</button><button class="btn btn-ghost" data-action="romantic-initiative" data-id="${character.id}" data-type="decline">В другой раз</button></div></div>`:'';
+  return `<section class="panel-card relationship-panel"><div class="card-head"><div><small class="relationship-kicker">ЛИЧНЫЙ МАРШРУТ</small><h3>🌸 Симпатия и отношения</h3></div><span class="relationship-status">${status}</span></div>
+    <div class="relationship-mood"><div><span>Настроение ${escapeHTML(character.name)}</span><b>${relation.mood}/100</b></div><i><u style="width:${relation.mood}%"></u></i></div>
+    <p class="relationship-copy">Этот маршрут построен на дружбе, взаимной симпатии и уважении к личным границам. Совместные встречи расходуют немного энергии. Отказ от приглашения не разрушает отношения.</p>
+    ${pending}
+    <div class="relationship-date-head"><b>Предложить совместное занятие</b><small>${ready?'Она уже готова проводить с тобой время':'Сначала укрепи дружбу до 15 и доверие до 10'}</small></div>
+    <div class="relationship-date-grid">${DATE_ACTIVITIES.map(item=>`<button class="relationship-date-option" data-action="romantic-date" data-id="${character.id}" data-type="${item.id}" ${ready?'':'disabled'}><span>${item.icon}</span><b>${item.label}</b><small>−${item.cost} энергии</small></button>`).join('')}</div>
+    <div class="relationship-footer"><span>Совместных встреч: <b>${relation.dates}</b>${relation.dates>=3?` · Ей нравится: ${escapeHTML(prefNames)}`:' · Узнавай её вкусы в разговорах'}</span><button class="btn btn-primary" data-action="romantic-confess" data-id="${character.id}" ${confessionReady?'':'disabled'}>${relation.status==='dating'?'Вы уже пара':'Сказать о симпатии'}</button></div>
+    ${!confessionReady&&relation.status!=='dating'?'<small class="relationship-requirements">Для признания нужны дружба 70+, доверие 55+ и две совместные встречи.</small>':''}
+  </section>`;
+}
+
 function renderPersonDetail(state,character) {
   const bond = getBond(state,character.id);
   const history = state.dialogues[character.id] || [];
@@ -3438,6 +3599,7 @@ function renderPersonDetail(state,character) {
           <div class="dossier-art-stage"><button class="art-arrow prev" data-action="profile-art-prev" data-id="${character.id}" aria-label="Предыдущее изображение">‹</button><img src="${escapeHTML(currentArt?.src||'')}" alt="${escapeHTML(character.name)} — ${escapeHTML(currentArt?.label||'Портрет')}" data-action="view-art" data-src="${escapeHTML(currentArt?.src||'')}" loading="eager"><button class="art-arrow next" data-action="profile-art-next" data-id="${character.id}" aria-label="Следующее изображение">›</button><span class="art-caption">${escapeHTML(currentArt?.label||'Портрет')}</span></div>
           <div class="dossier-art-dots">${art.map((item,i)=>`<button class="${i===index?'active':''}" data-action="profile-art-set" data-id="${character.id}" data-index="${i}" aria-label="${escapeHTML(item.label)}"></button>`).join('')}</div>${allArt.length>art.length?`<p class="art-unlock-hint">Следующие образы открываются по мере развития знакомства. Сейчас открыто ${art.length} из ${allArt.length}.</p>`:''}
         </section>
+        ${renderRelationshipPanel(state,character,bond)}
         <section class="panel-card dossier-story"><div class="card-head"><h3>История знакомства</h3><small>${bond.meetings||0} встреч</small></div><p class="dossier-bio">${escapeHTML(character.notes||character.personality)}</p><div class="dossier-history">${lastMemories.length?lastMemories.slice(-8).reverse().map(item=>`<div class="dossier-history-line"><b>${escapeHTML(item.title||'Событие')}</b><p>${escapeHTML(item.text||'Вы провели время вместе.')}</p><small>${item.day?`День ${item.day}`:'Запись знакомства'}</small></div>`).join(''):`<p class="chat-hint">Пока нет важных событий. После встреч здесь появятся запомнившиеся моменты, договорённости и поступки.</p>`}</div></section>
         <section class="panel-card dossier-gifts"><div class="card-head"><h3>Подарки и расходы</h3><small>${gifts.length} записей</small></div>${gifts.length?`<ul>${gifts.map(item=>`<li>${escapeHTML(item.name)} · ${item.price?`${item.price} рё`: 'стоимость неизвестна'} · день ${item.day}</li>`).join('')}</ul>`:'<p class="chat-hint">Пока подарков и расходов на неё не записано.</p>'}</section>
         <section class="panel-card dossier-availability"><div class="card-head"><h3>Последняя известная встреча</h3><small>${isHere?'РЯДОМ':'НЕ РЯДОМ'}</small></div><p>${isHere?`${escapeHTML(character.name)} сейчас находится в той же локации. Вернись к RP-сцене, чтобы продолжить разговор.`:`Последняя известная локация: ${escapeHTML(placeName)}. Точное расписание персонажа остаётся скрытым.`}</p><button class="btn btn-soft" data-view="world">Вернуться к RP-сцене</button></section>
@@ -3746,7 +3908,11 @@ const { getPet } = __require("src/data/pets.js");
 const { getJob } = __require("src/data/jobs.js");
 const { CLOTHING,CLOTHING_BY_ID,CLOTHING_SLOTS,STARTER_CLOTHING,PRESET_EQUIPMENT,LOOK_TO_PRESET } = __require("src/data/clothing.js");
 const { cycleWardrobePreview,equipClothing,purchaseClothing,applyWardrobePreset } = __require("src/core/wardrobe.js");
+const { normalizeEquipment } = __require("src/data/clothing.js");
+const { canRomance,completeRomanticDate,confessFeelings,resolveInitiative } = __require("src/core/relationships.js");
 const { renderView,renderStatus,populateOrigins,updateOriginNote,renderSettings,escapeHTML } = __require("src/ui/render.js");
+
+
 
 
 
@@ -3823,6 +3989,25 @@ function randomizeCreator() {
   if (name) name.value=randomPlayerName();
   updateOriginNote();
   toast('Случайный персонаж создан полностью. Можно изменить любые параметры.');
+  updateCreatorPreview();
+}
+
+function updateCreatorPreview() {
+  const gender=document.getElementById('player-gender')?.value || 'male';
+  const hair=['short','medium','long','tied','wild'].includes(document.getElementById('player-hair')?.value)?document.getElementById('player-hair').value:'medium';
+  const look=document.getElementById('player-look')?.value || 'casual';
+  const equipment=normalizeEquipment({},look);
+  const base=gender==='female'?'base-body-female.svg':'base-body.svg';
+  const order=['bottom','shoes','top','outer','accessory','head'];
+  const stage=document.getElementById('creator-avatar');
+  if(stage) stage.innerHTML=`<img class="wardrobe-avatar-base" src="assets/player/layers/${base}" alt="Основа персонажа"><img class="wardrobe-avatar-layer layer-hair" src="assets/player/layers/hair-${hair}.svg" alt="Причёска">${order.map(slot=>{const item=CLOTHING_BY_ID[equipment[slot]];return item?`<img class="wardrobe-avatar-layer layer-${slot}" src="${item.src}" alt="${item.name}">`:''}).join('')}`;
+  const name=document.getElementById('creator-name-preview');
+  if(name) name.textContent=(document.getElementById('player-name')?.value||'Твой персонаж').trim()||'Твой персонаж';
+  const genderLabel=document.getElementById('creator-gender-preview');
+  if(genderLabel) genderLabel.textContent=gender==='female'?'Куноичи':gender==='other'?'Шиноби':'Шиноби';
+  const clan=document.getElementById('player-clan')?.value || 'none';
+  const clanLabel=document.getElementById('creator-clan-preview');
+  if(clanLabel) clanLabel.textContent=clan==='none'?'Без клана':`Клан ${clan}`;
 }
 
 function persist() {
@@ -4598,8 +4783,8 @@ document.addEventListener('click',event=>{
   const {action,id,type,hours,item} = button.dataset;
   if (action!=='view-art' && action!=='close-modal') playUiSound(action==='new-game'||action==='continue'?'success':'tap');
   switch (action) {
-    case 'new-game': populateOrigins(); showScreen('creation'); break;
-    case 'random-name': { const field=document.getElementById('player-name'); if(field) field.value=randomPlayerName(); break; }
+    case 'new-game': populateOrigins(); showScreen('creation'); updateCreatorPreview(); break;
+    case 'random-name': { const field=document.getElementById('player-name'); if(field) field.value=randomPlayerName(); updateCreatorPreview(); break; }
     case 'random-character': randomizeCreator(); break;
     case 'continue': { const loaded = loadState(); if (loaded) { state=loaded; showScreen('game'); } else toast('Сохранение не найдено.'); break; }
     case 'home': showScreen('title'); break;
@@ -4658,6 +4843,9 @@ document.addEventListener('click',event=>{
     case 'back-profile': state.ui.view='profile'; state.ui.targetId=id; render(); break;
     case 'open-map-to-character': { const character=getCharacter(id); if(character){state.ui.view='map';state.ui.targetId=id;render();toast('Найди метку на карте. Точное личное расписание не раскрывается.');} break; }
     case 'invite-companion': { const character=getCharacter(id); const bond=state.bonds?.[id]||{}; if(!character)break; if((bond.friendship||0)<35||(bond.trust||0)<25){toast('Сначала укрепи дружбу и доверие.');break;} state.companions ||= []; if(!state.companions.includes(id)) state.companions.push(id); addFeed(state,`${character.name} согласилась войти в твой ближний круг и помогать с общими делами.`); render(); toast(`${character.name} теперь твоя спутница.`); break; }
+    case 'romantic-date': { const result=completeRomanticDate(state,id,type); if(!result.ok){toast(result.message);break;} tickAction(state,35); appendDialogue(id,'player',`Предлагаю провести время вместе: ${({walk:'прогулка',tea:'чайная',flowers:'цветочная лавка',training:'тренировка',festival:'фестиваль',books:'библиотека'})[type]||'встреча'}.`); appendDialogue(id,'npc',result.message); render(); toast(result.message); break; }
+    case 'romantic-confess': { const result=confessFeelings(state,id); if(result.ok) appendDialogue(id,'npc',result.message); render(); toast(result.message); break; }
+    case 'romantic-initiative': { const result=resolveInitiative(state,id,type==='accept'); if(result.accepted) tickAction(state,30); appendDialogue(id,'npc',result.message); render(); toast(result.message); break; }
     case 'select-scene-character': state.ui.sceneCharacterId=id; render(); break;
     case 'back-people': state.ui.view='people'; state.ui.targetId=''; render(); break;
     case 'person-action': speakAsAction(id,type); break;
@@ -4778,6 +4966,7 @@ document.addEventListener('submit',event=>{
 });
 
 document.addEventListener('input',event=>{
+  if (['player-name','player-gender','player-hair','player-look','player-clan'].includes(event.target.id)) updateCreatorPreview();
   if (event.target.dataset.titleSetting && ['musicVolume','sfxVolume'].includes(event.target.dataset.titleSetting)) {
     const output=event.target.parentElement?.querySelector('output'); if(output) output.textContent=`${event.target.value}%`;
     const prefs=getTitlePreferences(); prefs[event.target.dataset.titleSetting]=Number(event.target.value); localStorage.setItem(TITLE_PREF_KEY,JSON.stringify(prefs));
@@ -4786,6 +4975,7 @@ document.addEventListener('input',event=>{
 
 document.addEventListener('change',event=>{
   if (event.target.id === 'player-origin') updateOriginNote();
+  if (['player-name','player-gender','player-hair','player-look','player-clan'].includes(event.target.id)) updateCreatorPreview();
   if (event.target.dataset.titleSetting) {
     const prefs=getTitlePreferences(); const key=event.target.dataset.titleSetting;
     prefs[key]=event.target.type==='checkbox'?event.target.checked:Number(event.target.value);

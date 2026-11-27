@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://images2.alphacoders.com" crossorigin>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="assets/css/style.css?v=1.5.4">
+  <link rel="stylesheet" href="assets/css/style.css?v=1.5.5">
   <link rel="icon" href="assets/leaf.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
 </head>
@@ -22,6 +22,12 @@
       <div class="title-vignette"></div>
       <div class="title-project-mark"><span>NARUTO</span><b>ENOT GAREM</b><small>КОНОХА · ТВОЯ ИСТОРИЯ</small></div>
       <div class="title-menu-panel" aria-label="Главное меню">
+        <div class="title-menu-head">
+          <div class="title-menu-crest"><img src="assets/ui/konoha-crest.svg" alt=""></div>
+          <div><small>ТВОЯ ИСТОРИЯ В СКРЫТОМ ЛИСТЕ</small><strong>Коноха ждёт</strong><p>Новые знакомства, большие решения и свой путь среди ниндзя.</p></div>
+        </div>
+        <div class="title-menu-divider"><span>✿</span><i></i><span>✿</span></div>
+        <div class="title-menu-feature"><span>01 / CHRONICLES</span><b>Создай героя. Напиши свою историю.</b></div>
         <div class="title-actions">
           <button class="title-menu-button" data-action="new-game"><span><img src="assets/ui/generated/home.png" alt=""></span>Новая игра <i>↗</i></button>
           <button class="title-menu-button" data-action="continue" id="continue-button"><span><img src="assets/ui/generated/return.png" alt=""></span>Загрузить <i>↗</i></button>
@@ -30,15 +36,22 @@
           <button class="title-menu-button title-exit" data-action="exit-game"><span><img src="assets/ui/generated/back.png" alt=""></span>Выход <i>↗</i></button>
         </div>
         <div class="title-links"><a href="https://pixabay.com/music/ambient-japanese-style-ambient-475587/" target="_blank" rel="noopener">♫ Музыка из библиотеки</a></div>
-        <div class="title-foot"><span>VERSION 1.5.4</span><span>FAN-MADE PROJECT</span><span>LOCAL SAVE</span></div>
+        <div class="title-foot"><span>VERSION 1.5.5</span><span>FAN-MADE PROJECT</span><span>LOCAL SAVE</span></div>
       </div>
     </section>
 
     <section id="creation-screen" class="creation-screen hidden">
       <div class="creation-card">
-        <div class="eyebrow">ШАГ 01 / СОЗДАНИЕ ПЕРСОНАЖА</div>
-        <h2>Кем ты станешь в Конохе?</h2>
-        <p class="muted">Выбери прошлое, имя и стиль. Происхождение повлияет на стартовые навыки и первые события.</p>
+        <div class="creator-heading"><div><div class="eyebrow">ШАГ 01 / СОЗДАНИЕ ПЕРСОНАЖА</div><h2>Твоя легенда начинается здесь</h2><p class="muted">Собери героя, выбери прошлое и определи, каким путём пойдёшь в Конохе.</p></div><div class="creator-step-pill">✦ 01 <span>ПЕРСОНАЖ</span></div></div>
+        <div class="creator-layout">
+          <aside class="creator-preview-column">
+            <div class="creator-preview-top"><span>ПРЕДПРОСМОТР</span><b>КУНОИЧИ / ШИНОБИ</b></div>
+            <div class="creator-preview-stage"><div id="creator-avatar" class="wardrobe-avatar-stage"><img class="wardrobe-avatar-base" src="assets/player/layers/base-body.svg" alt="Основа персонажа"><img class="wardrobe-avatar-layer layer-hair" src="assets/player/layers/hair-medium.svg" alt="Причёска"><img class="wardrobe-avatar-layer layer-bottom" src="assets/player/layers/bottom-cargo.svg" alt="Одежда"><img class="wardrobe-avatar-layer layer-shoes" src="assets/player/layers/shoes-sneakers.svg" alt="Обувь"><img class="wardrobe-avatar-layer layer-top" src="assets/player/layers/top-basic.svg" alt="Верх"></div></div>
+            <div class="creator-preview-caption"><small>ТВОЙ ПЕРСОНАЖ</small><b id="creator-name-preview">Твой персонаж</b><span id="creator-gender-preview">Шиноби</span><i id="creator-clan-preview">Без клана</i></div>
+            <div class="creator-preview-note"><span>✧</span><p>Внешность можно будет менять позже в гардеробе. Выбор происхождения определит стартовые навыки.</p></div>
+            <div class="creator-preview-footer"><span>Коноха · Листья и истории</span><b>✿</b></div>
+          </aside>
+          <div class="creator-fields">
         <form id="creation-form">
           <label class="field-label" for="player-name">Имя персонажа</label>
           <div class="name-row"><input id="player-name" name="name" maxlength="22" placeholder="Например, Рэн" autocomplete="off"><button class="btn btn-soft" type="button" data-action="random-name">🎲 Случайное имя</button></div>
@@ -124,6 +137,8 @@
           <button class="btn btn-primary btn-large full-width" type="submit">Начать путь в Конохе <span>↗</span></button>
           <button class="btn btn-ghost full-width back-link" type="button" data-action="home">Назад в главное меню</button>
         </form>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -193,7 +208,7 @@
     <div id="modal-root"></div>
     <div id="toast-root" class="toast-root" aria-live="polite"></div>
   </main>
-  <script defer src="standalone.js?v=1.5.4" onerror="document.getElementById('runtime-error').hidden=false"></script>
+  <script defer src="standalone.js?v=1.5.5" onerror="document.getElementById('runtime-error').hidden=false"></script>
   <noscript><p class="runtime-warning">Для запуска игры включи JavaScript в браузере.</p></noscript>
   <div id="runtime-error" class="runtime-warning" hidden>Не удалось загрузить игровой файл <b>standalone.js</b>. Загрузи папку проекта целиком, включая index.html, standalone.js и assets.</div>
 </body>

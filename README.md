@@ -1,23 +1,29 @@
-# Naruto Enot Garem v1.5.4 — QA report
+# Naruto Enot Garem v1.5.5
 
-## Summary
+A local/offline fan-made social visual novel set in Konoha.
 
-- Modular clothing catalog: **49 items** across **6 compatible slots**.
-- New clothing: blouses, academy top, hoodie, festival top, cardigan, winter coat, short haori, jeans, long pleated skirt, wide trousers, festival hakama, high-top shoes, winter shoes, tote, gloves, beret and floral hair ribbon.
-- Player avatar uses separate SVG layers for body, hair, clothes and accessories; arrow preview updates one slot at a time.
-- Old full outfit presets remain available and are composed from owned starter items.
-- Save migration keeps old `look` and `ownedLooks` values and creates a compatible layered equipment object.
-- Current preview is retained; stale v1.5.1/v1.5.2 previews, debug layer preview and duplicate QA documents removed from the release root.
+## Run the game
 
-## Validation performed
+1. Extract the ZIP to a folder.
+2. On Windows, double-click `start-local.bat`.
+3. Open the local address shown in the terminal.
 
-- `node scripts/build-standalone.mjs` rebuilt the bundled runtime.
-- `node --test tests/*.mjs`: **14/14 suites passed, 0 failed**.
-- SVG path audit: all **49 clothing layers** and all **49 slot-cropped thumbnails** exist, share the `260×520` avatar coordinate system and contain no painted background rectangle or baked checkerboard.
-- Asset-path audit: all manifest clothing layers, thumbnails, base bodies, hairstyles, character art, pets, backgrounds and UI references resolve locally. Obsolete monolithic player-avatar PNGs were removed after migrating the sidebar to the layered avatar.
-- Wardrobe behavior coverage: six slots, arrow cycling and wraparound, wrong-slot rejection, purchase location/currency checks, duplicate purchase rejection, preset application and old-save migration.
+You can also serve this folder with any static HTTP server. Keep `index.html`, `standalone.js` and the `assets` folder together.
 
-## Browser note
+## v1.5.5 highlights
 
-A full manual Chromium playthrough is not claimed for this build. The game is static/offline and the standalone runtime and automated DOM/state smoke tests are used for release validation.
+- Refreshed main menu and responsive mobile layout.
+- Redesigned character creator with live layered-avatar preview.
+- Adult-only, non-sexual romance routes for a female player character, with individual date preferences and occasional NPC invitations.
+- Compatible with existing v1.5.4 saves and the previous wardrobe/catalogue.
 
+See `CHANGELOG.md` for the complete history and `QA-REPORT-v1.5.5.md` for the current test report.
+
+## Development
+
+Edit the ES modules under `src/`, then rebuild the offline runtime:
+
+```bash
+node scripts/build-standalone.mjs
+node --test tests/*.mjs
+```

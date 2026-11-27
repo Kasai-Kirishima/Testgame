@@ -11,6 +11,8 @@ import {getPet} from './data/pets.js';
 import {getJob} from './data/jobs.js';
 import {CLOTHING,CLOTHING_BY_ID,CLOTHING_SLOTS,STARTER_CLOTHING,PRESET_EQUIPMENT,LOOK_TO_PRESET} from './data/clothing.js';
 import {cycleWardrobePreview,equipClothing,purchaseClothing,applyWardrobePreset} from './core/wardrobe.js';
+import {normalizeEquipment} from './data/clothing.js';
+import {canRomance,completeRomanticDate,confessFeelings,resolveInitiative} from './core/relationships.js';
 import {renderView,renderStatus,populateOrigins,updateOriginNote,renderSettings,escapeHTML} from './ui/render.js';
 
 const PIXABAY_TRACK = 'https://pixabay.com/music/ambient-japanese-style-ambient-475587/';
@@ -75,6 +77,25 @@ function randomizeCreator() {
   if (name) name.value=randomPlayerName();
   updateOriginNote();
   toast('Случайный персонаж создан полностью. Можно изменить любые параметры.');
+  updateCreatorPreview();
+}
+
+function updateCreatorPreview() {
+  const gender=document.getElementById('player-gender')?.value || 'male';
+  const hair=['short','medium','long','tied','wild'].includes(document.getElementById('player-hair')?.value)?document.getElementById('player-hair').value:'medium';
+  const look=document.getElementById('player-look')?.value || 'casual';
+  const equipment=normalizeEquipment({},look);
+  const base=gender==='female'?'base-body-female.svg':'base-body.svg';
+  const order=['bottom','shoes','top','outer','accessory','head'];
+  const stage=document.getElementById('creator-avatar');
+  if(stage) stage.innerHTML=`<img class="wardrobe-avatar-base" src="assets/player/layers/${base}" alt="Основа персонажа"><img class="wardrobe-avatar-layer layer-hair" src="assets/player/layers/hair-${hair}.svg" alt="Причёска">${order.map(slot=>{const item=CLOTHING_BY_ID[equipment[slot]];return item?`<img class="wardrobe-avatar-layer layer-${slot}" src="${item.src}" alt="${item.name}">`:''}).join('')}`;
+  const name=document.getElementById('creator-name-preview');
+  if(name) name.textContent=(document.getElementById('player-name')?.value||'Твой персонаж').trim()||'Твой персонаж';
+  const genderLabel=document.getElementById('creator-gender-preview');
+  if(genderLabel) genderLabel.textContent=gender==='female'?'Куноичи':gender==='other'?'Шиноби':'Шиноби';
+  const clan=document.getElementById('player-clan')?.value || 'none';
+  const clanLabel=document.getElementById('creator-clan-preview');
+  if(clanLabel) clanLabel.textContent=clan==='none'?'Без клана':`Клан ${clan}`;
 }
 
 function persist() {
@@ -850,8 +871,8 @@ document.addEventListener('click',event=>{
   const {action,id,type,hours,item} = button.dataset;
   if (action!=='view-art' && action!=='close-modal') playUiSound(action==='new-game'||action==='continue'?'success':'tap');
   switch (action) {
-    case 'new-game': populateOrigins(); showScreen('creation'); break;
-    case 'random-name': { const field=document.getElementById('player-name'); if(field) field.value=randomPlayerName(); break; }
+    case 'new-game': populateOrigins(); showScreen('creation'); updateCreatorPreview(); break;
+    case 'random-name': { const field=document.getElementById('player-name'); if(field) field.value=randomPlayerName(); updateCreatorPreview(); break; }
     case 'random-character': randomizeCreator(); break;
     case 'continue': { const loaded = loadState(); if (loaded) { state=loaded; showScreen('game'); } else toast('Сохранение не найдено.'); break; }
     case 'home': showScreen('title'); break;
@@ -910,6 +931,9 @@ document.addEventListener('click',event=>{
     case 'back-profile': state.ui.view='profile'; state.ui.targetId=id; render(); break;
     case 'open-map-to-character': { const character=getCharacter(id); if(character){state.ui.view='map';state.ui.targetId=id;render();toast('Найди метку на карте. Точное личное расписание не раскрывается.');} break; }
     case 'invite-companion': { const character=getCharacter(id); const bond=state.bonds?.[id]||{}; if(!character)break; if((bond.friendship||0)<35||(bond.trust||0)<25){toast('Сначала укрепи дружбу и доверие.');break;} state.companions ||= []; if(!state.companions.includes(id)) state.companions.push(id); addFeed(state,`${character.name} согласилась войти в твой ближний круг и помогать с общими делами.`); render(); toast(`${character.name} теперь твоя спутница.`); break; }
+    case 'romantic-date': { const result=completeRomanticDate(state,id,type); if(!result.ok){toast(result.message);break;} tickAction(state,35); appendDialogue(id,'player',`Предлагаю провести время вместе: ${({walk:'прогулка',tea:'чайная',flowers:'цветочная лавка',training:'тренировка',festival:'фестиваль',books:'библиотека'})[type]||'встреча'}.`); appendDialogue(id,'npc',result.message); render(); toast(result.message); break; }
+    case 'romantic-confess': { const result=confessFeelings(state,id); if(result.ok) appendDialogue(id,'npc',result.message); render(); toast(result.message); break; }
+    case 'romantic-initiative': { const result=resolveInitiative(state,id,type==='accept'); if(result.accepted) tickAction(state,30); appendDialogue(id,'npc',result.message); render(); toast(result.message); break; }
     case 'select-scene-character': state.ui.sceneCharacterId=id; render(); break;
     case 'back-people': state.ui.view='people'; state.ui.targetId=''; render(); break;
     case 'person-action': speakAsAction(id,type); break;
@@ -1030,6 +1054,7 @@ document.addEventListener('submit',event=>{
 });
 
 document.addEventListener('input',event=>{
+  if (['player-name','player-gender','player-hair','player-look','player-clan'].includes(event.target.id)) updateCreatorPreview();
   if (event.target.dataset.titleSetting && ['musicVolume','sfxVolume'].includes(event.target.dataset.titleSetting)) {
     const output=event.target.parentElement?.querySelector('output'); if(output) output.textContent=`${event.target.value}%`;
     const prefs=getTitlePreferences(); prefs[event.target.dataset.titleSetting]=Number(event.target.value); localStorage.setItem(TITLE_PREF_KEY,JSON.stringify(prefs));
@@ -1038,6 +1063,7 @@ document.addEventListener('input',event=>{
 
 document.addEventListener('change',event=>{
   if (event.target.id === 'player-origin') updateOriginNote();
+  if (['player-name','player-gender','player-hair','player-look','player-clan'].includes(event.target.id)) updateCreatorPreview();
   if (event.target.dataset.titleSetting) {
     const prefs=getTitlePreferences(); const key=event.target.dataset.titleSetting;
     prefs[key]=event.target.type==='checkbox'?event.target.checked:Number(event.target.value);

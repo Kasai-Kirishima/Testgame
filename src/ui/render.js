@@ -10,6 +10,7 @@ import {ensureDailyBoard,SKILL_META,getSkillLevel,RECIPES,canCraft} from '../cor
 import {ACHIEVEMENTS,getAchievementProgress} from '../core/achievements.js';
 import {MAGAZINE_ISSUES} from '../data/secret-magazine.js';
 import {CLOTHING,CLOTHING_BY_ID,CLOTHING_SLOTS,LOOK_TO_PRESET,normalizeEquipment} from '../data/clothing.js';
+import {canRomance,getRelationship,DATE_ACTIVITIES,ROMANCE_PROFILES} from '../core/relationships.js';
 
 export const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g,char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
@@ -147,7 +148,7 @@ function renderPersonCard(state,character) {
   const value = Math.max(bond.friendship,bond.trust,bond.respect);
   const portrait = character.art?.[0]?.src || '';
   const statusClass=value>=75?'bond-close':value>=40?'bond-warm':value<=8?'bond-new':'bond-neutral';
-  return `<button class="person-card ref-person-card ${statusClass}" data-action="open-person" data-id="${character.id}"><span class="ref-card-portrait"><img src="${portrait}" alt="${escapeHTML(character.name)}" loading="lazy"><i>${escapeHTML(character.role)}</i></span><span class="ref-card-copy"><strong>${escapeHTML(character.name)}</strong><small>${escapeHTML(character.personality)}</small><span class="bond-line"><span>${escapeHTML(bond.stage||'Знакомая')}</span><b>${value}/100</b></span><span class="bond-track"><i style="width:${value}%"></i></span></span></button>`;
+  return `<button class="person-card ref-person-card ${statusClass}" data-action="open-person" data-id="${character.id}"><span class="ref-card-portrait"><img src="${portrait}" alt="${escapeHTML(character.name)}" loading="lazy"><i>${escapeHTML(character.role)}</i></span><span class="ref-card-copy"><strong>${escapeHTML(character.name)}${state.relationships?.[character.id]?.status==='dating'?' · ♥':''}</strong><small>${escapeHTML(character.personality)}</small><span class="bond-line"><span>${escapeHTML(bond.stage||'Знакомая')}</span><b>${value}/100</b></span><span class="bond-track"><i style="width:${value}%"></i></span></span></button>`;
 }
 
 function renderPeople(state) {
@@ -159,6 +160,26 @@ function renderPeople(state) {
     ${available.length?`<div class="people-grid">${available.map(item=>renderPersonCard(state,item)).join('')}</div>`:`<section class="panel-card empty-heroes"><div class="empty-heroes-mark">🌸</div><h3>Пока нет знакомых героев</h3><p>Посещай места Конохи, замечай людей на сцене и начинай разговор. После первой личной беседы героиня появится здесь.</p><button class="btn btn-primary" data-view="world">Вернуться в RP</button></section>`}
     ${!secretOpen?`<button class="person-card secret-card" data-action="secret-hint"><div class="person-top"><div class="person-avatar secret-avatar">?</div><div><strong>Неизвестный гость</strong><small>Секретная встреча</small></div></div><p class="person-desc">В старом лесу иногда видят незнакомого путешественника. Следы чаще появляются зимой.</p><div class="bond-line"><span>Загадка</span><b>???</b></div></button>`:''}`;
 }
+function renderRelationshipPanel(state,character,bond) {
+  if(!canRomance(state,character.id)) return '';
+  const relation=getRelationship(state,character.id);
+  const ready=(bond.friendship||0)>=15 && (bond.trust||0)>=10;
+  const confessionReady=(bond.friendship||0)>=70 && (bond.trust||0)>=55 && relation.dates>=2;
+  const status=relation.status==='dating'?'Вы вместе':relation.dates>0?'Постепенно сближаетесь':'Пока друзья';
+  const preferred=ROMANCE_PROFILES[character.id].preference;
+  const prefNames=preferred.map(id=>DATE_ACTIVITIES.find(item=>item.id===id)?.label).filter(Boolean).join(', ');
+  const pending=relation.pending?`<div class="relationship-invite"><small>ЕЁ ПРИГЛАШЕНИЕ · ДЕНЬ ${relation.pending.day}</small><p>${escapeHTML(relation.pending.text)}</p><div class="relationship-invite-actions"><button class="btn btn-primary" data-action="romantic-initiative" data-id="${character.id}" data-type="accept">Принять</button><button class="btn btn-ghost" data-action="romantic-initiative" data-id="${character.id}" data-type="decline">В другой раз</button></div></div>`:'';
+  return `<section class="panel-card relationship-panel"><div class="card-head"><div><small class="relationship-kicker">ЛИЧНЫЙ МАРШРУТ</small><h3>🌸 Симпатия и отношения</h3></div><span class="relationship-status">${status}</span></div>
+    <div class="relationship-mood"><div><span>Настроение ${escapeHTML(character.name)}</span><b>${relation.mood}/100</b></div><i><u style="width:${relation.mood}%"></u></i></div>
+    <p class="relationship-copy">Этот маршрут построен на дружбе, взаимной симпатии и уважении к личным границам. Совместные встречи расходуют немного энергии. Отказ от приглашения не разрушает отношения.</p>
+    ${pending}
+    <div class="relationship-date-head"><b>Предложить совместное занятие</b><small>${ready?'Она уже готова проводить с тобой время':'Сначала укрепи дружбу до 15 и доверие до 10'}</small></div>
+    <div class="relationship-date-grid">${DATE_ACTIVITIES.map(item=>`<button class="relationship-date-option" data-action="romantic-date" data-id="${character.id}" data-type="${item.id}" ${ready?'':'disabled'}><span>${item.icon}</span><b>${item.label}</b><small>−${item.cost} энергии</small></button>`).join('')}</div>
+    <div class="relationship-footer"><span>Совместных встреч: <b>${relation.dates}</b>${relation.dates>=3?` · Ей нравится: ${escapeHTML(prefNames)}`:' · Узнавай её вкусы в разговорах'}</span><button class="btn btn-primary" data-action="romantic-confess" data-id="${character.id}" ${confessionReady?'':'disabled'}>${relation.status==='dating'?'Вы уже пара':'Сказать о симпатии'}</button></div>
+    ${!confessionReady&&relation.status!=='dating'?'<small class="relationship-requirements">Для признания нужны дружба 70+, доверие 55+ и две совместные встречи.</small>':''}
+  </section>`;
+}
+
 function renderPersonDetail(state,character) {
   const bond = getBond(state,character.id);
   const history = state.dialogues[character.id] || [];
@@ -196,6 +217,7 @@ function renderPersonDetail(state,character) {
           <div class="dossier-art-stage"><button class="art-arrow prev" data-action="profile-art-prev" data-id="${character.id}" aria-label="Предыдущее изображение">‹</button><img src="${escapeHTML(currentArt?.src||'')}" alt="${escapeHTML(character.name)} — ${escapeHTML(currentArt?.label||'Портрет')}" data-action="view-art" data-src="${escapeHTML(currentArt?.src||'')}" loading="eager"><button class="art-arrow next" data-action="profile-art-next" data-id="${character.id}" aria-label="Следующее изображение">›</button><span class="art-caption">${escapeHTML(currentArt?.label||'Портрет')}</span></div>
           <div class="dossier-art-dots">${art.map((item,i)=>`<button class="${i===index?'active':''}" data-action="profile-art-set" data-id="${character.id}" data-index="${i}" aria-label="${escapeHTML(item.label)}"></button>`).join('')}</div>${allArt.length>art.length?`<p class="art-unlock-hint">Следующие образы открываются по мере развития знакомства. Сейчас открыто ${art.length} из ${allArt.length}.</p>`:''}
         </section>
+        ${renderRelationshipPanel(state,character,bond)}
         <section class="panel-card dossier-story"><div class="card-head"><h3>История знакомства</h3><small>${bond.meetings||0} встреч</small></div><p class="dossier-bio">${escapeHTML(character.notes||character.personality)}</p><div class="dossier-history">${lastMemories.length?lastMemories.slice(-8).reverse().map(item=>`<div class="dossier-history-line"><b>${escapeHTML(item.title||'Событие')}</b><p>${escapeHTML(item.text||'Вы провели время вместе.')}</p><small>${item.day?`День ${item.day}`:'Запись знакомства'}</small></div>`).join(''):`<p class="chat-hint">Пока нет важных событий. После встреч здесь появятся запомнившиеся моменты, договорённости и поступки.</p>`}</div></section>
         <section class="panel-card dossier-gifts"><div class="card-head"><h3>Подарки и расходы</h3><small>${gifts.length} записей</small></div>${gifts.length?`<ul>${gifts.map(item=>`<li>${escapeHTML(item.name)} · ${item.price?`${item.price} рё`: 'стоимость неизвестна'} · день ${item.day}</li>`).join('')}</ul>`:'<p class="chat-hint">Пока подарков и расходов на неё не записано.</p>'}</section>
         <section class="panel-card dossier-availability"><div class="card-head"><h3>Последняя известная встреча</h3><small>${isHere?'РЯДОМ':'НЕ РЯДОМ'}</small></div><p>${isHere?`${escapeHTML(character.name)} сейчас находится в той же локации. Вернись к RP-сцене, чтобы продолжить разговор.`:`Последняя известная локация: ${escapeHTML(placeName)}. Точное расписание персонажа остаётся скрытым.`}</p><button class="btn btn-soft" data-view="world">Вернуться к RP-сцене</button></section>
