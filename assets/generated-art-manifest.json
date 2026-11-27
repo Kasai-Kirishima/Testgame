@@ -1,0 +1,292 @@
+{
+  "playerOutfits": {
+    "female-festival": {
+      "src": "assets/player/outfits/female-festival.png",
+      "width": 215,
+      "height": 515,
+      "transparent": true
+    },
+    "female-shinobi": {
+      "src": "assets/player/outfits/female-shinobi.png",
+      "width": 185,
+      "height": 514,
+      "transparent": true
+    },
+    "female-travel": {
+      "src": "assets/player/outfits/female-travel.png",
+      "width": 197,
+      "height": 515,
+      "transparent": true
+    },
+    "male-casual": {
+      "src": "assets/player/outfits/male-casual.png",
+      "width": 232,
+      "height": 757,
+      "transparent": true
+    },
+    "male-formal": {
+      "src": "assets/player/outfits/male-formal.png",
+      "width": 298,
+      "height": 758,
+      "transparent": true
+    },
+    "male-raincoat": {
+      "src": "assets/player/outfits/male-raincoat.png",
+      "width": 286,
+      "height": 754,
+      "transparent": true
+    },
+    "male-shinobi": {
+      "src": "assets/player/outfits/male-shinobi.png",
+      "width": 248,
+      "height": 751,
+      "transparent": true
+    },
+    "male-travel": {
+      "src": "assets/player/outfits/male-travel.png",
+      "width": 289,
+      "height": 764,
+      "transparent": true
+    },
+    "male-work": {
+      "src": "assets/player/outfits/male-work.png",
+      "width": 245,
+      "height": 760,
+      "transparent": true
+    }
+  },
+  "pets": {
+    "black-cat": {
+      "src": "assets/pets/black-cat.png",
+      "width": 76,
+      "height": 97,
+      "transparent": true
+    },
+    "crow": {
+      "src": "assets/pets/crow.png",
+      "width": 92,
+      "height": 89,
+      "transparent": true
+    },
+    "fox": {
+      "src": "assets/pets/fox.png",
+      "width": 127,
+      "height": 106,
+      "transparent": true
+    },
+    "frog": {
+      "src": "assets/pets/frog.png",
+      "width": 98,
+      "height": 92,
+      "transparent": true
+    },
+    "tanuki": {
+      "src": "assets/pets/tanuki.png",
+      "width": 90,
+      "height": 99,
+      "transparent": true
+    },
+    "white-cat": {
+      "src": "assets/pets/white-cat.png",
+      "width": 95,
+      "height": 97,
+      "transparent": true
+    }
+  },
+  "ui": {
+    "alert": {
+      "src": "assets/ui/generated/alert.png",
+      "width": 69,
+      "height": 70,
+      "transparent": true
+    },
+    "back": {
+      "src": "assets/ui/generated/back.png",
+      "width": 67,
+      "height": 70,
+      "transparent": true
+    },
+    "calendar": {
+      "src": "assets/ui/generated/calendar.png",
+      "width": 72,
+      "height": 72,
+      "transparent": true
+    },
+    "chat": {
+      "src": "assets/ui/generated/chat.png",
+      "width": 73,
+      "height": 71,
+      "transparent": true
+    },
+    "coin": {
+      "src": "assets/ui/generated/coin.png",
+      "width": 68,
+      "height": 58,
+      "transparent": true
+    },
+    "gift-box": {
+      "src": "assets/ui/generated/gift-box.png",
+      "width": 135,
+      "height": 109,
+      "transparent": true
+    },
+    "gift": {
+      "src": "assets/ui/generated/gift.png",
+      "width": 65,
+      "height": 69,
+      "transparent": true
+    },
+    "heart": {
+      "src": "assets/ui/generated/heart.png",
+      "width": 65,
+      "height": 62,
+      "transparent": true
+    },
+    "help": {
+      "src": "assets/ui/generated/help.png",
+      "width": 69,
+      "height": 70,
+      "transparent": true
+    },
+    "home": {
+      "src": "assets/ui/generated/home.png",
+      "width": 68,
+      "height": 68,
+      "transparent": true
+    },
+    "journal": {
+      "src": "assets/ui/generated/journal.png",
+      "width": 75,
+      "height": 69,
+      "transparent": true
+    },
+    "location": {
+      "src": "assets/ui/generated/location.png",
+      "width": 59,
+      "height": 74,
+      "transparent": true
+    },
+    "mail": {
+      "src": "assets/ui/generated/mail.png",
+      "width": 67,
+      "height": 63,
+      "transparent": true
+    },
+    "panel-dark": {
+      "src": "assets/ui/generated/panel-dark.png",
+      "width": 360,
+      "height": 146,
+      "transparent": true
+    },
+    "panel-dialog": {
+      "src": "assets/ui/generated/panel-dialog.png",
+      "width": 338,
+      "height": 96,
+      "transparent": true
+    },
+    "panel-parchment": {
+      "src": "assets/ui/generated/panel-parchment.png",
+      "width": 361,
+      "height": 167,
+      "transparent": true
+    },
+    "pause": {
+      "src": "assets/ui/generated/pause.png",
+      "width": 62,
+      "height": 66,
+      "transparent": true
+    },
+    "question": {
+      "src": "assets/ui/generated/question.png",
+      "width": 65,
+      "height": 69,
+      "transparent": true
+    },
+    "ramen-bowl": {
+      "src": "assets/ui/generated/ramen-bowl.png",
+      "width": 111,
+      "height": 82,
+      "transparent": true
+    },
+    "return": {
+      "src": "assets/ui/generated/return.png",
+      "width": 66,
+      "height": 67,
+      "transparent": true
+    },
+    "scroll-case": {
+      "src": "assets/ui/generated/scroll-case.png",
+      "width": 94,
+      "height": 84,
+      "transparent": true
+    },
+    "settings": {
+      "src": "assets/ui/generated/settings.png",
+      "width": 73,
+      "height": 74,
+      "transparent": true
+    },
+    "trophy": {
+      "src": "assets/ui/generated/trophy.png",
+      "width": 77,
+      "height": 74,
+      "transparent": true
+    }
+  },
+  "playerAvatars": {
+    "female-festival": {
+      "src": "assets/player/avatars/female-festival.png",
+      "width": 181,
+      "height": 246,
+      "transparent": true
+    },
+    "female-shinobi": {
+      "src": "assets/player/avatars/female-shinobi.png",
+      "width": 141,
+      "height": 247,
+      "transparent": true
+    },
+    "female-travel": {
+      "src": "assets/player/avatars/female-travel.png",
+      "width": 162,
+      "height": 247,
+      "transparent": true
+    },
+    "male-casual": {
+      "src": "assets/player/avatars/male-casual.png",
+      "width": 214,
+      "height": 378,
+      "transparent": true
+    },
+    "male-formal": {
+      "src": "assets/player/avatars/male-formal.png",
+      "width": 290,
+      "height": 378,
+      "transparent": true
+    },
+    "male-raincoat": {
+      "src": "assets/player/avatars/male-raincoat.png",
+      "width": 267,
+      "height": 369,
+      "transparent": true
+    },
+    "male-shinobi": {
+      "src": "assets/player/avatars/male-shinobi.png",
+      "width": 215,
+      "height": 370,
+      "transparent": true
+    },
+    "male-travel": {
+      "src": "assets/player/avatars/male-travel.png",
+      "width": 247,
+      "height": 381,
+      "transparent": true
+    },
+    "male-work": {
+      "src": "assets/player/avatars/male-work.png",
+      "width": 223,
+      "height": 380,
+      "transparent": true
+    }
+  }
+}

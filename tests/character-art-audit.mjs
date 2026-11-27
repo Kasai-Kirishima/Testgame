@@ -26,6 +26,7 @@ for (const [id, item] of Object.entries(manifest)) {
   }
   if (item.portrait) portraits++;
   if (item.portrait?.endsWith('portrait-clean.webp')) cleanPortraits++;
+  if (item.galleryType === 'portrait-plus' && (item.gallery || []).length !== 2) failures.push(`${id}: portrait-plus must have two images`);
   if (item.galleryType === 'triptych') {
     triptychs++;
     if ((item.gallery || []).length !== 3) failures.push(`${id}: triptych must have exactly three images`);
@@ -34,10 +35,12 @@ for (const [id, item] of Object.entries(manifest)) {
 if (portraits !== 28) failures.push(`Expected 28 portraits, got ${portraits}`);
 if (cleanPortraits !== 19) failures.push(`Expected 19 clean portraits, got ${cleanPortraits}`);
 if (triptychs !== 6) failures.push(`Expected 6 triptychs, got ${triptychs}`);
+const portraitPlus=Object.values(manifest).filter(item=>item.galleryType==='portrait-plus').length;
+if (portraitPlus !== 8) failures.push(`Expected 8 extra portrait sets, got ${portraitPlus}`);
 if (JSON.stringify(manifest).includes('.svg')) failures.push('Art manifest still contains SVG entries; previous SVG assets were missing');
 
 if (failures.length) {
   console.error('Character art audit failed:\n- ' + failures.join('\n- '));
   process.exit(1);
 }
-console.log(`Character art audit passed: ${portraits} portraits, ${cleanPortraits} clean crops, ${triptychs} triptychs; all files exist.`);
+console.log(`Character art audit passed: ${portraits} portraits, ${cleanPortraits} clean crops, ${triptychs} triptychs, ${portraitPlus} extra portraits; all files exist.`);

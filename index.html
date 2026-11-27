@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#180f24">
+  <meta name="theme-color" content="#120e1b">
   <meta name="description" content="Naruto Enot Garem — фанатская мобильная социальная визуальная новелла о повседневной жизни в Конохе.">
   <meta name="color-scheme" content="dark">
   <title>Naruto Enot Garem — Коноха зовёт</title>
   <link rel="preconnect" href="https://images2.alphacoders.com" crossorigin>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="assets/css/style.css?v=1.5.0">
+  <link rel="stylesheet" href="assets/css/style.css?v=1.5.3">
   <link rel="icon" href="assets/leaf.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
 </head>
@@ -23,14 +23,14 @@
       <div class="title-project-mark"><span>NARUTO</span><b>ENOT GAREM</b><small>КОНОХА · ТВОЯ ИСТОРИЯ</small></div>
       <div class="title-menu-panel" aria-label="Главное меню">
         <div class="title-actions">
-          <button class="title-menu-button" data-action="new-game"><span>✦</span>Новая игра <i>↗</i></button>
-          <button class="title-menu-button" data-action="continue" id="continue-button"><span>◈</span>Загрузить <i>↗</i></button>
-          <button class="title-menu-button" data-action="title-settings"><span>⚙</span>Настройки <i>↗</i></button>
-          <button class="title-menu-button" data-action="open-gallery"><span>▧</span>Галерея <i>↗</i></button>
-          <button class="title-menu-button title-exit" data-action="exit-game"><span>×</span>Выход <i>↗</i></button>
+          <button class="title-menu-button" data-action="new-game"><span><img src="assets/ui/generated/home.png" alt=""></span>Новая игра <i>↗</i></button>
+          <button class="title-menu-button" data-action="continue" id="continue-button"><span><img src="assets/ui/generated/return.png" alt=""></span>Загрузить <i>↗</i></button>
+          <button class="title-menu-button" data-action="title-settings"><span><img src="assets/ui/generated/settings.png" alt=""></span>Настройки <i>↗</i></button>
+          <button class="title-menu-button" data-action="open-gallery"><span><img src="assets/ui/generated/journal.png" alt=""></span>Галерея <i>↗</i></button>
+          <button class="title-menu-button title-exit" data-action="exit-game"><span><img src="assets/ui/generated/back.png" alt=""></span>Выход <i>↗</i></button>
         </div>
         <div class="title-links"><a href="https://pixabay.com/music/ambient-japanese-style-ambient-475587/" target="_blank" rel="noopener">♫ Музыка из библиотеки</a></div>
-        <div class="title-foot"><span>VERSION 1.5.0</span><span>FAN-MADE PROJECT</span><span>LOCAL SAVE</span></div>
+        <div class="title-foot"><span>VERSION 1.5.3</span><span>FAN-MADE PROJECT</span><span>LOCAL SAVE</span></div>
       </div>
     </section>
 
@@ -66,6 +66,7 @@
                 <option value="festival">Праздничное кимоно</option>
                 <option value="travel">Дорожный плащ</option>
                 <option value="raincoat">Дождевой плащ</option>
+                <option value="workwear">Рабочая форма</option>
               </select>
             </div>
             <div>
@@ -129,13 +130,13 @@
     <section id="game-screen" class="game-screen hidden">
       <header class="topbar">
         <button class="drawer-toggle" data-action="toggle-drawer" aria-label="Открыть меню">☰</button>
-        <button class="brand-button" data-action="home" aria-label="Главное меню"><span class="brand-symbol"><img src="assets/ui/cropped/leaf-mark.png" alt=""></span><span>NARUTO <b>ENOT GAREM</b><small>Коноха / хроники</small></span></button>
+        <button class="brand-button" data-action="home" aria-label="Главное меню"><span class="brand-symbol"><img src="assets/ui/konoha-crest.svg" alt=""></span><span>NARUTO <b>ENOT GAREM</b><small>Коноха / хроники</small></span></button>
         <div class="top-status">
           <span class="status-pill status-clock" id="clock-pill">◷ Утро · 08:00</span>
           <span class="status-pill status-weather" id="weather-pill">☀️ Ясно</span>
           <span class="status-pill status-hp" id="top-hp">♥ 100</span>
-          <span class="status-pill status-coins"><img src="assets/ui/cropped/coin.png" alt=""><b id="top-coins">0</b><small>рё</small></span>
-          <button class="icon-button" data-action="open-settings" aria-label="Настройки"><img src="assets/ui/cropped/settings.png" alt=""></button>
+          <span class="status-pill status-coins"><img src="assets/ui/generated/coin.png" alt=""><b id="top-coins">0</b><small>рё</small></span>
+          <button class="icon-button" data-action="open-settings" aria-label="Настройки"><img src="assets/ui/generated/settings.png" alt=""></button>
         </div>
       </header>
       <div class="game-layout">
@@ -149,20 +150,20 @@
           <div class="sidebar-caption side-nav-caption">РАЗДЕЛЫ</div>
           <nav class="side-nav" aria-label="Разделы игры">
             <button class="side-nav-item active" data-view="world"><img src="assets/ui/cropped/home.png" alt="">Главная</button>
-            <button class="side-nav-item" data-view="map"><img src="assets/ui/cropped/location.png" alt="">Карта Конохи</button>
-            <button class="side-nav-item" data-view="people"><img src="assets/ui/cropped/heart.png" alt="">Герои</button>
-            <button class="side-nav-item" data-view="gallery"><span>▧</span>Галерея</button>
-            <button class="side-nav-item" data-view="achievements"><span>🏆</span>Достижения</button>
-            <button class="side-nav-item" data-view="magazine" hidden><span>📖</span>Альманах</button>
-            <button class="side-nav-item" data-view="locations"><span>🌸</span>Локации</button>
-            <button class="side-nav-item" data-view="day"><img src="assets/ui/cropped/promise.png" alt="">Распорядок дня</button>
-            <button class="side-nav-item" data-view="work"><span>💼</span>Работа</button>
-            <button class="side-nav-item" data-view="scroll"><img src="assets/ui/scroll.svg" alt="">Свиток дел</button>
-            <button class="side-nav-item" data-view="bag"><img src="assets/ui/pouch.svg" alt="">Инвентарь</button>
-            <button class="side-nav-item" data-view="phone"><img src="assets/ui/cropped/chat.png" alt="">Смартфон</button>
-            <button class="side-nav-item" data-view="pets"><span>🐾</span>Питомцы</button>
-            <button class="side-nav-item" data-view="settings"><img src="assets/ui/cropped/settings.png" alt="">Настройки</button>
-            <button class="side-nav-item" data-view="help"><span>?</span>Помощь</button>
+            <button class="side-nav-item" data-view="map"><img src="assets/ui/generated/location.png" alt="">Карта Конохи</button>
+            <button class="side-nav-item" data-view="people"><img src="assets/ui/generated/heart.png" alt="">Герои</button>
+            <button class="side-nav-item" data-view="gallery"><img src="assets/ui/generated/journal.png" alt="">Галерея</button>
+            <button class="side-nav-item" data-view="achievements"><img src="assets/ui/generated/trophy.png" alt="">Достижения</button>
+            <button class="side-nav-item" data-view="magazine" hidden><img src="assets/ui/generated/journal.png" alt="">Альманах</button>
+            <button class="side-nav-item" data-view="locations"><img src="assets/ui/generated/location.png" alt="">Локации</button>
+            <button class="side-nav-item" data-view="day"><img src="assets/ui/generated/calendar.png" alt="">Распорядок дня</button>
+            <button class="side-nav-item" data-view="work"><img src="assets/ui/generated/gift.png" alt="">Работа</button>
+            <button class="side-nav-item" data-view="scroll"><img src="assets/ui/generated/scroll-case.png" alt="">Свиток дел</button>
+            <button class="side-nav-item" data-view="bag"><img src="assets/ui/generated/gift-box.png" alt="">Инвентарь</button>
+            <button class="side-nav-item" data-view="phone"><img src="assets/ui/generated/mail.png" alt="">Смартфон</button>
+            <button class="side-nav-item" data-view="pets"><img src="assets/pets/white-cat.png" alt="">Питомцы</button>
+            <button class="side-nav-item" data-view="settings"><img src="assets/ui/generated/settings.png" alt="">Настройки</button>
+            <button class="side-nav-item" data-view="help"><img src="assets/ui/generated/question.png" alt="">Помощь</button>
           </nav>
           <div class="sidebar-divider"></div>
           <div class="sidebar-caption">ТЕКУЩЕЕ МЕСТО</div>
@@ -177,22 +178,22 @@
         </section>
       </div>
       <nav class="bottom-nav" aria-label="Навигация">
-        <button data-view="world" class="nav-item active"><span><img src="assets/ui/cropped/home.png" alt=""></span>RP</button>
-        <button data-view="map" class="nav-item"><span><img src="assets/ui/cropped/location.png" alt=""></span>Карта</button>
-        <button data-view="people" class="nav-item"><span><img src="assets/ui/cropped/heart.png" alt=""></span>Герои</button>
-        <button data-view="scroll" class="nav-item"><span><img src="assets/ui/scroll.svg" alt=""></span>Задания</button>
-        <button data-view="achievements" class="nav-item"><span>🏆</span>Трофеи</button>
-        <button data-view="magazine" class="nav-item" hidden><span>📖</span>Альманах</button>
-        <button data-view="bag" class="nav-item"><span><img src="assets/ui/pouch.svg" alt=""></span>Сумка</button>
-        <button data-view="phone" class="nav-item"><span><img src="assets/ui/cropped/chat.png" alt=""></span>Телефон</button>
-        <button data-view="settings" class="nav-item"><span><img src="assets/ui/cropped/settings.png" alt=""></span>Ещё</button>
+        <button data-view="world" class="nav-item active"><span><img src="assets/ui/generated/home.png" alt=""></span>RP</button>
+        <button data-view="map" class="nav-item"><span><img src="assets/ui/generated/location.png" alt=""></span>Карта</button>
+        <button data-view="people" class="nav-item"><span><img src="assets/ui/generated/heart.png" alt=""></span>Герои</button>
+        <button data-view="scroll" class="nav-item"><span><img src="assets/ui/generated/scroll-case.png" alt=""></span>Задания</button>
+        <button data-view="achievements" class="nav-item"><span><img src="assets/ui/generated/trophy.png" alt=""></span>Трофеи</button>
+        <button data-view="magazine" class="nav-item" hidden><span><img src="assets/ui/generated/journal.png" alt=""></span>Альманах</button>
+        <button data-view="bag" class="nav-item"><span><img src="assets/ui/generated/gift-box.png" alt=""></span>Сумка</button>
+        <button data-view="phone" class="nav-item"><span><img src="assets/ui/generated/mail.png" alt=""></span>Телефон</button>
+        <button data-view="settings" class="nav-item"><span><img src="assets/ui/generated/settings.png" alt=""></span>Ещё</button>
       </nav>
     </section>
 
     <div id="modal-root"></div>
     <div id="toast-root" class="toast-root" aria-live="polite"></div>
   </main>
-  <script defer src="standalone.js?v=1.5.0" onerror="document.getElementById('runtime-error').hidden=false"></script>
+  <script defer src="standalone.js?v=1.5.3" onerror="document.getElementById('runtime-error').hidden=false"></script>
   <noscript><p class="runtime-warning">Для запуска игры включи JavaScript в браузере.</p></noscript>
   <div id="runtime-error" class="runtime-warning" hidden>Не удалось загрузить игровой файл <b>standalone.js</b>. Загрузи папку проекта целиком, включая index.html, standalone.js и assets.</div>
 </body>

@@ -262,7 +262,7 @@ for (const characterId of detailedCharacters) {
     assert.ok(fs.existsSync(new URL(`../assets/characters/${characterId}/${variant}.webp`, import.meta.url)),`${characterId} ${variant} detailed art must exist`);
   }
 }
-for (const scene of ['konoha-main','training-ground','ichiraku','tatami-home','river-sunset','festival-street','clinic','library','flower-shop','hokage-office','village-gate','memorial-garden','market-street','academy-courtyard','bathhouse-garden','rainy-alley','mountain-trail','campsite']) assert.ok(fs.existsSync(new URL(`../assets/backgrounds/${scene}.webp`, import.meta.url)),`${scene} background must exist`);
+for (const scene of ['konoha-main','training-ground','ichiraku','tatami-home','river-sunset','festival-street','clinic','library','flower-shop','hokage-office','village-gate','memorial-garden','market-street','academy-courtyard','bathhouse-garden','rainy-alley','mountain-trail','campsite','konoha-dawn','archive-glow','twilight-pavilion','rain-training']) assert.ok(fs.existsSync(new URL(`../assets/backgrounds/${scene}.webp`, import.meta.url)),`${scene} background must exist`);
 for (const enemy of ['masked-scout','road-rogue','armored-guard','forest-ambusher','chakra-adept','stone-guardian']) assert.ok(fs.existsSync(new URL(`../assets/enemies/${enemy}.webp`, import.meta.url)),`${enemy} enemy art must exist`);
 
 const uiSprites = ['leaf-mark','flower','sun','location','coin','gem','settings','save','chat','training','gift','outfit','heart','home','sleep','promise','mood'];
@@ -296,4 +296,4 @@ click({target:{closest:()=>putOnOutfit,classList:{contains:()=>false}}});
 assert.equal(context.window.NEG_TEST.state().player.look,'festival','Owned clothing can be equipped at home');
 assert.ok(fs.readFileSync(new URL('../assets/css/style.css',import.meta.url),'utf8').includes('aspect-ratio:9 / 18.5'),'Phone must retain a vertical 9:18.5 aspect ratio');
 
-console.log('OK: start, text actions/dialogue, 28 portraits, triptychs, 18 backgrounds, combat, smartphone, pets, jobs, wardrobe and UI sprites.');
+console.log('OK: start, text actions/dialogue, 28 portraits, triptychs, 22 backgrounds, combat, smartphone, pets, jobs, wardrobe and UI sprites.');

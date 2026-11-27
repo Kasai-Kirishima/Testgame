@@ -1,3 +1,17 @@
+## v1.5.2
+- Added eight additional fully clothed portrait variants for Ino, Temari, Kurenai, Tsunade, Mirai, Karin, Tenten and Shizune; each variant unlocks after two personal meetings and is appended without replacing existing character art.
+- Added five category-colored achievement medal assets and wired achievement cards to render the matching medal by category.
+- Added a Konoha raccoon mascot illustration to the empty pet screen. Existing pet mechanics and good location backgrounds remain unchanged.
+- Updated the character art catalog and art manifest, CSS cache key, standalone runtime and visual regression coverage.
+
+## v1.5.1
+- Added four new, optimized 16:9 environment illustrations: Konoha at sunrise, a warm scroll archive, a twilight tea pavilion, and a rain-washed training yard.
+- Connected the new scenes to the title screen, main street, library/archive, tea house, training area and the location browser; rainy weather can switch the training yard background.
+- Refined the visual system with a custom Konoha crest, sakura pattern, parchment texture, achievement medal, improved scene overlays, card depth, keyboard focus states and reduced-motion-aware transitions.
+- Updated the gallery to show every character-art variant currently unlocked by relationship progression, while keeping locked variants hidden.
+- Added a dedicated visual asset audit covering all location variants, scene manifest backgrounds, character art, CSS image references and cache-busted runtime/style versions.
+- Rebuilt the standalone runtime; see QA report for the exact regression run.
+
 ## v1.5.0
 - Added 21 Steam-style achievements with points, progress bars, hidden conditions and save migration.
 - Added the secret collectible journal “Листья и истории”: discovered in the library, with later issues hidden in the scroll archive and tea house. The magazine remains absent from navigation until discovered.
@@ -6,6 +20,16 @@
 - Added migration-safe persistence and dedicated tests for achievement unlocks, issue gating, page reading, asset existence and hidden navigation.
 
 # Changelog
+
+## v1.5.3
+- Integrated the generated transparent player outfit sprites into the wardrobe: six male and three fully clothed female looks, including casual, shinobi, festival, travel, raincoat and workwear variants.
+- Created nine transparent head-and-shoulder avatar crops from the outfit sprites so the sidebar portrait reflects the selected look without shrinking the full-body sprite.
+- Added workwear to character creation, random look selection, quick wardrobe presets, home storage and the clothing shop; initial selected looks are now included in owned wardrobe items and legacy saves migrate safely.
+- Wired six generated animal sprites into pet cards and shop entries, with names for tanuki, fox, cats, crow and frog.
+- Connected 23 generated transparent UI assets across title actions, side and bottom navigation, RP HUD, phone, inventory, crafting, help, notifications, achievement and magazine panels.
+- Kept existing location backgrounds, roster artwork, six character triptychs and prior visual variants unchanged.
+- Added generated-art manifest and integration tests; validated the real alpha channel on all 47 listed PNG assets, all local HTML/CSS asset paths, rebuilt standalone runtime and passed all 13 automated suites.
+
 
 ## v1.4.8
 - Added a daily board with three rotating optional contracts, progress tracking, one-time rewards and a 14-day history.

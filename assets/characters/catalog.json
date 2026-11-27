@@ -33,9 +33,10 @@
       "id": "ino",
       "portrait": "ino/portrait.webp",
       "gallery": [
-        "ino/portrait.webp"
+        "ino/portrait.webp",
+        "ino/portrait-alt.webp"
       ],
-      "galleryType": "portrait"
+      "galleryType": "portrait-plus"
     },
     {
       "id": "yodo",
@@ -57,9 +58,10 @@
       "id": "karin",
       "portrait": "karin/portrait.webp",
       "gallery": [
-        "karin/portrait.webp"
+        "karin/portrait.webp",
+        "karin/portrait-alt.webp"
       ],
-      "galleryType": "portrait"
+      "galleryType": "portrait-plus"
     },
     {
       "id": "konan",
@@ -75,9 +77,10 @@
       "id": "kurenai",
       "portrait": "kurenai/portrait-clean.webp",
       "gallery": [
-        "kurenai/portrait-clean.webp"
+        "kurenai/portrait-clean.webp",
+        "kurenai/portrait-alt.webp"
       ],
-      "galleryType": "portrait"
+      "galleryType": "portrait-plus"
     },
     {
       "id": "kurotsuchi",
@@ -123,9 +126,10 @@
       "id": "mirai",
       "portrait": "mirai/portrait-clean.webp",
       "gallery": [
-        "mirai/portrait-clean.webp"
+        "mirai/portrait-clean.webp",
+        "mirai/portrait-alt.webp"
       ],
-      "galleryType": "portrait"
+      "galleryType": "portrait-plus"
     },
     {
       "id": "mito",
@@ -181,17 +185,19 @@
       "id": "temari",
       "portrait": "temari/portrait-clean.webp",
       "gallery": [
-        "temari/portrait-clean.webp"
+        "temari/portrait-clean.webp",
+        "temari/portrait-alt.webp"
       ],
-      "galleryType": "portrait"
+      "galleryType": "portrait-plus"
     },
     {
       "id": "tenten",
       "portrait": "tenten/portrait-clean.webp",
       "gallery": [
-        "tenten/portrait-clean.webp"
+        "tenten/portrait-clean.webp",
+        "tenten/portrait-alt.webp"
       ],
-      "galleryType": "portrait"
+      "galleryType": "portrait-plus"
     },
     {
       "id": "hanabi",
@@ -217,9 +223,10 @@
       "id": "tsunade",
       "portrait": "tsunade/portrait-clean.webp",
       "gallery": [
-        "tsunade/portrait-clean.webp"
+        "tsunade/portrait-clean.webp",
+        "tsunade/portrait-alt.webp"
       ],
-      "galleryType": "portrait"
+      "galleryType": "portrait-plus"
     },
     {
       "id": "haku",
@@ -233,9 +240,10 @@
       "id": "shizune",
       "portrait": "shizune/portrait-clean.webp",
       "gallery": [
-        "shizune/portrait-clean.webp"
+        "shizune/portrait-clean.webp",
+        "shizune/portrait-alt.webp"
       ],
-      "galleryType": "portrait"
+      "galleryType": "portrait-plus"
     }
   ]
 }

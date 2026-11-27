@@ -1,22 +1,15 @@
-# Naruto Enot Garem v1.5.0 — QA report
+# Naruto Enot Garem v1.5.3 — generated visual integration QA
 
-## New systems
-- 21 achievement definitions with progress, points, hidden states and migration-safe save data.
-- A hidden 3-issue journal with 9 pages; discovery chain: library → archive → tea house.
-- The secret journal is absent from navigation until found in the library. It is not a map location.
-- Reading each page grants a small one-time knowledge/focus reward; repeat reads are blocked.
-- All journal illustrations reference existing local environment artwork already included in the game.
+## Visual integration
+- Player outfits: 9 transparent full-body PNGs (6 male, 3 female) plus 9 matching transparent avatar crops.
+- Pets: 6 transparent sprite assets wired into owned-pet cards, shop cards and the RP scene.
+- UI: 23 transparent sprites (navigation, actions, items, notifications, panels and decoration) wired into real game screens.
+- Generated art manifest lists 47 image assets; all files have alpha minimum 0 and non-zero visible alpha.
+- Local asset references in `index.html` and `assets/css/style.css` resolve successfully.
+- Existing 22 background scenes, 28 character portraits, 8 extra portraits, 6 triptychs and previous progression content remain in place.
 
-## Regression results
-- `dialogue-corpus.mjs`: 500/500 phrases and 14,000 established-conversation checks passed.
-- `situational-gm.mjs`: 12 unusual-situation tests passed.
-- `gm-upgrade.mjs`: NPC initiative, memory, response variation and anti-farming tests passed.
-- `content-counts.mjs`: 50 reply categories, 800 prompts, 100 actions and secret-location gating passed.
-- `character-art-audit.mjs`: 28 portraits, 19 clean crops and 6 triptychs verified.
-- `smoke.mjs`, `standalone-smoke.mjs`, `gameplay-expansion.mjs`, `dialogue-expansion.mjs` passed.
-- `achievements-magazine.mjs`: achievements, hidden unlocks, issue gating, page reading, local image paths and old-save migration passed.
-- `standalone.js` syntax check passed; ZIP integrity check passed.
-
-A headless Chromium interaction test was attempted but timed out in this environment. Interactive browser QA is therefore not claimed as complete; the checks above are automated source/runtime regression tests.
-
-The separately uploaded `zipka.zip` is not embedded because it contains explicit sexual imagery. This build uses existing non-explicit environment artwork already in the project; no new images were generated.
+## Regression
+- All 13 `.mjs` test suites passed, including dialogue corpus (500 + 500 phrases and 14,000 established-dialogue checks), 50 categories, 100 actions, 28 characters, gameplay, pets, wardrobe, achievements, magazine and standalone DOM smoke.
+- `node scripts/build-standalone.mjs` rebuilt `standalone.js` from 16 source modules.
+- ZIP integrity is verified on the final archive.
+- Full interactive Chromium visual playthrough is not claimed; the current environment's browser startup has been unreliable. The standalone DOM/VM smoke tests and local asset audits passed.

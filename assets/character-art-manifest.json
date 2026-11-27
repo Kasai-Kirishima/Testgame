@@ -52,9 +52,10 @@
   "ino": {
     "portrait": "assets/characters/ino/portrait.webp",
     "gallery": [
-      "assets/characters/ino/portrait.webp"
+      "assets/characters/ino/portrait.webp",
+      "assets/characters/ino/portrait-alt.webp"
     ],
-    "galleryType": "portrait"
+    "galleryType": "portrait-plus"
   },
   "kaguya": {
     "portrait": "assets/characters/kaguya/portrait.webp",
@@ -66,9 +67,10 @@
   "karin": {
     "portrait": "assets/characters/karin/portrait.webp",
     "gallery": [
-      "assets/characters/karin/portrait.webp"
+      "assets/characters/karin/portrait.webp",
+      "assets/characters/karin/portrait-alt.webp"
     ],
-    "galleryType": "portrait"
+    "galleryType": "portrait-plus"
   },
   "konan": {
     "portrait": "assets/characters/konan/portrait.webp",
@@ -82,9 +84,10 @@
   "kurenai": {
     "portrait": "assets/characters/kurenai/portrait-clean.webp",
     "gallery": [
-      "assets/characters/kurenai/portrait-clean.webp"
+      "assets/characters/kurenai/portrait-clean.webp",
+      "assets/characters/kurenai/portrait-alt.webp"
     ],
-    "galleryType": "portrait"
+    "galleryType": "portrait-plus"
   },
   "kurotsuchi": {
     "portrait": "assets/characters/kurotsuchi/portrait-clean.webp",
@@ -124,9 +127,10 @@
   "mirai": {
     "portrait": "assets/characters/mirai/portrait-clean.webp",
     "gallery": [
-      "assets/characters/mirai/portrait-clean.webp"
+      "assets/characters/mirai/portrait-clean.webp",
+      "assets/characters/mirai/portrait-alt.webp"
     ],
-    "galleryType": "portrait"
+    "galleryType": "portrait-plus"
   },
   "mito": {
     "portrait": "assets/characters/mito/portrait-clean.webp",
@@ -168,9 +172,10 @@
   "shizune": {
     "portrait": "assets/characters/shizune/portrait-clean.webp",
     "gallery": [
-      "assets/characters/shizune/portrait-clean.webp"
+      "assets/characters/shizune/portrait-clean.webp",
+      "assets/characters/shizune/portrait-alt.webp"
     ],
-    "galleryType": "portrait"
+    "galleryType": "portrait-plus"
   },
   "tayuya": {
     "portrait": "assets/characters/tayuya/portrait-clean.webp",
@@ -182,23 +187,26 @@
   "temari": {
     "portrait": "assets/characters/temari/portrait-clean.webp",
     "gallery": [
-      "assets/characters/temari/portrait-clean.webp"
+      "assets/characters/temari/portrait-clean.webp",
+      "assets/characters/temari/portrait-alt.webp"
     ],
-    "galleryType": "portrait"
+    "galleryType": "portrait-plus"
   },
   "tenten": {
     "portrait": "assets/characters/tenten/portrait-clean.webp",
     "gallery": [
-      "assets/characters/tenten/portrait-clean.webp"
+      "assets/characters/tenten/portrait-clean.webp",
+      "assets/characters/tenten/portrait-alt.webp"
     ],
-    "galleryType": "portrait"
+    "galleryType": "portrait-plus"
   },
   "tsunade": {
     "portrait": "assets/characters/tsunade/portrait-clean.webp",
     "gallery": [
-      "assets/characters/tsunade/portrait-clean.webp"
+      "assets/characters/tsunade/portrait-clean.webp",
+      "assets/characters/tsunade/portrait-alt.webp"
     ],
-    "galleryType": "portrait"
+    "galleryType": "portrait-plus"
   },
   "yodo": {
     "portrait": "assets/characters/yodo/portrait.webp",

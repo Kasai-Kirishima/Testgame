@@ -620,3 +620,155 @@ input,textarea,select{pointer-events:auto;user-select:text;-webkit-user-select:t
 .magazine-masthead{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(220px,.8fr);gap:0;border:1px solid rgba(220,185,218,.22);border-radius:20px;overflow:hidden;background:#211e2a;margin:12px 0 22px}.magazine-cover-scene{min-height:245px;background-position:center;background-size:cover;display:flex;align-items:flex-end;padding:25px}.magazine-cover-mark{display:flex;flex-direction:column;color:#fff;text-shadow:0 2px 14px rgba(0,0,0,.75)}.magazine-cover-mark small{font-size:.65rem;letter-spacing:.2em}.magazine-cover-mark strong{font-family:Georgia,serif;font-size:clamp(2.5rem,6vw,4.8rem);letter-spacing:.1em;line-height:1.1}.magazine-cover-mark span{font-size:.7rem;letter-spacing:.16em}.magazine-info{padding:24px;display:flex;flex-direction:column;justify-content:center}.magazine-info h3{font-family:Georgia,serif;font-size:1.45rem;margin:10px 0}.magazine-info p{color:var(--muted);line-height:1.6;font-size:.86rem}.magazine-info>small{color:var(--muted)}.magazine-issue{margin:24px 0}.magazine-issue-head{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:16px 0;border-bottom:1px solid rgba(220,185,218,.2)}.magazine-issue-head small,.magazine-page-copy>small{font-size:.68rem;letter-spacing:.15em;color:#d7b38c}.magazine-issue-head h3{font-family:Georgia,serif;font-size:1.5rem;margin:5px 0}.magazine-issue-head p{margin:0;color:var(--muted);font-size:.84rem}.magazine-issue-cover{width:112px;height:78px;flex:0 0 112px;border-radius:10px;background-position:center;background-size:cover;border:1px solid rgba(220,185,218,.2)}.magazine-pages{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}.magazine-page{border:1px solid rgba(220,185,218,.16);border-radius:15px;overflow:hidden;background:rgba(33,48,42,.78)}.magazine-page.page-read{border-color:rgba(170,196,159,.35)}.magazine-page-image{height:130px;background-size:cover;background-position:center}.magazine-page-copy{padding:15px}.magazine-page-copy h4{font-family:Georgia,serif;font-size:1.1rem;margin:7px 0}.magazine-page-copy p{font-size:.82rem;line-height:1.62;color:#d7d0d9}.magazine-page-copy .btn{margin-top:5px}.magazine-clue{margin-top:18px;padding:17px}.magazine-clue p{color:var(--muted);margin:7px 0 12px}.secret-find-btn{border:1px dashed rgba(224,194,143,.65)!important;background:rgba(128,93,61,.2)!important;color:#f0d8b3!important;padding:9px 13px;border-radius:12px}
 @media(max-width:760px){.achievement-grid{grid-template-columns:1fr}.achievement-summary{gap:8px;padding:13px}.achievement-summary strong{font-size:1.1rem}.magazine-masthead{grid-template-columns:1fr}.magazine-cover-scene{min-height:190px}.magazine-info{padding:16px}.magazine-pages{grid-template-columns:1fr}.magazine-page-image{height:155px}.achievement-card{grid-template-columns:44px minmax(0,1fr) 18px;padding:12px}.achievement-icon{width:42px;height:42px}}
 [hidden]{display:none!important}
+
+/* v1.5.1 — visual pass: richer scenes, refined Konoha crest, tactile cards and responsive polish */
+:root{
+  --bg:#120e1b;--panel:#21192a;--panel-2:#2a2034;--panel-3:#382941;
+  --ink:#f8eff7;--muted:#c0afc2;--leaf:#dfa4c9;--leaf-2:#f4cde3;
+  --gold:#e5c28a;--line:rgba(235,190,222,.17);--shadow:0 20px 55px rgba(4,2,10,.34)
+}
+html,body{background:#120e1b}
+body{background:radial-gradient(ellipse at 72% -10%,rgba(113,69,121,.28),transparent 46%),radial-gradient(ellipse at 10% 90%,rgba(63,90,69,.15),transparent 40%),#120e1b}
+.grain{opacity:.026;mix-blend-mode:screen}
+.title-bg{background-image:linear-gradient(90deg,rgba(14,8,20,.82) 0%,rgba(15,8,23,.55) 41%,rgba(15,8,23,.04) 100%),url('../backgrounds/konoha-dawn.webp');background-position:center 52%;filter:saturate(1.06) contrast(1.02)}
+.title-vignette{background:linear-gradient(0deg,rgba(10,6,16,.68),transparent 42%,rgba(10,6,16,.12))}
+.title-menu-panel{background:linear-gradient(155deg,rgba(25,14,34,.88),rgba(15,9,24,.81));border-right:1px solid rgba(239,193,220,.38);box-shadow:20px 0 70px rgba(0,0,0,.34),inset -1px 0 rgba(255,255,255,.045);backdrop-filter:blur(13px)}
+.title-menu-panel:after{content:"";position:absolute;pointer-events:none;inset:12px 10px 12px 0;border:1px solid rgba(226,183,213,.09);border-left:0;border-radius:0 10px 10px 0}
+.title-project-mark{padding:11px 15px;border:1px solid rgba(240,201,226,.2);border-radius:12px;background:rgba(20,11,29,.42);backdrop-filter:blur(9px)}
+.brand-symbol{width:42px;height:42px;border-radius:50%;padding:4px;background:linear-gradient(145deg,rgba(238,198,219,.2),rgba(161,110,168,.1));border:1px solid rgba(230,190,218,.43);box-shadow:0 0 22px rgba(207,145,194,.13)}
+.brand-symbol img{width:100%;height:100%;object-fit:contain}
+.topbar{background:linear-gradient(90deg,rgba(19,12,27,.97),rgba(31,20,39,.94),rgba(19,12,27,.97));border-bottom-color:rgba(233,185,219,.22);box-shadow:0 8px 26px rgba(0,0,0,.2)}
+.status-pill{background:rgba(240,219,239,.055);border-color:rgba(236,194,220,.15);color:#f0e2ee}
+.status-coins img{filter:drop-shadow(0 1px 3px rgba(240,194,125,.32))}
+.icon-button{border-color:rgba(236,182,215,.24);background:linear-gradient(145deg,rgba(110,65,116,.26),rgba(38,24,49,.7));box-shadow:inset 0 1px rgba(255,255,255,.05)}
+.page-heading{position:relative;overflow:hidden;background:linear-gradient(108deg,rgba(43,26,54,.95),rgba(23,14,33,.88));border-color:rgba(231,179,216,.24);box-shadow:0 8px 24px rgba(0,0,0,.14)}
+.page-heading:after{content:"";position:absolute;right:0;top:0;bottom:0;width:min(42%,260px);background:url('../ui/sakura-pattern.svg') center/cover no-repeat;opacity:.23;pointer-events:none}
+.page-heading:before{content:"";background:url('../ui/konoha-crest.svg') center/contain no-repeat;border-radius:0;width:40px;height:40px;flex-basis:40px;color:transparent;box-shadow:none}
+.panel-card,.person-card,.gallery-section,.achievement-card,.magazine-page{box-shadow:0 10px 28px rgba(0,0,0,.14),inset 0 1px rgba(255,255,255,.025);backdrop-filter:blur(5px)}
+.panel-card{background:linear-gradient(145deg,rgba(45,31,55,.93),rgba(25,18,34,.97));border-color:rgba(235,190,219,.16)}
+.person-card{background:linear-gradient(145deg,rgba(55,38,63,.96),rgba(27,20,37,.98));border-color:rgba(234,184,216,.17)}
+.person-card:hover,.panel-card:hover{border-color:rgba(235,184,220,.42);box-shadow:0 16px 34px rgba(0,0,0,.23),0 0 0 1px rgba(224,166,207,.06)}
+.btn-primary{background:linear-gradient(125deg,#f3cde2,#d98dbb);box-shadow:0 8px 24px rgba(209,116,175,.23),inset 0 1px rgba(255,255,255,.4)}
+.btn-soft{background:linear-gradient(130deg,rgba(174,105,162,.28),rgba(106,71,130,.25));border-color:rgba(229,166,213,.34)}
+.btn-ghost{border-color:rgba(233,181,218,.27);background:rgba(32,20,43,.68)}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid #f2c6df;outline-offset:3px}
+.rp-full-scene{border-color:rgba(238,190,221,.42);box-shadow:0 24px 65px rgba(0,0,0,.42),inset 0 1px rgba(255,255,255,.08);background:#1c1426}
+.rp-full-bg{filter:saturate(1.08) contrast(1.025);transform:scale(1.015)}
+.rp-full-vignette{background:linear-gradient(90deg,rgba(17,9,24,.48),transparent 56%),linear-gradient(0deg,rgba(10,5,16,.94) 0%,rgba(10,5,16,.16) 46%,rgba(10,5,16,.12) 100%),radial-gradient(ellipse at 75% 38%,transparent 15%,rgba(9,5,14,.18) 100%)}
+.rp-full-scene:after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;border:1px solid rgba(255,255,255,.05);border-radius:inherit;background:linear-gradient(115deg,rgba(255,255,255,.04),transparent 22% 78%,rgba(255,255,255,.025))}
+.rp-chip{background:rgba(24,13,33,.78);border-color:rgba(242,195,224,.34);box-shadow:0 4px 14px rgba(0,0,0,.15);backdrop-filter:blur(12px)}
+.rp-health-hud span{background:rgba(20,11,29,.82);border-color:rgba(238,188,217,.3);box-shadow:0 4px 12px rgba(0,0,0,.18)}
+.rp-cutout>img{filter:drop-shadow(0 12px 28px rgba(0,0,0,.44)) drop-shadow(0 0 18px rgba(225,154,201,.1))}
+.rp-cutout-name{border-color:rgba(240,185,219,.38);background:linear-gradient(100deg,rgba(26,13,37,.92),rgba(44,24,54,.88));box-shadow:0 6px 24px rgba(0,0,0,.18)}
+.rp-place-title h2{text-shadow:0 3px 18px rgba(0,0,0,.7)}
+.rp-scene-bottom{background:linear-gradient(90deg,rgba(21,11,31,.96),rgba(31,16,42,.9));border-top-color:rgba(240,185,221,.31);box-shadow:0 -10px 38px rgba(0,0,0,.16)}
+.rp-control-deck{gap:12px}
+.rp-text-action,.rp-text-dialogue{background:linear-gradient(135deg,rgba(51,31,65,.98),rgba(23,14,34,.98));border-color:rgba(231,177,216,.3);box-shadow:0 12px 28px rgba(0,0,0,.2),inset 0 1px rgba(255,255,255,.035)}
+.rp-text-action textarea,.rp-text-dialogue textarea{background:rgba(13,8,21,.92);border-color:rgba(236,184,217,.25)}
+.rp-text-action textarea:focus,.rp-text-dialogue textarea:focus{border-color:#eeb5d6;box-shadow:0 0 0 3px rgba(226,150,198,.12)}
+.rp-bottom-shortcuts button{border-color:rgba(231,181,215,.28);background:linear-gradient(120deg,rgba(81,49,94,.55),rgba(35,22,49,.68));color:#f2d0e5;transition:transform .16s,border-color .16s,background .16s}
+.rp-bottom-shortcuts button:hover{transform:translateY(-2px);border-color:rgba(247,199,225,.58);background:rgba(116,67,121,.55)}
+.map-ornate-banner,.quest-banner,.bag-heading,.locations-heading{background-image:linear-gradient(90deg,rgba(17,9,25,.91),rgba(24,12,34,.55)),url('../backgrounds/twilight-pavilion.webp');border-color:rgba(233,182,218,.28);box-shadow:0 12px 32px rgba(0,0,0,.22)}
+.map-overview,.map-card{border-color:rgba(230,180,215,.2)}
+.ref-location-tile{border-color:rgba(230,180,215,.18);background:linear-gradient(150deg,rgba(46,31,56,.96),rgba(24,17,34,.97));transition:transform .18s,border-color .18s,box-shadow .18s}
+.ref-location-tile:hover{transform:translateY(-3px);border-color:rgba(241,190,219,.5);box-shadow:0 12px 27px rgba(0,0,0,.22)}
+.gallery-section{border-color:rgba(230,180,215,.2);background:linear-gradient(145deg,rgba(38,26,49,.88),rgba(23,16,33,.92))}
+.gallery-tile,.gallery-backgrounds button{border-color:rgba(235,184,219,.26);box-shadow:0 5px 16px rgba(0,0,0,.18)}
+.gallery-tile span{background:linear-gradient(0deg,rgba(14,7,21,.97),rgba(16,8,23,.72),transparent)}
+.gallery-tile b{color:#f5c4df}
+.achievement-summary{background:linear-gradient(125deg,rgba(93,64,103,.48),rgba(34,24,46,.88)),url('../ui/sakura-pattern.svg') right center/auto 100% no-repeat;border-color:rgba(232,189,218,.29)}
+.achievement-card{background:linear-gradient(145deg,rgba(42,30,54,.97),rgba(22,16,33,.97));border-color:rgba(231,183,216,.19);transition:transform .18s,border-color .18s,box-shadow .18s}
+.achievement-card:hover{transform:translateY(-2px);border-color:rgba(233,184,218,.42);box-shadow:0 12px 28px rgba(0,0,0,.22)}
+.achievement-icon{background:url('../ui/achievement-medal.svg') center/contain no-repeat;color:#f2d5a7;text-shadow:0 2px 7px #28192c}
+.achievement-card.is-unlocked{border-color:rgba(226,190,126,.44);background:linear-gradient(120deg,rgba(77,57,58,.64),rgba(29,21,39,.96))}
+.magazine-masthead{border-color:rgba(232,190,218,.28);box-shadow:0 15px 38px rgba(0,0,0,.24)}
+.magazine-cover-scene{position:relative;isolation:isolate}
+.magazine-cover-scene:after{content:"";position:absolute;inset:12px;border:1px solid rgba(249,222,190,.3);outline:1px solid rgba(249,222,190,.12);outline-offset:4px;pointer-events:none;z-index:-1}
+.magazine-info{background:linear-gradient(145deg,rgba(38,25,48,.98),rgba(22,15,32,.98)),url('../ui/parchment-texture.svg') center/cover}
+.magazine-issue-head{border-bottom-color:rgba(235,193,220,.24)}
+.magazine-page{background:linear-gradient(145deg,rgba(44,31,56,.96),rgba(25,18,37,.97));border-color:rgba(228,182,215,.19)}
+.magazine-page.page-read{border-color:rgba(184,210,158,.44);box-shadow:0 0 0 1px rgba(184,210,158,.08),0 10px 26px rgba(0,0,0,.17)}
+.secret-find-btn{box-shadow:inset 0 1px rgba(255,255,255,.08),0 5px 18px rgba(0,0,0,.2)}
+.bottom-nav{background:rgba(17,10,25,.96);border-top-color:rgba(232,183,218,.25);box-shadow:0 -8px 30px rgba(0,0,0,.22)}
+.nav-item.active{color:#f4c9e1;text-shadow:0 0 13px rgba(225,145,192,.24)}
+.toast{background:linear-gradient(110deg,#f4d6e8,#ead2ed);color:#291c34;border:1px solid rgba(255,255,255,.65);box-shadow:0 12px 34px rgba(0,0,0,.34)}
+@media(max-width:850px){
+  .title-bg{background-position:58% center}
+  .rp-full-scene{box-shadow:0 16px 38px rgba(0,0,0,.36)}
+  .rp-full-vignette{background:linear-gradient(0deg,rgba(10,5,16,.95) 0%,rgba(10,5,16,.26) 53%,rgba(10,5,16,.22) 100%)}
+}
+@media(max-width:600px){
+  .brand-symbol{width:30px;height:30px;padding:2px}
+  .title-bg{background-image:linear-gradient(0deg,rgba(10,5,16,.9),rgba(10,5,16,.42) 65%,rgba(10,5,16,.1)),url('../backgrounds/konoha-dawn.webp');background-position:58% center}
+  .title-menu-panel{background:linear-gradient(155deg,rgba(23,13,32,.88),rgba(16,9,24,.82));border-right-color:rgba(236,188,219,.28)}
+  .page-heading:before{width:29px;height:29px;flex-basis:29px}
+  .rp-full-scene{border-radius:12px}
+  .rp-chip{box-shadow:0 3px 9px rgba(0,0,0,.2)}
+  .rp-control-deck{gap:8px}
+  .rp-text-action,.rp-text-dialogue{border-radius:11px}
+}
+@media(prefers-reduced-motion:reduce){.panel-card,.person-card,.ref-location-tile,.achievement-card,.rp-bottom-shortcuts button{transition:none!important}}
+.gallery-unlock-note{margin:13px 2px 0;color:#c4b2c8;font-size:9px;line-height:1.55}
+.gallery-tile.gallery-unseen{border-style:dashed;border-color:rgba(234,184,216,.34)}
+.gallery-tile.gallery-unseen span{background:linear-gradient(0deg,rgba(21,12,31,.97),rgba(27,16,38,.72),transparent)}
+.gallery-tile img{background:linear-gradient(145deg,#35253f,#1b1427)}
+
+/* v1.5.2 — distinct achievement badges and the Konoha mascot sticker. */
+.achievement-icon{position:relative;overflow:hidden;background:rgba(227,192,222,.06)!important;border:1px solid rgba(230,190,220,.12)}
+.achievement-icon .achievement-medal-art{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 3px 5px rgba(0,0,0,.25))}
+.achievement-icon>span{position:relative;z-index:1;font-size:1.05rem;line-height:1;text-shadow:0 1px 4px rgba(18,10,25,.9);transform:translateY(1px)}
+.achievement-card.is-hidden .achievement-medal-art{filter:grayscale(.85) brightness(.62);opacity:.75}
+.pets-empty{position:relative;overflow:hidden;min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.pets-empty-mascot{display:block;width:104px;height:104px;object-fit:cover;border-radius:24px;margin:0 auto 8px;filter:drop-shadow(0 8px 14px rgba(0,0,0,.24))}
+@media(max-width:640px){.pets-empty-mascot{width:88px;height:88px}}
+
+/* v1.5.3 — generated art is used as real UI sprites, not as a mockup. */
+.title-menu-button span{display:grid;place-items:center;min-width:24px;width:24px;height:24px;border-radius:8px;background:rgba(246,206,230,.1)}
+.title-menu-button span img{width:20px;height:20px;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,.25))}
+.side-nav-item img{width:21px;height:21px;object-fit:contain;flex:0 0 21px}
+.bottom-nav .nav-item span img{width:21px;height:21px;object-fit:contain;display:block;filter:drop-shadow(0 2px 4px rgba(0,0,0,.22))}
+.avatar.has-player-art{position:relative;overflow:hidden;display:grid;place-items:end center;background:linear-gradient(145deg,#e9b6d4,#6d4b7d);border:1px solid rgba(246,205,230,.45)}
+.avatar.has-player-art img{display:block;width:100%;height:100%;object-fit:contain;object-position:center bottom;padding:2px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.32))}
+.pet-portrait,.pet-shop-icon{overflow:hidden;position:relative}
+.pet-portrait img,.pet-shop-icon img{display:block;width:100%;height:100%;max-height:110px;object-fit:contain;padding:5px;filter:drop-shadow(0 5px 8px rgba(0,0,0,.22))}
+.pet-shop-icon img{max-height:78px}
+.rp-full-pet{width:74px;height:72px;display:grid;place-items:center}
+.rp-full-pet img{max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 5px 8px rgba(0,0,0,.4))}
+.outfit-grid{align-items:stretch}
+.outfit-option{min-width:0;overflow:hidden;position:relative}
+.outfit-art-wrap{height:176px;width:100%;display:grid;place-items:center;overflow:hidden;border-radius:11px;background:radial-gradient(ellipse at 50% 38%,rgba(231,173,211,.18),rgba(26,16,39,.05) 72%);border:1px solid rgba(235,190,220,.12)}
+.outfit-art-wrap img{display:block;width:100%;height:100%;object-fit:contain;object-position:center bottom;padding:5px;filter:drop-shadow(0 5px 9px rgba(0,0,0,.3))}
+.wardrobe-current{display:grid;grid-template-columns:160px minmax(0,1fr);align-items:center;gap:18px}
+.wardrobe-current-art{height:210px;display:grid;place-items:center;overflow:hidden;border-radius:14px;border:1px solid rgba(237,190,220,.18);background:radial-gradient(ellipse at 50% 36%,rgba(228,164,209,.2),rgba(25,15,36,.08) 72%)}
+.wardrobe-current-art img{width:100%;height:100%;object-fit:contain;object-position:center bottom;padding:8px;filter:drop-shadow(0 8px 13px rgba(0,0,0,.34))}
+.wardrobe-storage-row{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:10px;align-items:center}
+.wardrobe-storage-row img{width:42px;height:56px;object-fit:contain;filter:drop-shadow(0 3px 6px rgba(0,0,0,.3))}
+.craft-recipe-icon img{display:block;width:100%;height:100%;object-fit:contain;padding:4px;filter:drop-shadow(0 3px 6px rgba(0,0,0,.25))}
+.storage-heading-icon{width:24px;height:24px;object-fit:contain;vertical-align:middle;margin-right:5px}
+.item-art{width:44px;height:44px;object-fit:contain;filter:drop-shadow(0 3px 5px rgba(0,0,0,.22))}
+.item-detail-art img{width:100%;height:100%;object-fit:contain;padding:8px;filter:drop-shadow(0 5px 9px rgba(0,0,0,.22))}
+/* Generated ornamental panels are layered behind live HTML controls. */
+.title-menu-panel{background-image:linear-gradient(155deg,rgba(23,13,32,.9),rgba(16,9,24,.88)),url('../ui/generated/panel-dark.png');background-size:cover,100% 100%;background-position:center}
+.rp-text-dialogue{background-image:linear-gradient(135deg,rgba(51,31,65,.94),rgba(23,14,34,.94)),url('../ui/generated/panel-dialog.png');background-size:cover,100% 100%;background-position:center}
+.modal-card{background-image:linear-gradient(145deg,rgba(38,25,48,.96),rgba(19,12,29,.98)),url('../ui/generated/panel-dark.png');background-size:cover,100% 100%}
+.magazine-info{background-image:linear-gradient(145deg,rgba(38,25,48,.95),rgba(22,15,32,.95)),url('../ui/generated/panel-parchment.png'),url('../ui/parchment-texture.svg');background-size:cover,100% 100%,cover}
+@media(max-width:640px){
+  .wardrobe-current{grid-template-columns:104px minmax(0,1fr);gap:10px}
+  .wardrobe-current-art{height:148px}
+  .outfit-art-wrap{height:145px}
+  .wardrobe-storage-row{grid-template-columns:34px minmax(0,1fr) auto}
+  .wardrobe-storage-row img{width:34px;height:48px}
+  .rp-full-pet{width:56px;height:56px}
+}
+.rp-bottom-shortcuts button{display:inline-flex;align-items:center;gap:6px}
+.rp-bottom-shortcuts button img{width:17px;height:17px;object-fit:contain;flex:0 0 17px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.25))}
+@media(max-width:600px){.rp-bottom-shortcuts button img{width:14px;height:14px;flex-basis:14px}}
+.toast{display:flex;align-items:center;gap:10px}
+.toast:before{content:"";display:block;flex:0 0 22px;width:22px;height:22px;background:url('../ui/generated/alert.png') center/contain no-repeat;filter:drop-shadow(0 2px 3px rgba(0,0,0,.18))}
+.help-banner{display:flex;align-items:center;gap:12px;margin-bottom:13px;padding:13px 16px}
+.help-banner>img:first-child{width:34px;height:34px;object-fit:contain}
+.help-banner div{display:grid;gap:4px;min-width:0}
+.help-banner b{font-size:11px;color:#f4ddec}
+.help-banner small{font-size:9px;line-height:1.5;color:#c5b2cf}
+.help-banner .help-banner-question{width:26px;height:26px;object-fit:contain;margin-left:auto;opacity:.75}
+.phone-launch-icon img{display:block;width:24px;height:24px;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,.22))}

@@ -52,7 +52,7 @@ function randomizeCreator() {
   const choices = {
     'player-origin':['resident','shinobi','traveler','guest','medic','merchant','craft','instructor','clan','otherworld'],
     'player-style':['balanced','bold','kind','quiet','witty'],
-    'player-look':['casual','shinobi','festival','travel','raincoat'],
+    'player-look':['casual','shinobi','festival','travel','raincoat','workwear'],
     'player-clan':['none','Узумаки','Учиха','Хьюга','Нара','Яманака','Акимичи','Инузука','Абураме','Хатаке','Сарутоби','Другой / неизвестный'],
     'player-chakra':['fire','water','wind','earth','lightning','balanced'],
     'player-specialty':['taijutsu','ninjutsu','genjutsu','medical','sensors','craft','none'],
@@ -240,8 +240,8 @@ function openHomeStorage(kind='fridge') {
   if(state.world.location!=='home'){toast('Домашний схрон доступен только у тебя дома.');return;}
   state.storage ||= {fridge:[]}; state.storage.fridge ||= [];
   if(kind==='wardrobe') {
-    const looks=[['casual','Повседневная одежда'],['shinobi','Форма шиноби'],['festival','Праздничный наряд'],['travel','Дорожный плащ'],['raincoat','Дождевой плащ']];
-    elements.modal.innerHTML=`<div class="modal-backdrop"><section class="modal-card storage-modal"><div class="modal-head"><div><div class="eyebrow">ДОМАШНИЙ СХРОН</div><h3>Шкаф с одеждой</h3></div><button class="close-button" data-action="close-modal">×</button></div><div class="storage-list">${looks.filter(([id])=>(state.player.ownedLooks||[]).includes(id)).map(([id,name])=>`<div class="storage-row"><span>👘</span><b>${name}</b><button class="mini-btn" data-action="outfit" data-id="${id}">${state.player.look===id?'Надето':'Переодеться'}</button></div>`).join('')||'<p class="empty-state">В шкафу пока пусто.</p>'}</div><p class="chat-hint">Одежду можно купить на рынке и хранить в шкафу. Переодевание доступно дома или в магазине.</p></section></div>`;
+    const looks=[['casual','Повседневная одежда',state.player.gender==='female'?'female-travel':'male-casual'],['shinobi','Форма шиноби',state.player.gender==='female'?'female-shinobi':'male-shinobi'],['festival','Праздничный наряд',state.player.gender==='female'?'female-festival':'male-formal'],['travel','Дорожный плащ',state.player.gender==='female'?'female-travel':'male-travel'],['raincoat','Дождевой плащ',state.player.gender==='female'?'female-travel':'male-raincoat'],['workwear','Рабочая форма',state.player.gender==='female'?'female-shinobi':'male-work']];
+    elements.modal.innerHTML=`<div class="modal-backdrop"><section class="modal-card storage-modal"><div class="modal-head"><div><div class="eyebrow">ДОМАШНИЙ СХРОН</div><h3>Шкаф с одеждой</h3></div><button class="close-button" data-action="close-modal">×</button></div><div class="storage-list">${looks.filter(([id])=>(state.player.ownedLooks||[]).includes(id)).map(([id,name,art])=>`<div class="storage-row wardrobe-storage-row"><img src="assets/player/outfits/${art}.png" alt=""><b>${name}</b><button class="mini-btn" data-action="outfit" data-id="${id}">${state.player.look===id?'Надето':'Переодеться'}</button></div>`).join('')||'<p class="empty-state">В шкафу пока пусто.</p>'}</div><p class="chat-hint">Одежду можно купить на рынке и хранить в шкафу. Переодевание доступно дома или в магазине.</p></section></div>`;
     return;
   }
   const food=state.inventory.filter(item=>item.kind==='food'&&item.qty>0);
@@ -871,7 +871,7 @@ document.addEventListener('click',event=>{
     case 'video-play': { state.phone.videoViews ||= []; if(!state.phone.videoViews.includes(id)) state.phone.videoViews.push(id); state.phone.activeVideo=id; addFeed(state,'Ты открыл видео на ScrollTube.'); render(); break; }
     case 'video-back': state.phone.activeVideo=''; render(); break;
     case 'phone-like': { const post=state.phone.posts.find(item=>item.id===id); if(post){post.liked=!post.liked;post.likes=Math.max(0,(post.likes||0)+(post.liked?1:-1));render();} break; }
-    case 'buy-pet': { const pet=getPet(id); if(!pet) break; if((state.pets||[]).length>=5){toast('Можно завести не больше пяти питомцев.');break;} if(state.player.stats.coins<pet.price){toast('Не хватает рё.');break;} state.player.stats.coins-=pet.price; const names={ 'konoha-cat':['Мару','Юки','Сора'],'ninja-dog':['Ака','Кума','Рэй'],'white-rabbit':['Момо','Широ','Хана'],'courier-hawk':['Хая','Тори','Казэ'],'pond-turtle':['Каме','Тама','Нори']}; const choices=names[id]||['Тама']; const name=choices[Math.floor(Math.random()*choices.length)]; state.pets.push({...pet,uid:`pet-${Date.now()}`,name,affection:5,hunger:45,mood:55,energy:80}); addFeed(state,`В доме появился новый питомец: ${name} (${pet.kind}).`); render();toast(`${name} теперь твой питомец!`); break; }
+    case 'buy-pet': { const pet=getPet(id); if(!pet) break; if((state.pets||[]).length>=5){toast('Можно завести не больше пяти питомцев.');break;} if(state.player.stats.coins<pet.price){toast('Не хватает рё.');break;} state.player.stats.coins-=pet.price; const names={ 'konoha-cat':['Мару','Юки','Сора'],'ninja-dog':['Ака','Кума','Рэй'],'white-rabbit':['Момо','Широ','Хана'],'courier-hawk':['Хая','Тори','Казэ'],'pond-turtle':['Каме','Тама','Нори'],'tanuki-companion':['Тану','Куру','Мидзу'],'red-fox':['Кицу','Юдзу','Ака'],'black-cat-companion':['Куро','Суми','Кагэ'],'white-cat-companion':['Широ','Юки','Момо'],'courier-crow':['Кара','Хая','Куро'],'pond-frog':['Гэро','Ао','Мидори']}; const choices=names[id]||['Тама']; const name=choices[Math.floor(Math.random()*choices.length)]; state.pets.push({...pet,uid:`pet-${Date.now()}`,name,affection:5,hunger:45,mood:55,energy:80}); addFeed(state,`В доме появился новый питомец: ${name} (${pet.kind}).`); render();toast(`${name} теперь твой питомец!`); break; }
     case 'pet-care': { const pet=state.pets.find(item=>item.uid===id); if(pet){ if(type==='feed'){pet.hunger=Math.max(0,(pet.hunger??45)-35);pet.affection=Math.min(100,(pet.affection||0)+3);tickAction(state,8);} else if(type==='walk'){pet.energy=Math.max(0,(pet.energy??80)-12);pet.affection=Math.min(100,(pet.affection||0)+6);tickAction(state,18);} else {pet.mood=Math.min(100,(pet.mood??55)+18);pet.affection=Math.min(100,(pet.affection||0)+8);tickAction(state,12);} addFeed(state,`Ты позаботился о питомце ${pet.name}.`); render();toast(`${pet.name} рад вниманию.`);} break; }
     case 'close-modal': elements.modal.innerHTML=''; break;
     case 'skip-time': skipTime(state,Number(hours)||1); render(); break;
@@ -959,7 +959,7 @@ document.addEventListener('click',event=>{
       state.player.look=id; addFeed(state,`Ты переоделся: ${button.textContent.trim()}.`); render(); toast('Одежда изменена.'); break;
     }
     case 'buy-outfit': {
-      const prices={festival:48,travel:36,raincoat:30}; const price=prices[id];
+      const prices={festival:48,travel:36,raincoat:30,workwear:42}; const price=prices[id];
       if(state.world.location!=='market'){toast('Новые наряды продаются на рынке.');break;}
       if(!price){toast('Этот комплект нельзя купить.');break;}
       state.player.ownedLooks ||= ['casual','shinobi'];

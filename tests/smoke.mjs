@@ -22,8 +22,10 @@ assert.equal(new Set(scheduledLocations).size,scheduledLocations.length,'At most
 assert.ok(scheduledLocations.length<=LOCATIONS.length,'NPC schedule must not overfill locations');
 for (const minute of [8*60,13*60,18*60,23*60]) { state.world.minute=minute; updateNpcPositions(state,true); const positions=Object.values(state.npcLocations); assert.equal(new Set(positions).size,positions.length,'NPCs must never share a scheduled location'); }
 const detailedCharacters = new Set(['anko','ayame','konan','sakura','hanabi','hinata']);
+const extraPortraitCharacters = new Set(['ino','temari','kurenai','tsunade','mirai','karin','tenten','shizune']);
 for (const character of CHARACTERS) {
-  assert.equal(character.art.length,detailedCharacters.has(character.id)?3:1,`${character.name}: число изображений должно соответствовать готовым материалам`);
+  const expectedArtCount = detailedCharacters.has(character.id) ? 3 : extraPortraitCharacters.has(character.id) ? 2 : 1;
+  assert.equal(character.art.length,expectedArtCount,`${character.name}: число изображений должно соответствовать готовым материалам`);
   for (const art of character.art) assert.ok(fs.existsSync(path.join(root,art.src)),`${character.name}: файл арта ${art.src} должен существовать`);
 }
 

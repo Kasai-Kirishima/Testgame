@@ -17,7 +17,11 @@
     "bathhouse-garden": "assets/backgrounds/bathhouse-garden.webp",
     "rainy-alley": "assets/backgrounds/rainy-alley.webp",
     "mountain-trail": "assets/backgrounds/mountain-trail.webp",
-    "campsite": "assets/backgrounds/campsite.webp"
+    "campsite": "assets/backgrounds/campsite.webp",
+    "konoha-dawn": "assets/backgrounds/konoha-dawn.webp",
+    "archive-glow": "assets/backgrounds/archive-glow.webp",
+    "twilight-pavilion": "assets/backgrounds/twilight-pavilion.webp",
+    "rain-training": "assets/backgrounds/rain-training.webp"
   },
   "enemies": [
     {

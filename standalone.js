@@ -38,6 +38,9 @@ const cast = [
 const TRIPTYCH_ART = new Set(['anko','ayame','konan','sakura','hanabi','hinata']);
 const CLEAN_PORTRAIT_ART = new Set(['haku','hanabi','hinata','kurenai','kurotsuchi','kushina','mabui','mikoto','mirai','mito','rin','sakura','samui','sarada','shizune','tayuya','temari','tenten','tsunade']);
 
+// Дополнительные закрытые портреты добавлены только тем персонажам, у кого раньше был один арт.
+const ALT_PORTRAIT_ART = new Set(['ino','temari','kurenai','tsunade','mirai','karin','tenten','shizune']);
+
 const CHARACTERS = cast.map(([id,name,role,personality,notes,likes,icon,c1,c2,startLocation,style]) => ({
   id,name,role,personality,notes,likes,icon,colors:[c1,c2],startLocation,style,
   intro:`${name} здесь. ${personality}`,
@@ -46,10 +49,13 @@ const CHARACTERS = cast.map(([id,name,role,personality,notes,likes,icon,c1,c2,st
         src:`assets/characters/${id}/${variant}.webp`,
         label:['Повседневный образ','Тренировка шиноби','Вечерний фестиваль'][index]
       }))
-    : [{
-        src:`assets/characters/${id}/${CLEAN_PORTRAIT_ART.has(id)?'portrait-clean':'portrait'}.webp`,
-        label:CLEAN_PORTRAIT_ART.has(id)?'Портрет без подписи':'Портрет персонажа'
-      }],
+    : [
+        {
+          src:`assets/characters/${id}/${CLEAN_PORTRAIT_ART.has(id)?'portrait-clean':'portrait'}.webp`,
+          label:CLEAN_PORTRAIT_ART.has(id)?'Портрет без подписи':'Портрет персонажа'
+        },
+        ...(ALT_PORTRAIT_ART.has(id)?[{src:`assets/characters/${id}/portrait-alt.webp`,label:'Дополнительный портрет'}]:[])
+      ],
   secret:id==='haku'
 }));
 const getCharacter = id => CHARACTERS.find(character => character.id === id);
@@ -97,26 +103,26 @@ const ORIGINS = [
 ];
 
 const LOCATIONS = [
-  {id:'main-street',name:'Главная улица',icon:'🏮',area:'Центр',desc:'Шумная улица с лавками, прохожими и городскими новостями.',bg:'assets/backgrounds/konoha-main.webp',rainBg:'assets/backgrounds/rainy-alley.webp',nightBg:'assets/backgrounds/festival-street.webp',activities:['Прогуляться','Осмотреть витрины','Поговорить с жителями']},
+  {id:'main-street',name:'Главная улица',icon:'🏮',area:'Центр',desc:'Шумная улица с лавками, прохожими и городскими новостями.',bg:'assets/backgrounds/konoha-dawn.webp',rainBg:'assets/backgrounds/rainy-alley.webp',nightBg:'assets/backgrounds/festival-street.webp',activities:['Прогуляться','Осмотреть витрины','Поговорить с жителями']},
   {id:'ichiraku',name:'Ичираку',icon:'🍜',area:'Центр',desc:'Знаменитая лапшичная. Здесь всегда уютно и пахнет бульоном.',bg:'assets/backgrounds/ichiraku.webp',activities:['Поесть рамен','Помочь на кухне','Отдохнуть']},
   {id:'flower-shop',name:'Цветочная лавка',icon:'🌸',area:'Торговый квартал',desc:'Цветы, семена и небольшие подарки для друзей.',bg:'assets/backgrounds/flower-shop.webp',activities:['Купить цветы','Помочь с букетами','Изучить растения']},
   {id:'market',name:'Рынок',icon:'🧺',area:'Торговый квартал',desc:'Торговцы, ремесленники и полезные мелочи для повседневной жизни.',bg:'assets/backgrounds/market-street.webp',nightBg:'assets/backgrounds/festival-street.webp',activities:['Купить предметы','Помочь торговцам','Осмотреть товары']},
-  {id:'training',name:'Тренировочная площадка',icon:'🥋',area:'Восток',desc:'Место для упражнений, командных испытаний и обучения контролю чакры.',bg:'assets/backgrounds/training-ground.webp',activities:['Тренировка контроля','Испытание на ловкость','Защитный барьер']},
+  {id:'training',name:'Тренировочная площадка',icon:'🥋',area:'Восток',desc:'Место для упражнений, командных испытаний и обучения контролю чакры.',bg:'assets/backgrounds/training-ground.webp',rainBg:'assets/backgrounds/rain-training.webp',activities:['Тренировка контроля','Испытание на ловкость','Защитный барьер']},
   {id:'hospital',name:'Больница',icon:'🏥',area:'Восток',desc:'Медицинский корпус и тихий внутренний двор.',bg:'assets/backgrounds/clinic.webp',activities:['Помочь медикам','Изучить медицинские свитки','Отдохнуть']},
   {id:'hokage',name:'Резиденция Хокаге',icon:'🏯',area:'Центр',desc:'Кабинеты, архивы и доска необязательных поручений.',bg:'assets/backgrounds/hokage-office.webp',activities:['Посмотреть поручения','Изучить архив','Поговорить с чиновниками']},
-  {id:'tea-house',name:'Чайный домик',icon:'🍵',area:'Юг',desc:'Небольшой домик у сада, где приятно переждать дождь.',bg:'assets/backgrounds/tatami-home.webp',activities:['Выпить чай','Почитать','Поговорить']},
-  {id:'river',name:'Берег реки',icon:'🌊',area:'Юг',desc:'Спокойное место у воды, особенно красивое на закате.',bg:'assets/backgrounds/river-sunset.webp',nightBg:'assets/backgrounds/campsite.webp',activities:['Послушать воду','Порыбачить','Прогуляться']},
+  {id:'tea-house',name:'Чайный домик',icon:'🍵',area:'Юг',desc:'Небольшой домик у сада, где приятно переждать дождь.',bg:'assets/backgrounds/twilight-pavilion.webp',activities:['Выпить чай','Почитать','Поговорить']},
+  {id:'river',name:'Берег реки',icon:'🌊',area:'Юг',desc:'Спокойное место у воды, особенно красивое на закате.',bg:'assets/backgrounds/river-sunset.webp',nightBg:'assets/backgrounds/twilight-pavilion.webp',activities:['Послушать воду','Порыбачить','Прогуляться']},
   {id:'forest',name:'Лесная тропа',icon:'🌲',area:'За воротами',desc:'Тропа за деревней. Здесь можно собирать травы и замечать редкие следы.',bg:'assets/backgrounds/mountain-trail.webp',nightBg:'assets/backgrounds/campsite.webp',rainBg:'assets/backgrounds/rainy-alley.webp',activities:['Собрать травы','Исследовать тропу','Понаблюдать за птицами']},
   {id:'memorial',name:'Мемориальный парк',icon:'🕯️',area:'Запад',desc:'Тихое место памяти, где принято говорить негромко.',bg:'assets/backgrounds/memorial-garden.webp',activities:['Возложить цветы','Вспомнить прошлое','Посидеть в тишине']},
   {id:'gate',name:'Главные ворота',icon:'⛩️',area:'Север',desc:'Вход в деревню и место встреч с путешественниками.',bg:'assets/backgrounds/village-gate.webp',activities:['Встретить гостей','Узнать новости','Осмотреть окрестности']},
-  {id:'library',name:'Библиотека',icon:'📚',area:'Запад',desc:'Книги по истории, медицине, природе и контролю чакры.',bg:'assets/backgrounds/library.webp',activities:['Почитать','Изучить свитки','Навести порядок']},
+  {id:'library',name:'Библиотека',icon:'📚',area:'Запад',desc:'Книги по истории, медицине, природе и контролю чакры.',bg:'assets/backgrounds/archive-glow.webp',activities:['Почитать','Изучить свитки','Навести порядок']},
   {id:'garden',name:'Общественный сад',icon:'🌿',area:'Юг',desc:'Тихий сад с дорожками, скамейками и сезонными цветами.',bg:'assets/backgrounds/bathhouse-garden.webp',activities:['Полить растения','Прогуляться','Посидеть в тишине']},
   {id:'home',name:'Твой дом',icon:'🏡',area:'Жилой квартал',desc:'Небольшой дом, где можно готовить, отдыхать и планировать день.',bg:'assets/backgrounds/tatami-home.webp',activities:['Приготовить еду','Убраться','Отдохнуть']},
   {id:'academy',name:'Академия',icon:'🎓',area:'Восток',desc:'Учебный двор, классы и тренировочные занятия для шиноби.',bg:'assets/backgrounds/academy-courtyard.webp',activities:['Посетить занятие','Повторить основы','Помочь ученикам']},
   {id:'campsite',name:'Лесной привал',icon:'🏕️',area:'За воротами',desc:'Тихая стоянка у реки для короткого отдыха во время вылазок.',bg:'assets/backgrounds/campsite.webp',activities:['Разбить лагерь','Приготовить ужин','Отдохнуть у костра']},
   {id:'bathhouse',name:'Термальный сад',icon:'♨️',area:'Юг',desc:'Тихая общественная зона отдыха с каменными дорожками и горячими источниками.',bg:'assets/backgrounds/bathhouse-garden.webp',activities:['Отдохнуть','Послушать воду','Поговорить']},
-  {id:'dojo',name:'Зал додзё',icon:'🥋',area:'Восток',desc:'Крытый зал для спокойных упражнений, растяжки и командной подготовки.',bg:'assets/backgrounds/training-ground.webp',activities:['Отработать стойку','Тренировать контроль','Наблюдать за занятием']},
-  {id:'archive',name:'Архив свитков',icon:'📜',area:'Запад',desc:'Специальное хранилище старых карт, отчётов и исторических записей.',bg:'assets/backgrounds/library.webp',activities:['Изучить карту','Найти старый отчёт','Разобрать свитки']},
+  {id:'dojo',name:'Зал додзё',icon:'🥋',area:'Восток',desc:'Крытый зал для спокойных упражнений, растяжки и командной подготовки.',bg:'assets/backgrounds/rain-training.webp',activities:['Отработать стойку','Тренировать контроль','Наблюдать за занятием']},
+  {id:'archive',name:'Архив свитков',icon:'📜',area:'Запад',desc:'Специальное хранилище старых карт, отчётов и исторических записей.',bg:'assets/backgrounds/archive-glow.webp',activities:['Изучить карту','Найти старый отчёт','Разобрать свитки']},
   {id:'residential',name:'Жилой переулок',icon:'🏘️',area:'Жилой квартал',desc:'Небольшая улица с домами, садами и тихими двориками.',bg:'assets/backgrounds/tatami-home.webp',activities:['Прогуляться','Поздороваться с соседями','Осмотреть двор']},
   {id:'rooftop',name:'Крыши Конохи',icon:'🌆',area:'Центр',desc:'Высокие крыши с видом на улицы и монумент Хокаге.',bg:'assets/backgrounds/village-gate.webp',activities:['Посмотреть на город','Подышать воздухом','Понаблюдать за улицами']},
   {id:'music-hall',name:'Музыкальный зал «Лунный фонарь»',icon:'🎶',area:'За рынком',desc:'Небольшая площадка для открытых концертов, танцевальных занятий и творческих вечеров.',bg:'assets/backgrounds/festival-street.webp',nightBg:'assets/backgrounds/festival-street.webp',hidden:true,activities:['Послушать концерт','Посетить танцевальное занятие','Помочь с декорациями','Записаться на открытый вечер']},
@@ -156,7 +162,7 @@ function createInitialState(player = {}) {
       originName: origin.name,
       style: player.style || 'balanced',
       look: player.look || 'casual',
-      ownedLooks: Array.isArray(player.ownedLooks) ? [...new Set(player.ownedLooks)] : ['casual','shinobi'],
+      ownedLooks: Array.isArray(player.ownedLooks) ? [...new Set([...player.ownedLooks, player.look || 'casual'])] : [...new Set(['casual','shinobi',player.look || 'casual'])],
       jobId: player.jobId || '',
       workShifts: Number(player.workShifts)||0,
       workShiftsTotal: Math.max(0,Number(player.workShiftsTotal)||0),
@@ -233,7 +239,7 @@ function normalizeState(input) {
     meetingHistory: input.meetingHistory && typeof input.meetingHistory === 'object' ? input.meetingHistory : {},
     dialogueMeta: input.dialogueMeta && typeof input.dialogueMeta === 'object' ? input.dialogueMeta : {},
     companions: Array.isArray(input.companions) ? input.companions : [],
-    player: {...base.player,...input.player,ownedLooks:Array.isArray(input.player?.ownedLooks)?[...new Set(input.player.ownedLooks)]:base.player.ownedLooks,workShifts:Number(input.player?.workShifts)||0,workShiftsTotal:Math.max(0,Number(input.player?.workShiftsTotal)||0),lastWorkDay:Number(input.player?.lastWorkDay)||0,stats:{...base.player.stats,...input.player?.stats,hp:Number(input.player?.stats?.hp??base.player.stats.hp)}},
+    player: {...base.player,...input.player,ownedLooks:Array.isArray(input.player?.ownedLooks)?[...new Set([...input.player.ownedLooks,input.player?.look||base.player.look])]:[...new Set([...base.player.ownedLooks,input.player?.look||base.player.look])],workShifts:Number(input.player?.workShifts)||0,workShiftsTotal:Math.max(0,Number(input.player?.workShiftsTotal)||0),lastWorkDay:Number(input.player?.lastWorkDay)||0,stats:{...base.player.stats,...input.player?.stats,hp:Number(input.player?.stats?.hp??base.player.stats.hp)}},
     world: {...base.world,...input.world},
     dailyBoard: input.dailyBoard && typeof input.dailyBoard==='object' ? input.dailyBoard : base.dailyBoard,
     dailyBoardHistory: Array.isArray(input.dailyBoardHistory) ? input.dailyBoardHistory.slice(0,14) : [],
@@ -3028,11 +3034,17 @@ return { MAGAZINE_ISSUES, getMagazineIssue, getMagazinePage };
 "src/data/pets.js": function(__require) {
 
 const PETS = [
-  {id:'konoha-cat',name:'Кот из Конохи',kind:'Кот',icon:'🐈',price:45,desc:'Любопытный кот, любит тёплые места и наблюдать за улицей.',temperament:'любопытный',likes:['дом','сад','тихие места']},
+  {id:'konoha-cat',name:'Кот из Конохи',kind:'Кот',icon:'🐈',image:'assets/pets/black-cat.png',price:45,desc:'Любопытный кот, любит тёплые места и наблюдать за улицей.',temperament:'любопытный',likes:['дом','сад','тихие места']},
   {id:'ninja-dog',name:'Щенок-ниндзя',kind:'Собака',icon:'🐕',price:65,desc:'Преданный и энергичный компаньон, которому нужны прогулки.',temperament:'энергичный',likes:['прогулки','тренировки','игры']},
   {id:'white-rabbit',name:'Белый кролик',kind:'Кролик',icon:'🐇',price:35,desc:'Тихий питомец, любит свежую зелень и спокойную обстановку.',temperament:'спокойный',likes:['дом','сад','зелень']},
   {id:'courier-hawk',name:'Почтовый ястреб',kind:'Птица',icon:'🦅',price:90,desc:'Умная птица, помогает доставлять короткие сообщения.',temperament:'независимый',likes:['высота','прогулки','простор']},
-  {id:'pond-turtle',name:'Садовая черепаха',kind:'Черепаха',icon:'🐢',price:30,desc:'Невозмутимый питомец для небольшого домашнего сада.',temperament:'неторопливый',likes:['сад','вода','солнце']}
+  {id:'pond-turtle',name:'Садовая черепаха',kind:'Черепаха',icon:'🐢',price:30,desc:'Невозмутимый питомец для небольшого домашнего сада.',temperament:'неторопливый',likes:['сад','вода','солнце']},
+  {id:'tanuki-companion',name:'Тануки',kind:'Енот-полоскун',icon:'🦝',image:'assets/pets/tanuki.png',price:75,desc:'Любопытный лесной сосед, который любит исследовать сумки и коробки.',temperament:'озорной',likes:['исследование','игрушки','ягоды']},
+  {id:'red-fox',name:'Лисёнок',kind:'Лиса',icon:'🦊',image:'assets/pets/fox.png',price:85,desc:'Осторожный и умный зверёк. Быстро привыкает к спокойным людям.',temperament:'осторожный',likes:['лес','тишина','прогулки']},
+  {id:'black-cat-companion',name:'Чёрный кот',kind:'Кот',icon:'🐈‍⬛',image:'assets/pets/black-cat.png',price:60,desc:'Независимый кот, который сам выбирает, когда приходит за вниманием.',temperament:'независимый',likes:['уют','высокие места','лакомства']},
+  {id:'white-cat-companion',name:'Белый кот',kind:'Кот',icon:'🐈',image:'assets/pets/white-cat.png',price:60,desc:'Спокойный и ласковый кот с привычкой засыпать рядом с книгами.',temperament:'мягкий',likes:['книги','сон','поглаживания']},
+  {id:'courier-crow',name:'Почтовый ворон',kind:'Птица',icon:'🐦‍⬛',image:'assets/pets/crow.png',price:78,desc:'Сообразительная птица, запоминающая короткие маршруты по деревне.',temperament:'наблюдательный',likes:['высота','блестящие вещи','простор']},
+  {id:'pond-frog',name:'Садовая лягушка',kind:'Лягушка',icon:'🐸',image:'assets/pets/frog.png',price:28,desc:'Неприхотливый обитатель маленького пруда. Любит влажную прохладу.',temperament:'неторопливый',likes:['вода','камни','дождь']}
 ];
 const getPet = id => PETS.find(pet => pet.id === id);
 
@@ -3087,6 +3099,26 @@ function avatar(character,large=false) {
   return `<div class="person-avatar ${large?'large':''}" style="--av1:${character.colors[0]};--av2:${character.colors[1]}">${portrait?`<img src="${portrait}" alt="" loading="lazy"><span class="avatar-fallback">${character.icon}</span>`:character.icon}</div>`;
 }
 
+function getPlayerOutfitSrc(player={}) {
+  const gender=player.gender||'male';
+  const look=player.look||'casual';
+  const male={casual:'male-casual',shinobi:'male-shinobi',festival:'male-formal',travel:'male-travel',raincoat:'male-raincoat',workwear:'male-work'};
+  const female={casual:'female-travel',shinobi:'female-shinobi',festival:'female-festival',travel:'female-travel',raincoat:'female-travel',workwear:'female-shinobi'};
+  const chosen=(gender==='female'?female:male)[look] || (gender==='female'?'female-travel':'male-casual');
+  const exists=['male-casual','male-formal','male-work','male-shinobi','male-travel','male-raincoat','female-festival','female-shinobi','female-travel'].includes(chosen);
+  return exists?`assets/player/outfits/${chosen}.png`:'';
+}
+function getPetImage(pet={}) {
+  return pet.image || PETS.find(item=>item.id===pet.id)?.image || '';
+}
+function getPlayerAvatarSrc(player={}) {
+  const gender=player.gender||'male'; const look=player.look||'casual';
+  const male={casual:'male-casual',shinobi:'male-shinobi',festival:'male-formal',travel:'male-travel',raincoat:'male-raincoat',workwear:'male-work'};
+  const female={casual:'female-travel',shinobi:'female-shinobi',festival:'female-festival',travel:'female-travel',raincoat:'female-travel',workwear:'female-shinobi'};
+  const chosen=(gender==='female'?female:male)[look] || (gender==='female'?'female-travel':'male-casual');
+  return `assets/player/avatars/${chosen}.png`;
+}
+
 function renderWorld(state) {
   const place = getLocation(state.world.location);
   const weather = getWeather(state);
@@ -3126,10 +3158,10 @@ function renderWorld(state) {
   return `<section class="rp-full-scene" aria-label="Игровая сцена">
       <img class="rp-full-bg" src="${escapeHTML(sceneImage||'assets/backgrounds/konoha-main.webp')}" alt="${escapeHTML(place.name)}" loading="eager" decoding="async">
       <div class="rp-full-vignette"></div>
-      <div class="rp-hud-top"><span class="rp-chip"><img src="assets/ui/cropped/location.png" alt="">${escapeHTML(place.name)}</span><span class="rp-chip">${weather.icon} ${weather.label} · ${seasonLabel(state)} · ${clockLabel(state.world.minute)}</span><span class="rp-chip">День ${state.world.day}</span></div>
+      <div class="rp-hud-top"><span class="rp-chip"><img src="assets/ui/generated/location.png" alt="">${escapeHTML(place.name)}</span><span class="rp-chip">${weather.icon} ${weather.label} · ${seasonLabel(state)} · ${clockLabel(state.world.minute)}</span><span class="rp-chip">День ${state.world.day}</span></div>
       <div class="rp-health-hud"><span>♥ ${stats.hp??100} HP</span><span>◈ ${stats.stamina} EN</span></div>
       ${activeCharacter?`<button class="rp-cutout" data-action="open-person" data-id="${activeCharacter.id}" aria-label="Открыть досье: ${escapeHTML(activeCharacter.name)}"><img src="${escapeHTML(activeCharacter.art?.[0]?.src||'')}" alt="${escapeHTML(activeCharacter.name)}"><span class="rp-cutout-name"><b>${escapeHTML(activeCharacter.name)}</b><small>${escapeHTML(activeCharacter.role)}</small></span></button>`:''}
-      ${ambientPet?`<div class="rp-full-pet" title="${escapeHTML(ambientPet.name)}">${ambientPet.icon||'🐾'}</div>`:''}
+      ${ambientPet?`<div class="rp-full-pet" title="${escapeHTML(ambientPet.name)}">${getPetImage(ambientPet)?`<img src="${escapeHTML(getPetImage(ambientPet))}" alt="${escapeHTML(ambientPet.name)}">`:ambientPet.icon||'🐾'}</div>`:''}
       ${ambientEnemy?`<button class="rp-full-enemy" data-action="scene-patrol" data-id="${ambientEnemy.id}"><img src="${ambientEnemy.image}" alt=""><span>${escapeHTML(ambientEnemy.name)} · проверить</span></button>`:''}
       <div class="rp-place-title"><small>СЕЙЧАС В КОНОХЕ</small><h2>${escapeHTML(place.name)}</h2><p>${escapeHTML(place.desc)}</p></div>
       <div class="rp-scene-bottom"><div class="rp-speaker-line"><b>${escapeHTML(speaker)}</b><span>${activeCharacter?`Рядом · ${escapeHTML(activeCharacter.name)}`:'Тихая сцена'}</span></div><p data-typewriter>${escapeHTML(narration)}</p></div>
@@ -3138,7 +3170,7 @@ function renderWorld(state) {
       <form id="world-action-form" class="rp-text-action"><label><span>СВОБОДНОЕ ДЕЙСТВИЕ</span><small>Пиши, что делаешь, куда идёшь или что исследуешь</small></label><textarea name="action" rows="2" maxlength="700" placeholder="Например: осматриваю витрину, затем захожу в цветочную лавку…" required>${escapeHTML(state.ui.lastActionText||'')}</textarea><button class="btn btn-primary" type="submit">Выполнить ↗</button></form>
       <form id="world-dialogue-form" class="rp-text-dialogue"><label><span>ТВОЯ РЕПЛИКА</span><small>${activeCharacter?`Разговор с ${escapeHTML(activeCharacter.name)} · только ручной ввод`:'Рядом сейчас никого нет'}</small></label>${activeCharacter?`<input type="hidden" name="characterId" value="${activeCharacter.id}"><textarea name="message" rows="2" maxlength="700" placeholder="Напиши своими словами, что говоришь…" required></textarea><button class="btn btn-soft" type="submit">Сказать ➤</button>`:`<div class="rp-empty-talk">Персонаж появится в этой сцене, когда окажется в локации. Можно отправиться по карте или немного подождать.</div><button class="btn btn-soft" type="button" data-view="map">Открыть карту</button>`}</form>
     </section>
-    <div class="rp-bottom-shortcuts"><button data-view="locations">🌸 Локации</button><button data-view="map">⌖ Карта</button><button data-view="scroll">📜 Задания</button><button data-view="gallery">▧ Галерея</button><button data-view="achievements">🏆 Достижения</button>${state.collectibles?.magazineFound?'<button data-view="magazine">📖 Альманах</button>':''}${secretSearch}<button data-action="skip-time" data-hours="1">◷ +1 час</button>${['training','forest','gate','campsite'].includes(place.id)?'<button data-action="patrol">🥋 Учебный патруль</button>':''}</div>`;
+    <div class="rp-bottom-shortcuts"><button data-view="locations"><img src="assets/ui/generated/location.png" alt="">Локации</button><button data-view="map"><img src="assets/ui/generated/location.png" alt="">Карта</button><button data-view="scroll"><img src="assets/ui/generated/scroll-case.png" alt="">Задания</button><button data-view="gallery"><img src="assets/ui/generated/journal.png" alt="">Галерея</button><button data-view="achievements"><img src="assets/ui/generated/trophy.png" alt="">Достижения</button>${state.collectibles?.magazineFound?'<button data-view="magazine"><img src="assets/ui/generated/journal.png" alt="">Альманах</button>':''}${secretSearch}<button data-action="skip-time" data-hours="1"><img src="assets/ui/generated/pause.png" alt="">+1 час</button>${['training','forest','gate','campsite'].includes(place.id)?'<button data-action="patrol">🥋 Учебный патруль</button>':''}</div>`;
 }
 function renderMap(state) {
   const place = getLocation(state.world.location);
@@ -3270,7 +3302,7 @@ function renderPhone(state) {
   const stamp=minute=>`${String(Math.floor(minute/60)).padStart(2,'0')}:${String(minute%60).padStart(2,'0')}`;
   const apps=[
     ['konohagram','◎','Konohagram','Фото и повседневная лента','photo'],
-    ['line','✉','KonohaLine','Личные сообщения','chat'],
+    ['line','<img src="assets/ui/generated/chat.png" alt="">','KonohaLine','Личные сообщения','chat'],
     ['shinobix','𝕏','ShinobiX','Короткие записи и обсуждения','text'],
     ['scrolltube','▶','ScrollTube','Видео из жизни деревни','video']
   ];
@@ -3305,9 +3337,10 @@ function renderPhone(state) {
 
 function renderPets(state) {
   const owned = state.pets || [];
-  return `${heading('Питомцы','Заводи животных, выбирай имена и ухаживай за ними. Питомцы сохраняются вместе с историей.')}
-    <section class="panel-card pets-owned"><div class="card-head"><h3>Твои питомцы</h3><small>${owned.length} / 5</small></div>${owned.length?`<div class="pets-grid">${owned.map(pet=>`<article class="pet-card"><div class="pet-portrait">${pet.icon||'🐾'}</div><div><b>${escapeHTML(pet.name)}</b><small>${escapeHTML(pet.kind)} · ${escapeHTML(pet.temperament||'дружелюбный')}</small><p>Привязанность: ${pet.affection||0}/100 · Настроение: ${pet.mood??55}/100</p><small>Сытость: ${100-(pet.hunger??45)} · Энергия: ${pet.energy??80}</small><div class="bond-track"><i style="width:${pet.affection||0}%"></i></div><div class="pet-actions"><button class="mini-btn" data-action="pet-care" data-type="feed" data-id="${pet.uid}">Покормить</button><button class="mini-btn" data-action="pet-care" data-type="play" data-id="${pet.uid}">Поиграть</button><button class="mini-btn" data-action="pet-care" data-type="walk" data-id="${pet.uid}">Прогуляться</button></div><form class="pet-name-form" data-pet-id="${pet.uid}"><input name="name" maxlength="20" value="${escapeHTML(pet.name)}" aria-label="Имя питомца"><button class="mini-btn" type="submit">Переименовать</button></form></div></article>`).join('')}</div>`:'<div class="pets-empty"><div>🐾</div><h3>Пока дома тихо</h3><p>Выбери питомца в магазине ниже. У каждого свой характер и любимые занятия.</p></div>'}</section>
-    <section class="panel-card"><div class="card-head"><h3>Магазин животных</h3><small>БЮДЖЕТ: ${state.player.stats.coins} РЁ</small></div><div class="pets-grid">${PETS.map(pet=>`<article class="pet-shop-card"><div class="pet-shop-icon">${pet.icon}</div><h4>${escapeHTML(pet.name)}</h4><p>${escapeHTML(pet.desc)}</p><small>Темперамент: ${escapeHTML(pet.temperament)}</small><div class="pet-shop-footer"><b>${pet.price} рё</b><button class="btn btn-primary" data-action="buy-pet" data-id="${pet.id}" ${owned.length>=5?'disabled':''}>Завести</button></div></article>`).join('')}</div></section>`;
+  const portrait = pet => getPetImage(pet) ? `<img src="${escapeHTML(getPetImage(pet))}" alt="${escapeHTML(pet.name)}" loading="lazy">` : `<span>${pet.icon||'🐾'}</span>`;
+  return `${heading('Питомцы','Заводи животных, выбирай имена и ухаживай за ними. У каждого вида свой портрет, характер и привычки.')}
+    <section class="panel-card pets-owned"><div class="card-head"><h3>Твои питомцы</h3><small>${owned.length} / 5</small></div>${owned.length?`<div class="pets-grid">${owned.map(pet=>`<article class="pet-card"><div class="pet-portrait">${portrait(pet)}</div><div><b>${escapeHTML(pet.name)}</b><small>${escapeHTML(pet.kind)} · ${escapeHTML(pet.temperament||'дружелюбный')}</small><p>Привязанность: ${pet.affection||0}/100 · Настроение: ${pet.mood??55}/100</p><small>Сытость: ${100-(pet.hunger??45)} · Энергия: ${pet.energy??80}</small><div class="bond-track"><i style="width:${pet.affection||0}%"></i></div><div class="pet-actions"><button class="mini-btn" data-action="pet-care" data-type="feed" data-id="${pet.uid}">Покормить</button><button class="mini-btn" data-action="pet-care" data-type="play" data-id="${pet.uid}">Поиграть</button><button class="mini-btn" data-action="pet-care" data-type="walk" data-id="${pet.uid}">Прогуляться</button></div><form class="pet-name-form" data-pet-id="${pet.uid}"><input name="name" maxlength="20" value="${escapeHTML(pet.name)}" aria-label="Имя питомца"><button class="mini-btn" type="submit">Переименовать</button></form></div></article>`).join('')}</div>`:'<div class="pets-empty"><img class="pets-empty-mascot" src="assets/ui/enot-mascot.webp" alt="Маскот Конохи"><h3>Пока дома тихо</h3><p>Выбери питомца в магазине ниже. У каждого свой характер и любимые занятия.</p></div>'}</section>
+    <section class="panel-card pet-shop-panel"><div class="card-head"><h3>Магазин животных</h3><small>БЮДЖЕТ: ${state.player.stats.coins} РЁ</small></div><div class="pets-grid">${PETS.map(pet=>`<article class="pet-shop-card"><div class="pet-shop-icon">${pet.image?`<img src="${escapeHTML(pet.image)}" alt="${escapeHTML(pet.name)}" loading="lazy">`:pet.icon}</div><h4>${escapeHTML(pet.name)}</h4><p>${escapeHTML(pet.desc)}</p><small>Темперамент: ${escapeHTML(pet.temperament)}</small><div class="pet-shop-footer"><b>${pet.price} рё</b><button class="btn btn-primary" data-action="buy-pet" data-id="${pet.id}" ${owned.length>=5?'disabled':''}>Завести</button></div></article>`).join('')}</div><p class="chat-hint">В доме может жить не больше пяти питомцев одновременно. Виды с собственными иллюстрациями отмечены отдельными портретами.</p></section>`;
 }
 
 function renderScroll(state) {
@@ -3328,22 +3361,51 @@ function renderScroll(state) {
 }
 
 function renderBag(state) {
-  const looks = [['casual','Повседневная одежда','Удобный вариант для прогулок.'],['shinobi','Форма шиноби','Практичный стиль для тренировок.'],['festival','Праздничное кимоно','Наряд для городского праздника.'],['travel','Дорожный плащ','Подходит для прохладной погоды и поездок.'],['raincoat','Дождевой плащ','Удобно в дождь и ветер.']];
+  const gender=state.player.gender||'male';
+  const looks = gender==='female' ? [
+    ['casual','Повседневный плащ','Спокойный образ для прогулок.','female-travel'],
+    ['shinobi','Форма куноичи','Практичный комплект для заданий.','female-shinobi'],
+    ['festival','Праздничное кимоно','Наряд для городского праздника.','female-festival'],
+    ['travel','Дорожный плащ','Удобный вариант для поездок.','female-travel'],
+    ['raincoat','Плащ от дождя','Универсальный верхний слой.','female-travel'],
+    ['workwear','Форма помощницы','Собранный рабочий вариант.','female-shinobi']
+  ] : [
+    ['casual','Повседневная одежда','Удобный вариант для прогулок.','male-casual'],
+    ['shinobi','Форма шиноби','Практичный стиль для тренировок.','male-shinobi'],
+    ['festival','Праздничное кимоно','Наряд для городского праздника.','male-formal'],
+    ['travel','Дорожный плащ','Подходит для прохладной погоды и поездок.','male-travel'],
+    ['raincoat','Дождевой плащ','Тёплый плащ для дождя и ветра.','male-raincoat'],
+    ['workwear','Рабочая форма','Форма для смены в мастерской или лавке.','male-work']
+  ];
+  const prices={festival:48,travel:36,raincoat:30,workwear:42};
   const kinds=[['all','Всё'],['food','Еда'],['gift','Подарки'],['clothing','Одежда'],['pet','Питомцам'],['material','Материалы'],['other','Прочее']];
   const filter=state.ui.bagTab||'all';
   const filtered=state.inventory.filter(item=>filter==='all'||item.kind===filter||(filter==='other'&&!['food','gift','clothing','material','pet'].includes(item.kind)));
   const selected=filtered.find(item=>item.id===state.ui.selectedItemId)||filtered[0]||null;
-  const iconFor=item=>({tea:'tea',flower:'flower',paper:'scroll',herb:'herb',bento:'bento','pet-snack':'gift'}[item.id]||'pouch');
-  return `${heading('Инвентарь','Выбери предмет, чтобы посмотреть описание и доступные действия. Вещи можно хранить в домашнем схроне.')}
+  const iconFor=item=>({tea:'assets/ui/tea.svg',flower:'assets/ui/generated/gift.png',paper:'assets/ui/generated/scroll-case.png',herb:'assets/ui/herb.svg',bento:'assets/ui/generated/ramen-bowl.png','pet-snack':'assets/ui/generated/gift-box.png','field-kit':'assets/ui/pouch.svg','herbal-tea':'assets/ui/tea.svg','pressed-bouquet':'assets/ui/generated/gift.png'}[item.id]||'assets/ui/pouch.svg');
+  const owned=state.player.ownedLooks||['casual','shinobi'];
+  const canChange=['home','market'].includes(state.world.location);
+  const selectedLook=looks.find(([id])=>id===state.player.look)||looks[0];
+  const selectedArt=selectedLook?.[3]?`assets/player/outfits/${selectedLook[3]}.png`:'';
+  const outfitCards=looks.map(([id,name,desc,art])=>{
+    const isOwned=owned.includes(id); const price=prices[id]||0;
+    return `<article class="outfit-option ${state.player.look===id?'selected':''} ${isOwned?'owned':'locked'}"><div class="outfit-art-wrap">${art?`<img src="assets/player/outfits/${art}.png" alt="${escapeHTML(name)}" loading="lazy">`:'<span class="outfit-placeholder">👘</span>'}</div><b>${escapeHTML(name)}</b><small>${escapeHTML(desc)}</small>${isOwned?`<button class="mini-btn" data-action="outfit" data-id="${id}" ${!canChange?'disabled':''}>${state.player.look===id?'Надето':canChange?'Переодеться':'Доступно дома'}</button>`:`<button class="mini-btn" data-action="buy-outfit" data-id="${id}" ${state.world.location!=='market'?'disabled':''}>Купить · ${price} рё</button>`}</article>`;
+  }).join('');
+  const preset=(label,id,emoji)=>`<button class="wardrobe-preset ${state.player.look===id?'active':''}" data-action="outfit" data-id="${id}" ${!owned.includes(id)||!canChange?'disabled':''}><span>${emoji}</span><b>${label}</b><small>${owned.includes(id)?(state.player.look===id?'Сейчас надето':'Надеть комплект'):'Нужно купить на рынке'}</small></button>`;
+  return `${heading('Инвентарь','Предметы, одежда и мастерская. Выбирай вещи и собирай подходящий комплект для работы, прогулки, тренировки или встречи.')}
     <section class="bag-heading"><div><small>🌸 ЛИЧНЫЕ ВЕЩИ</small><h3>Инвентарь</h3><p>${state.inventory.reduce((sum,item)=>sum+item.qty,0)} предметов в сумке</p></div></section>
     <div class="bag-tabs">${kinds.map(([id,label])=>`<button data-action="bag-filter" data-id="${id}" class="${filter===id?'active':''}">${label}</button>`).join('')}</div>
-    <section class="panel-card"><div class="inventory-grid">${filtered.length?filtered.map(item=>`<article class="item-card ${selected?.id===item.id?'selected':''}"><button class="item-select" data-action="select-item" data-id="${item.id}"><img class="item-art" src="assets/ui/${iconFor(item)}.svg" alt=""><span><strong>${escapeHTML(item.name)}</strong><small>${item.kind==='gift'?'Подарок':item.kind==='food'?'Еда':item.kind==='clothing'?'Одежда':item.kind==='pet'?'Для питомцев':'Материал'}</small></span><b class="quantity">×${item.qty}</b></button><div class="item-tools">${item.kind==='gift'?`<button class="mini-btn" data-action="choose-gift" data-id="${item.id}">🎁 Подарить</button>`:''}${item.kind==='food'&&item.id!=='herbal-tea'?`<button class="mini-btn" data-action="use-food" data-id="${item.id}">Использовать</button>`:''}${item.kind==='pet'?`<button class="mini-btn" data-action="pet-item" data-id="${item.id}">Использовать</button>`:''}${item.id==='field-kit'||item.id==='herbal-tea'?`<button class="mini-btn" data-action="use-crafted-item" data-id="${item.id}">Применить</button>`:''}</div></article>`).join(''):'<div class="empty-state">В этой категории пока пусто.</div>'}</div>
-      ${selected?`<section class="item-detail-panel"><div class="item-detail-art"><img src="assets/ui/${iconFor(selected)}.svg" alt=""></div><div class="item-detail-copy"><small>ВЫБРАННЫЙ ПРЕДМЕТ</small><h3>${escapeHTML(selected.name)}</h3><p>${escapeHTML(selected.desc||'Описание пока неизвестно.')}</p><div class="item-detail-meta"><span>Категория: ${escapeHTML(selected.kind)}</span><b>Количество: ${selected.qty}</b></div><div class="item-detail-actions">${selected.kind==='gift'?`<button class="btn btn-primary" data-action="choose-gift" data-id="${selected.id}">Подарить</button>`:''}${selected.kind==='food'&&selected.id!=='herbal-tea'?`<button class="btn btn-primary" data-action="use-food" data-id="${selected.id}">Использовать</button>`:''}${selected.kind==='pet'?`<button class="btn btn-primary" data-action="pet-item" data-id="${selected.id}">Использовать для питомца</button>`:''}${selected.id==='field-kit'||selected.id==='herbal-tea'?`<button class="btn btn-primary" data-action="use-crafted-item" data-id="${selected.id}">Применить</button>`:''}</div></div></section>`:''}
+    <section class="panel-card"><div class="inventory-grid">${filtered.length?filtered.map(item=>`<article class="item-card ${selected?.id===item.id?'selected':''}"><button class="item-select" data-action="select-item" data-id="${item.id}"><img class="item-art" src="${iconFor(item)}" alt="" loading="lazy"><span><strong>${escapeHTML(item.name)}</strong><small>${item.kind==='gift'?'Подарок':item.kind==='food'?'Еда':item.kind==='clothing'?'Одежда':item.kind==='pet'?'Для питомцев':item.kind==='material'?'Материал':'Прочее'}</small></span><b class="quantity">×${item.qty}</b></button><div class="item-tools">${item.kind==='gift'?`<button class="mini-btn" data-action="choose-gift" data-id="${item.id}">🎁 Подарить</button>`:''}${item.kind==='food'&&item.id!=='herbal-tea'?`<button class="mini-btn" data-action="use-food" data-id="${item.id}">Использовать</button>`:''}${item.kind==='pet'?`<button class="mini-btn" data-action="pet-item" data-id="${item.id}">Использовать</button>`:''}${item.id==='field-kit'||item.id==='herbal-tea'?`<button class="mini-btn" data-action="use-crafted-item" data-id="${item.id}">Применить</button>`:''}</div></article>`).join(''):'<div class="empty-state">В этой категории пока пусто.</div>'}</div>
+      ${selected?`<section class="item-detail-panel"><div class="item-detail-art"><img src="${iconFor(selected)}" alt=""></div><div class="item-detail-copy"><small>ВЫБРАННЫЙ ПРЕДМЕТ</small><h3>${escapeHTML(selected.name)}</h3><p>${escapeHTML(selected.desc||'Описание пока неизвестно.')}</p><div class="item-detail-meta"><span>Категория: ${escapeHTML(selected.kind)}</span><b>Количество: ${selected.qty}</b></div><div class="item-detail-actions">${selected.kind==='gift'?`<button class="btn btn-primary" data-action="choose-gift" data-id="${selected.id}">Подарить</button>`:''}${selected.kind==='food'&&selected.id!=='herbal-tea'?`<button class="btn btn-primary" data-action="use-food" data-id="${selected.id}">Использовать</button>`:''}${selected.kind==='pet'?`<button class="btn btn-primary" data-action="pet-item" data-id="${selected.id}">Использовать для питомца</button>`:''}${selected.id==='field-kit'||selected.id==='herbal-tea'?`<button class="btn btn-primary" data-action="use-crafted-item" data-id="${selected.id}">Применить</button>`:''}</div></div></section>`:''}
     </section>
-    <section class="panel-card outfit-card"><div class="card-head"><h3>Гардероб</h3><small>${state.world.location==='home'?'ДОМАШНИЙ ШКАФ':state.world.location==='market'?'МАГАЗИН ОДЕЖДЫ':'ПЕРЕОДЕВАНИЕ ДОМА ИЛИ В МАГАЗИНЕ'}</small></div><div class="outfit-grid">${looks.map(([id,name,desc])=>{const owned=(state.player.ownedLooks||['casual','shinobi']).includes(id);const price={festival:48,travel:36,raincoat:30}[id]||0;const canChange=['home','market'].includes(state.world.location);return `<article class="outfit-option ${state.player.look===id?'selected':''}"><span>👘</span><b>${name}</b><small>${desc}</small>${owned?`<button class="mini-btn" data-action="outfit" data-id="${id}" ${!canChange?'disabled':''}>${state.player.look===id?'Надето':canChange?'Переодеться':'Доступно дома'}</button>`:`<button class="mini-btn" data-action="buy-outfit" data-id="${id}" ${state.world.location!=='market'?'disabled':''}>Купить · ${price} рё</button>`}</article>`}).join('')}</div></section>
-    <section class="panel-card craft-panel"><div class="card-head"><h3>Мастерская</h3><small>${state.world.location==='home'?'ДОМАШНИЙ РАБОЧИЙ СТОЛ':'ДОСТУПНО ТОЛЬКО ДОМА'}</small></div><p class="chat-hint">Комбинируй найденные материалы. Рецепты открыты сразу, но требуют нужных ресурсов.</p><div class="craft-grid">${RECIPES.map(recipe=>`<article class="craft-recipe"><div class="craft-recipe-icon">${recipe.id==='field-kit'?'🩹':recipe.id==='herbal-tea'?'🍵':'💐'}</div><b>${escapeHTML(recipe.name)}</b><p>${escapeHTML(recipe.desc)}</p><small>Нужно: ${Object.entries(recipe.ingredients).map(([id,qty])=>`${qty}× ${id==='herb'?'трава':id==='paper'?'бумага':id==='tea'?'чай':'цветы'}`).join(' · ')}</small><button class="mini-btn" data-action="craft-item" data-id="${recipe.id}" ${canCraft(state,recipe.id)?'':'disabled'}>Изготовить</button></article>`).join('')}</div></section>
-    ${state.world.location==='home'?`<section class="home-storage-grid"><article><b>🧊 Холодильник</b><p>Запасы еды дома: ${state.inventory.filter(x=>x.kind==='food').reduce((a,x)=>a+x.qty,0)}</p><button class="mini-btn" data-action="home-storage" data-id="fridge">Открыть</button></article><article><b>👘 Шкаф</b><p>Купленные наряды: ${(state.player.ownedLooks||[]).length}</p><button class="mini-btn" data-action="home-storage" data-id="wardrobe">Открыть</button></article></section>`:''}`;
+    <section class="panel-card wardrobe-panel"><div class="card-head"><div><h3>Гардероб</h3><small>СОБИРАЙ ОБРАЗ ПОД СВОИ ПЛАНЫ</small></div><small>${state.world.location==='home'?'ДОМАШНИЙ ШКАФ':state.world.location==='market'?'МАГАЗИН ОДЕЖДЫ':'ПЕРЕОДЕВАНИЕ ДОМА ИЛИ В МАГАЗИНЕ'}</small></div>
+      <div class="wardrobe-current"><div class="wardrobe-current-art">${selectedArt?`<img src="${selectedArt}" alt="Текущий образ">`:'<span>👤</span>'}</div><div><small>ТЕКУЩИЙ ОБРАЗ</small><h3>${escapeHTML(selectedLook[1])}</h3><p>${escapeHTML(selectedLook[2])}</p><div class="wardrobe-current-tags"><span>Свидание · ${state.player.look==='festival'?'подходит':'можно выбрать кимоно'}</span><span>Работа · ${state.player.look==='workwear'?'подходит':'есть рабочая форма'}</span></div></div></div>
+      <div class="wardrobe-presets">${preset('На свидание','festival','🌸')}${preset('На работу','workwear','🧰')}${preset('На тренировку','shinobi','🥋')}${preset('На прогулку','casual','🌿')}</div>
+      <div class="outfit-grid">${outfitCards}</div><p class="chat-hint">Новые комплекты продаются на рынке. Переодеться можно дома или в магазине одежды; выбор сохраняется в сохранении игры.</p></section>
+    <section class="panel-card craft-panel"><div class="card-head"><h3>Мастерская</h3><small>${state.world.location==='home'?'ДОМАШНИЙ РАБОЧИЙ СТОЛ':'ДОСТУПНО ТОЛЬКО ДОМА'}</small></div><p class="chat-hint">Комбинируй найденные материалы. Рецепты открыты сразу, но требуют нужных ресурсов.</p><div class="craft-grid">${RECIPES.map(recipe=>`<article class="craft-recipe"><div class="craft-recipe-icon"><img src="${recipe.id==='field-kit'?'assets/ui/pouch.svg':recipe.id==='herbal-tea'?'assets/ui/tea.svg':'assets/ui/generated/gift.png'}" alt=""></div><b>${escapeHTML(recipe.name)}</b><p>${escapeHTML(recipe.desc)}</p><small>Нужно: ${Object.entries(recipe.ingredients).map(([id,qty])=>`${qty}× ${id==='herb'?'трава':id==='paper'?'бумага':id==='tea'?'чай':'цветы'}`).join(' · ')}</small><button class="mini-btn" data-action="craft-item" data-id="${recipe.id}" ${canCraft(state,recipe.id)?'':'disabled'}>Изготовить</button></article>`).join('')}</div></section>
+    ${state.world.location==='home'?`<section class="home-storage-grid"><article><b><img class="storage-heading-icon" src="assets/ui/generated/ramen-bowl.png" alt=""> Холодильник</b><p>Запасы еды дома: ${state.inventory.filter(x=>x.kind==='food').reduce((a,x)=>a+x.qty,0)}</p><button class="mini-btn" data-action="home-storage" data-id="fridge">Открыть</button></article><article><b><img class="storage-heading-icon" src="assets/ui/generated/gift-box.png" alt=""> Шкаф</b><p>Купленные наряды: ${(state.player.ownedLooks||[]).length}</p><button class="mini-btn" data-action="home-storage" data-id="wardrobe">Открыть</button></article></section>`:''}`;
 }
+
 function renderJobs(state) {
   const active=getJob(state.player.jobId);
   return `${heading('Работа и подработки','Выбирай занятие, приходи в нужное место и бери смену. У каждой работы своя оплата и длительность.')}
@@ -3364,15 +3426,16 @@ function renderGallery(state) {
   const met=new Set([...(state.metCharacters||[]),...Object.keys(people)]);
   const roster=CHARACTERS.filter(character=>state.unlocked.includes(character.id));
   const backgrounds=[...(gallery.backgrounds||[])];
-  const allArts=roster.map(character=>{ const seen=people[character.id]||[]; const first=character.art?.[0]?.src; return {character,src:first,seen:Boolean(first&&seen.includes(first)),label:character.art?.[0]?.label||'Портрет'}; });
-  return `${heading('Галерея','Портреты всех доступных героинь и изображения, которые уже встречались в твоей истории.')}
-    <section class="gallery-section"><div class="gallery-section-title"><span>🌸</span><div><small>ПЕРСОНАЖИ</small><h3>Галерея героинь · ${roster.length}</h3></div></div>
-      <div class="gallery-grid">${allArts.map(entry=>`<button class="gallery-tile ${entry.seen?'':'gallery-unseen'}" data-action="view-art" data-src="${escapeHTML(entry.src||'')}"><img src="${escapeHTML(entry.src||'')}" alt="" loading="lazy"><span><b>${escapeHTML(entry.character.name)}</b><small>${escapeHTML(entry.label)} · ${entry.seen?'Открыто в RP':'Просмотр галереи'}</small></span></button>`).join('')}</div></section>
+  const allArts=roster.flatMap(character=>getUnlockedCharacterArts(state,character).map((art,index)=>{ const seen=people[character.id]||[]; return {character,src:art.src,seen:seen.includes(art.src),label:art.label||`Образ ${index+1}`,index}; }));
+  return `${heading('Галерея','Портреты и дополнительные образы открываются по мере знакомства, встреч и укрепления доверия.')}
+    <section class="gallery-section"><div class="gallery-section-title"><span>🌸</span><div><small>ПЕРСОНАЖИ И ОБРАЗЫ</small><h3>Галерея героинь · ${roster.length}</h3><small>Открытых образов: ${allArts.length}</small></div></div>
+      <div class="gallery-grid">${allArts.map(entry=>`<button class="gallery-tile ${entry.seen?'':'gallery-unseen'}" data-action="view-art" data-src="${escapeHTML(entry.src||'')}"><img src="${escapeHTML(entry.src||'')}" alt="" loading="lazy"><span><b>${escapeHTML(entry.character.name)}</b><small>${escapeHTML(entry.label)} · ${entry.seen?'Открыто в RP':'Просмотр галереи'}</small></span></button>`).join('')}</div><p class="gallery-unlock-note">Следующие варианты внешности появляются после новых встреч и роста доверия. В галерею попадают только доступные образы.</p></section>
     <section class="gallery-section"><div class="gallery-section-title"><span>🏞️</span><div><small>ИСТОРИЯ ПУТЕШЕСТВИЙ</small><h3>Увиденные сцены · ${backgrounds.length}</h3></div></div><div class="gallery-backgrounds">${backgrounds.map(src=>`<button data-action="view-art" data-src="${escapeHTML(src)}"><img src="${escapeHTML(src)}" alt="Увиденная локация" loading="lazy"></button>`).join('')||'<div class="empty-state">Посещай новые места, чтобы сохранить их фоны в галерее.</div>'}</div></section>
     <section class="gallery-section"><div class="gallery-section-title"><span>✦</span><div><small>ОТКРЫТЫЕ ИЗОБРАЖЕНИЯ</small><h3>Встреченные арты · ${Object.values(people).reduce((sum,items)=>sum+(items||[]).length,0)}</h3></div></div><div class="gallery-grid">${Object.entries(people).flatMap(([id,paths])=>(paths||[]).map(src=>({character:getCharacter(id),src}))).filter(entry=>entry.character).map(entry=>`<button class="gallery-tile" data-action="view-art" data-src="${escapeHTML(entry.src)}"><img src="${escapeHTML(entry.src)}" alt="" loading="lazy"><span><b>${escapeHTML(entry.character.name)}</b><small>Открыть арт</small></span></button>`).join('')||'<div class="empty-state">Пока не открыто дополнительных изображений. Исследуй локации и встречай героинь.</div>'}</div></section>`;
 }
 function renderHelp() {
   return `${heading('Помощь','Кратко о том, как устроена игра и как писать команды.')}
+    <section class="help-banner panel-card"><img src="assets/ui/generated/help.png" alt=""><div><b>Подсказка Конохи</b><small>Можно писать действия своими словами — игровой мастер разберёт намерение и проверит условия.</small></div><img class="help-banner-question" src="assets/ui/generated/question.png" alt=""></section>
     <section class="help-grid"><article class="panel-card"><h3>Свободные действия</h3><p>Пиши обычным текстом: «иду в цветочную лавку», «осматриваю комнату», «покупаю чай», «жду Аяме у входа». Игровой мастер проверит место, время и доступность действия.</p></article><article class="panel-card"><h3>Диалоги</h3><p>Для личной беседы персонаж должен находиться рядом. Напиши свою реплику вручную. Первое знакомство сдержанное; имя запоминается после представления.</p></article><article class="panel-card"><h3>Герои и галерея</h3><p>В разделе «Герои» показываются только те, с кем уже было личное взаимодействие. Изображения попадают в галерею после появления в RP.</p></article><article class="panel-card"><h3>Задания и обещания</h3><p>Задания могут появиться после разговора или твоего собственного плана. Награда указывается только если персонаж её назвал. Обещания можно отменять.</p></article><article class="panel-card"><h3>Карта и перемещения</h3><p>Переходы занимают игровое время. Резкий уход с договорённой встречи может быть замечен и повлиять на доверие.</p></article><article class="panel-card"><h3>Сохранение</h3><p>Прогресс сохраняется в этом браузере. На другом устройстве используй экспорт и импорт сохранения в настройках.</p></article></section>`;
 }
 
@@ -3386,8 +3449,9 @@ function renderAchievements(state) {
     const hidden=item.hidden && !done;
     const title=hidden?'Секретное достижение':item.title;
     const desc=hidden?'Условия открытия неизвестны.':item.desc;
+    const medalColor = ({'История':'gold','Исследование':'blue','Общение':'pink','Команда':'red','Повседневность':'silver','Развитие':'gold','Коллекция':'blue','Секреты':'red'})[item.group] || 'silver';
     return `<article class="achievement-card ${done?'is-unlocked':''} ${hidden?'is-hidden':''}">
-      <div class="achievement-icon">${hidden?'？':item.icon}</div>
+      <div class="achievement-icon"><img class="achievement-medal-art" src="assets/ui/achievement/medal-${medalColor}.webp" alt="${escapeHTML(item.group)}"><span>${hidden?'?':item.icon}</span></div>
       <div class="achievement-body"><div class="achievement-topline"><b>${escapeHTML(title)}</b><span>${done?`+${item.points} оч.`:`${item.points} оч.`}</span></div><p>${escapeHTML(desc)}</p>
       ${done?`<small class="achievement-state">Получено · день ${unlocked.find(x=>x.id===item.id)?.day||1}</small>`:hidden?'<small class="achievement-state">Скрыто</small>':`<div class="achievement-progress"><i style="width:${progress.percent}%"></i></div><small class="achievement-state">${progress.value} / ${progress.target}</small>`}</div>
       <span class="achievement-check">${done?'✓':hidden?'✦':'◌'}</span></article>`;
@@ -3448,10 +3512,12 @@ function renderStatus(state) {
   const topCoins = document.getElementById('top-coins');
   if (topCoins) topCoins.textContent = String(stats.coins);
   const topHp=document.getElementById('top-hp'); if(topHp) topHp.textContent=`♥ ${stats.hp??100} HP`;
-  document.getElementById('mobile-status').innerHTML = `<span class="status-pill"><span class="clock-symbol">◷</span>${clockLabel(state.world.minute)}</span><span class="status-pill">${status}</span><span class="status-pill">♥ ${stats.hp??100} HP</span><span class="status-pill"><img class="status-icon" src="assets/ui/cropped/coin.png" alt="">${stats.coins} рё</span>`;
+  document.getElementById('mobile-status').innerHTML = `<span class="status-pill"><span class="clock-symbol">◷</span>${clockLabel(state.world.minute)}</span><span class="status-pill">${status}</span><span class="status-pill">♥ ${stats.hp??100} HP</span><span class="status-pill"><img class="status-icon" src="assets/ui/generated/coin.png" alt="">${stats.coins} рё</span>`;
   document.getElementById('player-name-label').textContent = state.player.name;
   document.getElementById('player-origin-label').textContent = `${state.player.originName}${state.player.clan && state.player.clan!=='none' ? ` · ${state.player.clan}` : ''}`;
-  document.getElementById('player-avatar').textContent = state.player.name.slice(0,1).toUpperCase();
+  const playerAvatar=document.getElementById('player-avatar');
+  const playerAvatarSrc=getPlayerAvatarSrc(state.player);
+  if(playerAvatar){playerAvatar.innerHTML=`<img src="${playerAvatarSrc}" alt="Образ ${escapeHTML(state.player.name)}">`;playerAvatar.classList.add('has-player-art');}
   document.getElementById('player-stats').innerHTML = statLine('Выносливость',stats.stamina)+statLine('Чакра',stats.chakra)+statLine('Внимание',stats.focus)+`<div class="stat-row"><span>Репутация</span><b>${stats.renown}</b></div><div class="stat-row"><span>Рё</span><b>¥${stats.coins}</b></div>`;
   const place = getLocation(state.world.location);
   document.getElementById('current-place').innerHTML = `<span class="pin"><img src="assets/ui/cropped/location.png" alt="">${place.icon}</span><b>${place.name}</b><small>${place.area}</small>`;
@@ -3556,7 +3622,7 @@ function randomizeCreator() {
   const choices = {
     'player-origin':['resident','shinobi','traveler','guest','medic','merchant','craft','instructor','clan','otherworld'],
     'player-style':['balanced','bold','kind','quiet','witty'],
-    'player-look':['casual','shinobi','festival','travel','raincoat'],
+    'player-look':['casual','shinobi','festival','travel','raincoat','workwear'],
     'player-clan':['none','Узумаки','Учиха','Хьюга','Нара','Яманака','Акимичи','Инузука','Абураме','Хатаке','Сарутоби','Другой / неизвестный'],
     'player-chakra':['fire','water','wind','earth','lightning','balanced'],
     'player-specialty':['taijutsu','ninjutsu','genjutsu','medical','sensors','craft','none'],
@@ -3744,8 +3810,8 @@ function openHomeStorage(kind='fridge') {
   if(state.world.location!=='home'){toast('Домашний схрон доступен только у тебя дома.');return;}
   state.storage ||= {fridge:[]}; state.storage.fridge ||= [];
   if(kind==='wardrobe') {
-    const looks=[['casual','Повседневная одежда'],['shinobi','Форма шиноби'],['festival','Праздничный наряд'],['travel','Дорожный плащ'],['raincoat','Дождевой плащ']];
-    elements.modal.innerHTML=`<div class="modal-backdrop"><section class="modal-card storage-modal"><div class="modal-head"><div><div class="eyebrow">ДОМАШНИЙ СХРОН</div><h3>Шкаф с одеждой</h3></div><button class="close-button" data-action="close-modal">×</button></div><div class="storage-list">${looks.filter(([id])=>(state.player.ownedLooks||[]).includes(id)).map(([id,name])=>`<div class="storage-row"><span>👘</span><b>${name}</b><button class="mini-btn" data-action="outfit" data-id="${id}">${state.player.look===id?'Надето':'Переодеться'}</button></div>`).join('')||'<p class="empty-state">В шкафу пока пусто.</p>'}</div><p class="chat-hint">Одежду можно купить на рынке и хранить в шкафу. Переодевание доступно дома или в магазине.</p></section></div>`;
+    const looks=[['casual','Повседневная одежда',state.player.gender==='female'?'female-travel':'male-casual'],['shinobi','Форма шиноби',state.player.gender==='female'?'female-shinobi':'male-shinobi'],['festival','Праздничный наряд',state.player.gender==='female'?'female-festival':'male-formal'],['travel','Дорожный плащ',state.player.gender==='female'?'female-travel':'male-travel'],['raincoat','Дождевой плащ',state.player.gender==='female'?'female-travel':'male-raincoat'],['workwear','Рабочая форма',state.player.gender==='female'?'female-shinobi':'male-work']];
+    elements.modal.innerHTML=`<div class="modal-backdrop"><section class="modal-card storage-modal"><div class="modal-head"><div><div class="eyebrow">ДОМАШНИЙ СХРОН</div><h3>Шкаф с одеждой</h3></div><button class="close-button" data-action="close-modal">×</button></div><div class="storage-list">${looks.filter(([id])=>(state.player.ownedLooks||[]).includes(id)).map(([id,name,art])=>`<div class="storage-row wardrobe-storage-row"><img src="assets/player/outfits/${art}.png" alt=""><b>${name}</b><button class="mini-btn" data-action="outfit" data-id="${id}">${state.player.look===id?'Надето':'Переодеться'}</button></div>`).join('')||'<p class="empty-state">В шкафу пока пусто.</p>'}</div><p class="chat-hint">Одежду можно купить на рынке и хранить в шкафу. Переодевание доступно дома или в магазине.</p></section></div>`;
     return;
   }
   const food=state.inventory.filter(item=>item.kind==='food'&&item.qty>0);
@@ -4375,7 +4441,7 @@ document.addEventListener('click',event=>{
     case 'video-play': { state.phone.videoViews ||= []; if(!state.phone.videoViews.includes(id)) state.phone.videoViews.push(id); state.phone.activeVideo=id; addFeed(state,'Ты открыл видео на ScrollTube.'); render(); break; }
     case 'video-back': state.phone.activeVideo=''; render(); break;
     case 'phone-like': { const post=state.phone.posts.find(item=>item.id===id); if(post){post.liked=!post.liked;post.likes=Math.max(0,(post.likes||0)+(post.liked?1:-1));render();} break; }
-    case 'buy-pet': { const pet=getPet(id); if(!pet) break; if((state.pets||[]).length>=5){toast('Можно завести не больше пяти питомцев.');break;} if(state.player.stats.coins<pet.price){toast('Не хватает рё.');break;} state.player.stats.coins-=pet.price; const names={ 'konoha-cat':['Мару','Юки','Сора'],'ninja-dog':['Ака','Кума','Рэй'],'white-rabbit':['Момо','Широ','Хана'],'courier-hawk':['Хая','Тори','Казэ'],'pond-turtle':['Каме','Тама','Нори']}; const choices=names[id]||['Тама']; const name=choices[Math.floor(Math.random()*choices.length)]; state.pets.push({...pet,uid:`pet-${Date.now()}`,name,affection:5,hunger:45,mood:55,energy:80}); addFeed(state,`В доме появился новый питомец: ${name} (${pet.kind}).`); render();toast(`${name} теперь твой питомец!`); break; }
+    case 'buy-pet': { const pet=getPet(id); if(!pet) break; if((state.pets||[]).length>=5){toast('Можно завести не больше пяти питомцев.');break;} if(state.player.stats.coins<pet.price){toast('Не хватает рё.');break;} state.player.stats.coins-=pet.price; const names={ 'konoha-cat':['Мару','Юки','Сора'],'ninja-dog':['Ака','Кума','Рэй'],'white-rabbit':['Момо','Широ','Хана'],'courier-hawk':['Хая','Тори','Казэ'],'pond-turtle':['Каме','Тама','Нори'],'tanuki-companion':['Тану','Куру','Мидзу'],'red-fox':['Кицу','Юдзу','Ака'],'black-cat-companion':['Куро','Суми','Кагэ'],'white-cat-companion':['Широ','Юки','Момо'],'courier-crow':['Кара','Хая','Куро'],'pond-frog':['Гэро','Ао','Мидори']}; const choices=names[id]||['Тама']; const name=choices[Math.floor(Math.random()*choices.length)]; state.pets.push({...pet,uid:`pet-${Date.now()}`,name,affection:5,hunger:45,mood:55,energy:80}); addFeed(state,`В доме появился новый питомец: ${name} (${pet.kind}).`); render();toast(`${name} теперь твой питомец!`); break; }
     case 'pet-care': { const pet=state.pets.find(item=>item.uid===id); if(pet){ if(type==='feed'){pet.hunger=Math.max(0,(pet.hunger??45)-35);pet.affection=Math.min(100,(pet.affection||0)+3);tickAction(state,8);} else if(type==='walk'){pet.energy=Math.max(0,(pet.energy??80)-12);pet.affection=Math.min(100,(pet.affection||0)+6);tickAction(state,18);} else {pet.mood=Math.min(100,(pet.mood??55)+18);pet.affection=Math.min(100,(pet.affection||0)+8);tickAction(state,12);} addFeed(state,`Ты позаботился о питомце ${pet.name}.`); render();toast(`${pet.name} рад вниманию.`);} break; }
     case 'close-modal': elements.modal.innerHTML=''; break;
     case 'skip-time': skipTime(state,Number(hours)||1); render(); break;
@@ -4463,7 +4529,7 @@ document.addEventListener('click',event=>{
       state.player.look=id; addFeed(state,`Ты переоделся: ${button.textContent.trim()}.`); render(); toast('Одежда изменена.'); break;
     }
     case 'buy-outfit': {
-      const prices={festival:48,travel:36,raincoat:30}; const price=prices[id];
+      const prices={festival:48,travel:36,raincoat:30,workwear:42}; const price=prices[id];
       if(state.world.location!=='market'){toast('Новые наряды продаются на рынке.');break;}
       if(!price){toast('Этот комплект нельзя купить.');break;}
       state.player.ownedLooks ||= ['casual','shinobi'];
